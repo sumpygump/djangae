@@ -1,12 +1,13 @@
 from djangae.environment import application_id
 from django.core.exceptions import ImproperlyConfigured
 from google_auth_oauthlib.flow import Flow
+import google.auth
 
 from .models import AppOAuthCredentials
 
 
 def create_oauth2_flow(scopes):
-    credentials = AppOAuthCredentials.get_or_create()
+    credentials, project = google.auth.default()
 
     if (not credentials.client_id) or (not credentials.client_secret):
         raise ImproperlyConfigured(

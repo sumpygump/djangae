@@ -38,7 +38,10 @@ INSTALLED_APPS = (
     'djangae.contrib.googleauth',
 )
 
-AUTH_USER_MODEL = 'djangae.contrib.googleauth.User'
+AUTH_USER_MODEL = 'googleauth.User'
+AUTHENTICATION_BACKENDS = [
+    'djangae.contrib.googleauth.backends.oauth.OAuthBackend',
+]
 
 DATABASES = {
     'default': {

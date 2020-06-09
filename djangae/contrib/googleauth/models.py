@@ -179,10 +179,10 @@ class User(AbstractBaseUser):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email']
 
-    class Meta:
-        verbose_name = _('user')
-        verbose_name_plural = _('users')
-        abstract = True
+    # class Meta:
+    #     verbose_name = _('user')
+    #     verbose_name_plural = _('users')
+    #     # abstract = True
 
     def clean(self):
         super().clean()
@@ -205,7 +205,7 @@ class User(AbstractBaseUser):
 
 
 class UserPermission(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="permissions")
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     permission = PermissionChoiceField()
     obj_id = models.PositiveIntegerField()
 

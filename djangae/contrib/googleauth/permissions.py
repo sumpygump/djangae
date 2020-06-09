@@ -1,6 +1,8 @@
 from django.apps import apps
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy as _
+
 
 CUSTOM_PERMISSIONS = getattr(settings, "GOOGLEAUTH_CUSTOM_PERMISSIONS", {})
 
@@ -51,4 +53,14 @@ class PermissionChoiceField(models.CharField):
     def __init__(self, *args, **kwargs):
         kwargs["max_length"] = 150
         kwargs["choices"] = PermissionChoiceIterator()
+        if kwargs.get('verbose_name'):
+            print(">>>>>>>>>>>>>>>>>>>>>")
+            print(args)
+            print(kwargs)
+            print(">>>>>>>>>>>>>>>>>>>>>")
+            kwargs.pop('verbose_name')
         super().__init__(self, *args, **kwargs)
+
+    # class Meta:
+    #     verbose_name = _('permission')
+    #     verbose_name_plural = _('permissions')

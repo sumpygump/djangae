@@ -12,6 +12,7 @@ from django.contrib.auth import (
 from .backends.iap import IAPBackend
 from .backends.oauth import OAuthBackend
 from .models import OAuthUserSession
+from django.contrib import auth
 
 
 def get_user_object(request):
@@ -65,6 +66,7 @@ def authentication_middleware(get_response):
         )
 
         request.user = get_user(request)
+        import ipdb; ipdb.set_trace()
 
         if request.user.is_authenticated:
             backend_str = request.session.get(BACKEND_SESSION_KEY)
@@ -86,6 +88,9 @@ def authentication_middleware(get_response):
             elif backend_str and isinstance(load_backend(backend_str), IAPBackend):
                 # FIXME: Implement this
                 pass
+        else:
+            user = auth.authenticate(request)
+            auth.login(request, user)
 
     return middleware
 

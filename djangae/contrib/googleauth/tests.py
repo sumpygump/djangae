@@ -32,9 +32,9 @@ class OAuthTests(TestCase):
             should redirect to the authorization url
         """
 
+        import ipdb; ipdb.set_trace()
         response = self.client.get("/login_required")
         self.assertEqual(302, response.status_code)
-        import ipdb; ipdb.set_trace()
         pass
 
     def test_oauth_callback_creates_session(self):
