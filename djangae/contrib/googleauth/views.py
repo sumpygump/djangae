@@ -1,27 +1,21 @@
-from django.conf import settings
-from django.http import (
-    Http404,
-    HttpResponseRedirect,
-)
+from django.http import HttpResponseRedirect
 from django.urls import reverse
 
-from .credentials import create_oauth2_flow
-from .models import (
-    _OAUTH_USER_SESSION_SESSION_KEY,
-    OAuthUserSession,
-)
-from .state import (
-    check_state,
-    generate_state,
-)
+import google.auth as google_auth
+from requests_oauthlib import OAuth2Session
+from django.contrib import auth
 
-_DEFAULT_OAUTH_SCOPES = [
-    "openid",
-    "profile",
-    "email"
-]
 
-_DEFAULT_WHITELISTED_SCOPES = _DEFAULT_OAUTH_SCOPES[:]
+NEXT_URL_SESSION_KEY = 'oauth-next-url'
+STATE_SESSION_KEY = 'oauth-state'
+SCOPES = [
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile"
+    ]
+AUTHORIZATION_BASE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+TOKEN_URL = "https://www.googleapis.com/oauth2/v4/token"
+
+GOOGLE_USER_INFO = "https://www.googleapis.com/oauth2/v1/userinfo"
 
 
 def login(request):
@@ -29,75 +23,48 @@ def login(request):
         This view should be set as your login_url for using OAuth
         authentication. It will trigger the main oauth flow.
     """
-    WHITELISTED_SCOPES = getattr(settings, "GOOGLE_OAUTH_SCOPE_WHITELIST", _DEFAULT_WHITELISTED_SCOPES)
-    DEFAULT_SCOPES = getattr(settings, "GOOGLEAUTH_OAUTH_SCOPES", _DEFAULT_OAUTH_SCOPES)
+    original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
 
-    destination = request.GET.get("next", "/")
-    scopes = request.GET.get("scopes", "").split("%20")
-    scopes = [x for x in scopes if x]
+    next_url = request.GET.get('next')
+    if next_url:
+        print(f"saving next url into session: {next_url}")
+        request.session[NEXT_URL_SESSION_KEY] = next_url
 
-    # This is a security check to make sure we only ask for access
-    # to scopes that we've whitelisted. Just in-case the querystring
-    # parameter has been manipulated maliciously in some way
-    if not all(x in WHITELISTED_SCOPES for x in scopes):
-        raise Http404(
-            "Not all scopes were whitelisted for the application."
-        )
-
-    # If no scopes were provided, then we revert to the default
-    # scopes
-    scopes = scopes or DEFAULT_SCOPES
-
-    flow = create_oauth2_flow(scopes)
-
-    # Redirect the user to the oauth login
-    original_url = "%s://%s%s" % (
-        request.scheme(),
-        request.META['HTTP_HOST'],
-        destination
+    credentials, project = google_auth.default()
+    google = OAuth2Session(credentials.client_id, scope=SCOPES, redirect_uri=original_url)
+    authorization_url, state = google.authorization_url(
+        AUTHORIZATION_BASE_URL,
+        access_type="offline",
+        prompt="select_account"
     )
-
-    flow.redirect_uri = "%s://%s%s" % (
-        request.scheme(),
-        request.META['HTTP_HOST'],
-        reverse("googleauth_oauth2callback")
-    )
-
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true',
-        state=generate_state(
-            request,
-            redirect_to=original_url
-        )
-    )
+    request.session[STATE_SESSION_KEY] = state
 
     return HttpResponseRedirect(authorization_url)
 
 
 def oauth2callback(request):
-    state = request.GET.get("state")
-    if not state:
-        raise Http404("State is required for security token checking")
 
-    ok, state = check_state(state)
+    original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
 
-    if not ok:
-        raise Http404("Failed security_token check")
+    credentials, project = google_auth.default()
+    google =  OAuth2Session(
+        credentials.client_id,
+        state=request.session[STATE_SESSION_KEY],
+        redirect_uri=original_url
+    )
 
-    code = request.GET.get("code")
-    if not code:
-        # FIXME: Surely something nicer than this?
-        # configurable failure page or whatever
-        raise Http404()
+    token = google.fetch_token(
+        TOKEN_URL,
+        client_secret=credentials.client_secret,
+        authorization_response=request.build_absolute_uri()
+    )
+    next_url = request.session[NEXT_URL_SESSION_KEY]
+    if google.authorized and next_url:
+        r = google.get(GOOGLE_USER_INFO)
+        raw_user = r.json()
+        # credentials are valid, we should authenticate the user
+        user = auth.authenticate(request, username=raw_user.get('id'), email=raw_user.get('email'))
+        auth.login(request, user)
+        return HttpResponseRedirect(next_url)
 
-    scopes = request.GET.get("scopes", "").split("%20") or None
-
-    flow = create_oauth2_flow(scopes=scopes)
-    flow.fetch_token(authorization_response=code)
-
-    # FIXME: Pass params to oauth session
-    oauth_session = OAuthUserSession.objects.create()
-    request.session[_OAUTH_USER_SESSION_SESSION_KEY] = oauth_session.pk
-
-    return HttpResponseRedirect(state["redirect_to"])
+    return HttpResponseRedirect(reverse("googleauth_oauth2login"))
