@@ -1,14 +1,19 @@
-from django.contrib import auth
-from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
-from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied
+from djangae.contrib.googleauth import (
+    _get_backends,
+    load_backend,
+)
+from django.contrib.auth.base_user import (
+    AbstractBaseUser,
+    BaseUserManager,
+)
+from djangae.contrib.googleauth.validators import UnicodeUsernameValidator
 from django.core.mail import send_mail
 from django.db import models
-from django.db.models.manager import EmptyManager
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from gcloudc.db.models.fields.iterable import SetField
 
-# from .validators import UnicodeUsernameValidator
+from .permissions import PermissionChoiceField
 
 
 class UserManager(BaseUserManager):
@@ -45,7 +50,7 @@ class UserManager(BaseUserManager):
 
     def with_perm(self, perm, is_active=True, include_superusers=True, backend=None, obj=None):
         if backend is None:
-            backends = auth._get_backends(return_tuples=True)
+            backends = _get_backends(return_tuples=True)
             if len(backends) == 1:
                 backend, _ = backends[0]
             else:
@@ -59,7 +64,7 @@ class UserManager(BaseUserManager):
                 % backend
             )
         else:
-            backend = auth.load_backend(backend)
+            backend = load_backend(backend)
         if hasattr(backend, 'with_perm'):
             return backend.with_perm(
                 perm,
@@ -70,27 +75,87 @@ class UserManager(BaseUserManager):
         return self.none()
 
 
+class AnonymousUser:
+    id = None
+    pk = None
+    username = ''
+    is_staff = False
+    is_active = False
+    is_superuser = False
 
-class AbstractUser(AbstractBaseUser):
-    """
-    An abstract base class implementing a fully featured User model with
-    admin-compliant permissions.
+    def __str__(self):
+        return 'AnonymousUser'
 
-    Username and password are required. Other fields are optional.
-    """
-    # username_validator = UnicodeUsernameValidator()
+    def __eq__(self, other):
+        return isinstance(other, self.__class__)
+
+    def __hash__(self):
+        return 1  # instances always return the same hash value
+
+    def __int__(self):
+        raise TypeError('Cannot cast AnonymousUser to int. Are you trying to use it in place of User?')
+
+    def save(self):
+        raise NotImplementedError("Djangae doesn't provide a DB representation for AnonymousUser.")
+
+    def delete(self):
+        raise NotImplementedError("Djangae doesn't provide a DB representation for AnonymousUser.")
+
+    def set_password(self, raw_password):
+        raise NotImplementedError("Djangae doesn't provide a DB representation for AnonymousUser.")
+
+    def check_password(self, raw_password):
+        raise NotImplementedError("Djangae doesn't provide a DB representation for AnonymousUser.")
+
+    @property
+    def groups(self):
+        return self._groups
+
+    @property
+    def user_permissions(self):
+        return self._user_permissions
+
+    def get_group_permissions(self, obj=None):
+        return set()
+
+    def get_all_permissions(self, obj=None):
+        return []
+
+    def has_perm(self, perm, obj=None):
+        return False
+
+    def has_perms(self, perm_list, obj=None):
+        return all(self.has_perm(perm, obj) for perm in perm_list)
+
+    def has_module_perms(self, module):
+        return False
+
+    @property
+    def is_anonymous(self):
+        return True
+
+    @property
+    def is_authenticated(self):
+        return False
+
+    def get_username(self):
+        return self.username
+
+
+class User(AbstractBaseUser):
+    username_validator = UnicodeUsernameValidator()
 
     username = models.CharField(
         _('username'),
         max_length=150,
         unique=True,
         help_text=_('Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.'),
-        # validators=[username_validator],
+        validators=[username_validator],
         error_messages={
             'unique': _("A user with that username already exists."),
         },
     )
-    first_name = models.CharField(_('first name'), max_length=30, blank=True)
+    first_name = models.CharField(_('first name'), max_length=150, blank=True)
     last_name = models.CharField(_('last name'), max_length=150, blank=True)
     email = models.EmailField(_('email address'), blank=True)
     is_staff = models.BooleanField(
@@ -117,7 +182,7 @@ class AbstractUser(AbstractBaseUser):
     class Meta:
         verbose_name = _('user')
         verbose_name_plural = _('users')
-        abstract = True
+        # abstract = True
 
     def clean(self):
         super().clean()
@@ -139,12 +204,58 @@ class AbstractUser(AbstractBaseUser):
         send_mail(subject, message, from_email, [self.email], **kwargs)
 
 
-class User(AbstractUser):
-    """
-    Users within the Django authentication system are represented by this
-    model.
+class UserPermission(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="permissions")
+    permission = PermissionChoiceField()
+    obj_id = models.PositiveIntegerField()
 
-    Username and password are required. Other fields are optional.
-    """
-    class Meta(AbstractUser.Meta):
-        swappable = 'AUTH_USER_MODEL'
+
+class Group(models.Model):
+    name = models.CharField(_('name'), max_length=150, unique=True)
+    permissions = SetField(
+        PermissionChoiceField(),
+        blank=True
+    )
+
+    def __str__(self):
+        return self.name
+
+
+class AppOAuthCredentials(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
+    client_id = models.CharField(max_length=150, default="")
+    client_secret = models.CharField(max_length=150, default="")
+
+    @classmethod
+    def get(cls):
+        from djangae.environment import application_id
+        return cls.objects.get(
+            pk=application_id()
+        )
+
+    @classmethod
+    def get_or_create(cls, **kwargs):
+        from djangae.environment import application_id
+        return cls.objects.get_or_create(
+            pk=application_id(),
+            defaults=kwargs
+        )[0]
+
+
+# Set in the Django session in the oauth2callback. This is used
+# by the backend's authenticate() method
+_OAUTH_USER_SESSION_SESSION_KEY = "_OAUTH_USER_SESSION_ID"
+
+
+class OAuthUserSession(models.Model):
+    user = models.OneToOneField("User", on_delete=models.CASCADE, primary_key=True)
+    authorization_code = models.CharField(max_length=150, blank=True)
+
+    access_token = models.CharField(max_length=150, blank=True)
+    refresh_token = models.CharField(max_length=150, blank=True)
+
+    def is_valid(self):
+        pass
+
+    def refresh(self):
+        pass

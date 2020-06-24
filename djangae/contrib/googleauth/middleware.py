@@ -10,9 +10,12 @@ from django.contrib.auth import (
 )
 
 from .backends.iap import IAPBackend
-from .backends.oauth import OAuthBackend
+from .backends.oauth2 import OAuthBackend
 from .models import OAuthUserSession
 from django.contrib import auth
+from django.urls import reverse
+from django.shortcuts import redirect
+from django.utils.functional import SimpleLazyObject
 
 
 def get_user_object(request):
@@ -52,47 +55,27 @@ def get_user(request):
     return request._cached_user
 
 
-def authentication_middleware(get_response):
+class MiddlewareMixin:
+    def __init__(self, get_response=None):
+        self.get_response = get_response
+        super().__init__()
 
-    def middleware(request):
-        # This is taken from the Django auth middleware, just so that
-        # users don't have to confusingly install both
+    def __call__(self, request):
+        response = None
+        if hasattr(self, 'process_request'):
+            response = self.process_request(request)
+        response = response or self.get_response(request)
+        if hasattr(self, 'process_response'):
+            response = self.process_response(request, response)
+        return response
 
+
+class AuthenticationMiddleware(MiddlewareMixin):
+    def process_request(self, request):
         assert hasattr(request, 'session'), (
-            "The djangae.contrib.googleauth middleware requires session middleware "
-            "to be installed. Edit your MIDDLEWARE setting to insert "
+            "The Django authentication middleware requires session middleware "
+            "to be installed. Edit your MIDDLEWARE%s setting to insert "
             "'django.contrib.sessions.middleware.SessionMiddleware' before "
             "'django.contrib.auth.middleware.AuthenticationMiddleware'."
-        )
-
-        request.user = get_user(request)
-        import ipdb; ipdb.set_trace()
-
-        if request.user.is_authenticated:
-            backend_str = request.session.get(BACKEND_SESSION_KEY)
-            if backend_str and isinstance(load_backend(backend_str), OAuthBackend):
-                # The user is authenticated with Django, and they use the OAuth backend, so they
-                # should have a valid oauth session
-                oauth_session = OAuthUserSession.objects.filter(
-                    email_address=request.user.email
-                ).first()
-
-                # If we have an oauth session, but it's not valid, try
-                # refreshing it
-                if oauth_session and not oauth_session.is_valid():
-                    oauth_session.refresh()
-
-                # If we're still not valid, then log out the Django user
-                if not oauth_session or not oauth_session.is_valid():
-                    logout(request.user)
-            elif backend_str and isinstance(load_backend(backend_str), IAPBackend):
-                # FIXME: Implement this
-                pass
-        else:
-            user = auth.authenticate(request)
-            auth.login(request, user)
-
-    return middleware
-
-
-AuthenticationMiddleware = authentication_middleware
+        ) % ("_CLASSES" if settings.MIDDLEWARE is None else "")
+        request.user = SimpleLazyObject(lambda: get_user(request))
