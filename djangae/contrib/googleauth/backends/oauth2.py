@@ -1,23 +1,26 @@
-from django.contrib.auth import get_user_model
 from .base import BaseBackend
-
-
-UserModel = get_user_model()
+from ..models import (
+    Group,
+    OAuthUserSession,
+    User,
+    UserPermission,
+)
 
 
 class OAuthBackend(BaseBackend):
-    """
-    Authenticates against settings.AUTH_USER_MODEL.
-    """
-
     def authenticate(self, request, **kwargs):
         username = kwargs['email']
         email = kwargs['email']
-        user, created = UserModel._default_manager.get_or_create(
-                username=username, defaults={
+
+        user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
                     'email': email,
                 }
         )
+
+        oauth_user = OAuthUserSession.objects.update_or_create(user=user)
+
         return user
 
     def user_can_authenticate(self, user):
@@ -30,7 +33,25 @@ class OAuthBackend(BaseBackend):
 
     def get_user(self, user_id):
         try:
-            user = UserModel._default_manager.get(pk=user_id)
-        except UserModel.DoesNotExist:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
             return None
         return user if self.user_can_authenticate(user) else None
+
+    def get_user_permissions(self, user_obj, obj=None):
+        qs = UserPermission.objects.filter(
+            user_id=user_obj.pk
+        ).values_list("permission", flat=True)
+
+        if obj:
+            qs = qs.filter(obj_id=obj.pk)
+
+        return list(qs)
+
+    def get_group_permissions(self, user_obj, obj=None):
+        perms = set()
+        qs = Group.objects.filter(users__contains=user_obj)
+        for group in qs:
+            perms.update(group.permissions)
+
+        return list(perms)

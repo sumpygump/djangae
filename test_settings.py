@@ -26,21 +26,19 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'djangae.contrib.googleauth.middleware.AuthenticationMiddleware',
     'djangae.tasks.middleware.task_environment_middleware',
 ]
 
 INSTALLED_APPS = (
-    'django.contrib.auth',
+    'djangae',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
-    'gcloudc',
-    'djangae',
-    'djangae.tasks',
     'djangae.contrib.googleauth',
+    'gcloudc',
+    'djangae.tasks',
 )
 
-AUTH_USER_MODEL = 'googleauth.User'
 AUTHENTICATION_BACKENDS = [
     'djangae.contrib.googleauth.backends.oauth2.OAuthBackend',
 ]
