@@ -83,3 +83,6 @@ class DeferTests(TestCase):
             self.assertEqual(routing['instance'], instance)
 
         del os.environ['GAE_VERSION']
+
+    def test_deprecated_target_parameter(self):
+        self.assertRaises(UserWarning, defer, test_task, _target='test')
