@@ -26,7 +26,7 @@ import types
 from datetime import timedelta
 from urllib.parse import unquote
 
-from djangae.environment import task_queue_name, gae_version
+from djangae.environment import gae_version, task_queue_name
 from djangae.models import DeferIterationMarker
 from djangae.processing import find_key_ranges_for_queryset
 from djangae.utils import retry
