@@ -26,7 +26,7 @@ import types
 from datetime import timedelta
 from urllib.parse import unquote
 
-from djangae.environment import task_queue_name
+from djangae.environment import task_queue_name, gae_version
 from djangae.models import DeferIterationMarker
 from djangae.processing import find_key_ranges_for_queryset
 from djangae.utils import retry
@@ -172,7 +172,7 @@ def defer(obj, *args, **kwargs):
 
     task_args = {x: kwargs.pop(("_%s" % x), None) for x in KWARGS}
 
-    if task_args['target'] or task_args['retry_options']:
+    if task_args['retry_options']:
         raise NotImplementedError("FIXME. Implement these options")
 
     if task_args['transactional']:
@@ -190,6 +190,19 @@ def defer(obj, *args, **kwargs):
     task_headers.update(kwargs.pop("_headers", {}))
 
     queue = kwargs.pop("_queue", _DEFAULT_QUEUE) or _DEFAULT_QUEUE
+
+    # build the routing payload
+    routing = {}
+    target = task_args.get('target', gae_version())
+    if isinstance(target, dict):
+        # handle multiple target values
+        for key in ("service", "version", "instance", "host"):
+            if key in target:
+                routing[key] = target[key]
+    else:
+        # when only one value is specified, set it as the routing version;
+        # when `target` isn't specified, we default to using the current GAE version for routing
+        routing["version"] = target
 
     if wipe_related_caches:
         args = list(args)
@@ -235,6 +248,7 @@ def defer(obj, *args, **kwargs):
                 'relative_uri': deferred_handler_url,
                 'body': pickled,
                 'headers': task_headers,
+                'app_engine_routing': routing,
             }
         }
 
@@ -256,7 +270,8 @@ def defer(obj, *args, **kwargs):
             'app_engine_http_request': {  # Specify the type of request.
                 'http_method': 'POST',
                 'relative_uri': deferred_handler_url,
-                'body': pickled
+                'body': pickled,
+                'app_engine_routing': routing,
             }
         }
 
