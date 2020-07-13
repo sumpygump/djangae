@@ -256,7 +256,8 @@ def defer(obj, *args, **kwargs):
             'app_engine_http_request': {  # Specify the type of request.
                 'http_method': 'POST',
                 'relative_uri': deferred_handler_url,
-                'body': pickled
+                'body': pickled,
+                'headers': task_headers,
             }
         }
 
