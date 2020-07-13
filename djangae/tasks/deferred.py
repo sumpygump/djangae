@@ -205,9 +205,11 @@ def defer(obj, *args, **kwargs):
 
     # build the routing payload
     # default to using the current GAE version
-    routing = {"version": task_args.get("version", gae_version())}
+    routing = {
+        "version": task_args["version"] or gae_version(),
+    }
     for key in ("service", "instance"):
-        if key in task_args:
+        if task_args.get(key):
             routing[key] = task_args[key]
 
     if wipe_related_caches:
