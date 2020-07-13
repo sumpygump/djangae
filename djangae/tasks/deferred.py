@@ -160,6 +160,14 @@ def defer(obj, *args, **kwargs):
 
         It also *always* uses an entity group, unless you pass _small_task=True in which
         case it *never* uses an entity group (but you are limited by 100K)
+
+        :param _service: the GAE service to route the task to
+        :type _service: str, optional
+        :param _version: the GAE app version to route the task to;
+            defaults to using the current GAE version
+        :type _version: str, optional
+        :param _instance: the GAE instance to route the task to
+        :type _instance: str, optional
     """
 
     def serialize(obj, *args, **kwargs):
@@ -167,7 +175,8 @@ def defer(obj, *args, **kwargs):
         return pickle.dumps(curried, protocol=pickle.HIGHEST_PROTOCOL)
 
     KWARGS = {
-        "countdown", "eta", "name", "target", "retry_options", "transactional"
+        "countdown", "eta", "name", "retry_options", "transactional",
+        "service", "version", "instance",
     }
 
     task_args = {x: kwargs.pop(("_%s" % x), None) for x in KWARGS}
@@ -179,6 +188,9 @@ def defer(obj, *args, **kwargs):
         logger.warn(
             "WARNING: Transactional tasks are not yet supported. This could lead to unexpected behaviour!"
         )
+
+    if "_target" in kwargs:
+        raise UserWarning("'_target' parameter is no longer supported, use '_version' instead.")
 
     deferred_handler_url = kwargs.pop("_url", None) or unquote(force_str(_DEFAULT_URL))
 
@@ -192,16 +204,11 @@ def defer(obj, *args, **kwargs):
     queue = kwargs.pop("_queue", _DEFAULT_QUEUE) or _DEFAULT_QUEUE
 
     # build the routing payload
-    routing = {}
-    target = task_args.get('target')
-    if isinstance(target, dict):
-        # handle multiple target values
-        for key in ("service", "version", "instance", "host"):
-            if key in target:
-                routing[key] = target[key]
-    else:
-        # when `target` isn't specified, we default to using the current GAE version
-        routing["version"] = gae_version()
+    # default to using the current GAE version
+    routing = {"version": task_args.get("version", gae_version())}
+    for key in ("service", "instance"):
+        if key in task_args:
+            routing[key] = task_args[key]
 
     if wipe_related_caches:
         args = list(args)
