@@ -20,6 +20,7 @@
   - djangae.forms (used for database fields which no longer exist in djangae)
   - lib.memcache (memcache doesn't exist on the Python 3 runtime)
 - Control deferred task routing & default to routing tasks to their parent GAE version
+- Make `djangae/contrib/security/middleware.py` Python 3.7 compatible
 
 
 ### Bug fixes:
