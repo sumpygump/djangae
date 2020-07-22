@@ -19,6 +19,16 @@ GOOGLE_USER_INFO = "https://www.googleapis.com/oauth2/v1/userinfo"
 _DEFAULT_WHITELISTED_SCOPES = _DEFAULT_OAUTH_SCOPES[:]
 
 
+def _get_scopes(request_scopes):
+    if not request_scopes:
+        return _DEFAULT_WHITELISTED_SCOPES
+    else:
+        parsed_scopes = request_scopes.split(',')
+        if set(parsed_scopes) - set(_DEFAULT_WHITELISTED_SCOPES) != set():
+            raise ValueError
+        return parsed_scopes
+
+
 def login(request):
     """
         This view should be set as your login_url for using OAuth
@@ -26,12 +36,13 @@ def login(request):
     """
     original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
 
+    scopes = _get_scopes(request.GET.get('scopes'))
     next_url = request.GET.get('next')
     if next_url:
         request.session[auth.REDIRECT_FIELD_NAME] = next_url
 
     credentials, project = google_auth.default()
-    google = OAuth2Session(credentials.client_id, scope=_DEFAULT_WHITELISTED_SCOPES, redirect_uri=original_url)
+    google = OAuth2Session(credentials.client_id, scope=scopes, redirect_uri=original_url)
     authorization_url, state = google.authorization_url(
         AUTHORIZATION_BASE_URL,
         access_type="offline",
