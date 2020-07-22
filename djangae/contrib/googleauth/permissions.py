@@ -53,14 +53,4 @@ class PermissionChoiceField(models.CharField):
     def __init__(self, *args, **kwargs):
         kwargs["max_length"] = 150
         kwargs["choices"] = PermissionChoiceIterator()
-        if kwargs.get('verbose_name'):
-            print(">>>>>>>>>>>>>>>>>>>>>")
-            print(args)
-            print(kwargs)
-            print(">>>>>>>>>>>>>>>>>>>>>")
-            kwargs.pop('verbose_name')
         super().__init__(self, *args, **kwargs)
-
-    # class Meta:
-    #     verbose_name = _('permission')
-    #     verbose_name_plural = _('permissions')

@@ -1,41 +1,46 @@
 from djangae.test import TestCase
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from django.test import override_settings
+from django.test import override_settings, LiveServerTestCase
+from django.shortcuts import reverse
 from django.urls import (
     include,
     path,
 )
 
 
+
 class PermissionTests(TestCase):
     pass
 
 
-@login_required
-def login(request):
+@login_required(login_url='/googleauth/oauth2/login/')
+def a_protected_view(request):
     return HttpResponse("OK")
 
 
 urlpatterns = [
-    path("login_required", login),
-    path("googleauth", include("djangae.contrib.googleauth"))
+    path("protected", a_protected_view),
+    path("googleauth/", include("djangae.contrib.googleauth.urls"))
 ]
 
 
 @override_settings(ROOT_URLCONF=__name__)
-class OAuthTests(TestCase):
+class OAuthTests(LiveServerTestCase):
 
     def test_redirect_to_authorization_url(self):
         """
             Access to a page that is login_required
             should redirect to the authorization url
         """
-
-        import ipdb; ipdb.set_trace()
-        response = self.client.get("/login_required")
+        live_server_domain = self.live_server_url.split('://')[-1]
+        response = self.client.get('/protected', HTTP_HOST=live_server_domain)
+        self.assertTrue(reverse("googleauth_oauth2login") in response.url)
         self.assertEqual(302, response.status_code)
-        pass
+
+        response = self.client.get(response.url, HTTP_HOST=live_server_domain)
+        self.assertTrue('https://accounts.google.com/o/oauth2/v2/auth' in response.url)
+        self.assertEqual(302, response.status_code)
 
     def test_oauth_callback_creates_session(self):
         """

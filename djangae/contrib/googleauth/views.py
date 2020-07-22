@@ -63,7 +63,7 @@ def oauth2callback(request):
         r = google.get(GOOGLE_USER_INFO)
         raw_user = r.json()
         # credentials are valid, we should authenticate the user
-        user = auth.authenticate(request, username=raw_user.get('id'), email=raw_user.get('email'))
+        user = auth.authenticate(request, username=raw_user.get('id'), email=raw_user.get('email'), token=token)
         auth.login(request, user)
         return HttpResponseRedirect(next_url)
 
