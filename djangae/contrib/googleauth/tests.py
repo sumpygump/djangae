@@ -10,7 +10,7 @@ from django.urls import (
 
 from djangae.contrib.googleauth.decorators import oauth_scopes_required
 from djangae.contrib.googleauth.models import AnonymousUser, User, OAuthUserSession
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 from django.test import RequestFactory
 
 
@@ -29,6 +29,25 @@ urlpatterns = [
 ]
 
 
+class MockedAuth:
+    def default(self):
+        return MockedCreds(), 'test_project'
+
+
+class MockedCreds:
+    def __init__(self, *args, **kwargs):
+        self._client_id = 'xxxxxxx'
+        self._client_secret = 'yyyyyy'
+
+    @property
+    def client_id(self):
+        return self._client_id
+
+    @property
+    def client_secret(self):
+        return self._client_secret
+
+
 @override_settings(ROOT_URLCONF=__name__)
 class OAuthTests(LiveServerTestCase):
 
@@ -38,13 +57,33 @@ class OAuthTests(LiveServerTestCase):
             should redirect to the authorization url
         """
         live_server_domain = self.live_server_url.split('://')[-1]
-        response = self.client.get('/protected', HTTP_HOST=live_server_domain)
+        protected_url = '/protected'
+        response = self.client.get(protected_url, HTTP_HOST=live_server_domain)
         self.assertTrue(reverse("googleauth_oauth2login") in response.url)
         self.assertEqual(302, response.status_code)
 
-        response = self.client.get(response.url, HTTP_HOST=live_server_domain)
-        self.assertTrue('https://accounts.google.com/o/oauth2/v2/auth' in response.url)
-        self.assertEqual(302, response.status_code)
+        with patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True) as mocked_session:
+            with patch('djangae.contrib.googleauth.views.google_auth', new_callable=MockedAuth) as mocked_cred:
+                # force mock return values for authorization_url method to be a tuple
+                state = 'oauthstate'
+                authorization_url = 'oauthauthurl'
+                mocked_session_instance = mocked_session.return_value
+                mocked_session_instance.authorization_url.return_value = (authorization_url, state)
+
+                response = self.client.get(response.url, HTTP_HOST=live_server_domain)
+                # check OAuthSession has been called properly
+                mocked_session_instance.authorization_url.assert_called_once_with(
+                    'https://accounts.google.com/o/oauth2/v2/auth',
+                    access_type='offline',
+                    prompt='select_account'
+                )
+                # check session contains correct keys and values
+                self.assertEqual(self.client.session.get('oauth-state'), state)
+                self.assertEqual(self.client.session.get('next'), protected_url)
+
+                # check that we're redirecting to authorization url returned from the session instance
+                self.assertEqual(response.status_code, 302)
+                self.assertTrue(authorization_url in response.url)
 
     def test_oauth_callback_creates_session(self):
         """

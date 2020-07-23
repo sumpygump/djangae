@@ -4,13 +4,15 @@ from django.urls import reverse
 import google.auth as google_auth
 from requests_oauthlib import OAuth2Session
 from djangae.contrib import googleauth as auth
+from django.conf import settings
 
 
 STATE_SESSION_KEY = 'oauth-state'
 _DEFAULT_OAUTH_SCOPES = [
-        "https://www.googleapis.com/auth/userinfo.email",
-        "https://www.googleapis.com/auth/userinfo.profile"
-    ]
+    "openid",
+    "profile",
+    "email"
+]
 AUTHORIZATION_BASE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://www.googleapis.com/oauth2/v4/token"
 
@@ -21,11 +23,15 @@ _DEFAULT_WHITELISTED_SCOPES = _DEFAULT_OAUTH_SCOPES[:]
 
 def _get_scopes(request_scopes):
     if not request_scopes:
+        return getattr(settings, "GOOGLEAUTH_OAUTH_SCOPES", _DEFAULT_OAUTH_SCOPES)
         return _DEFAULT_WHITELISTED_SCOPES
     else:
         parsed_scopes = request_scopes.split(',')
-        if set(parsed_scopes) - set(_DEFAULT_WHITELISTED_SCOPES) != set():
-            raise ValueError
+        WHITELISTED_SCOPES = getattr(settings, "GOOGLE_OAUTH_SCOPE_WHITELIST", _DEFAULT_WHITELISTED_SCOPES)
+        if set(parsed_scopes) - set(WHITELISTED_SCOPES) != set():
+            raise Http404(
+            "Not all scopes were whitelisted for the application."
+        )
         return parsed_scopes
 
 
@@ -35,9 +41,9 @@ def login(request):
         authentication. It will trigger the main oauth flow.
     """
     original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
-
     scopes = _get_scopes(request.GET.get('scopes'))
     next_url = request.GET.get('next')
+
     if next_url:
         request.session[auth.REDIRECT_FIELD_NAME] = next_url
 
