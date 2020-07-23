@@ -9,8 +9,8 @@ from django.urls import (
 def oauth_scopes_required(function, scopes):
     @functools.wraps(function)
     def wrapper(request, *args, **kwargs):
-        login_reverse = f"{reverse('oauth_login_trigger')}?next={request.get_full_path()}"
-        if request.user.is_authenticated(): # Check if has scopes in oauthusersession
+        login_reverse = f"{reverse('googleauth_oauth2login')}?next={request.get_full_path()}"
+        if request.user.is_authenticated and hasattr(request.user,'oauthusersession'): # Check if has scopes in oauthusersession
             additional_scopes = set(scopes)
             current_scopes = set(request.user.oauthusersession.scopes)
             if additional_scopes - current_scopes != set():
