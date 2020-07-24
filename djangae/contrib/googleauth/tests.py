@@ -93,7 +93,7 @@ class OAuthTests(LiveServerTestCase):
             Middleware should take care of authenticating the
             Django session
         """
-        pass
+        callback_url = 'googleauth_oauth2callback'
 
     def test_login_checks_scope_whitelist(self):
         """
@@ -101,7 +101,12 @@ class OAuthTests(LiveServerTestCase):
             additional scopes in the GET param
             should only work for whitelisted scopes
         """
-        pass
+        live_server_domain = self.live_server_url.split('://')[-1]
+        next_url = '/protected'
+        serialized_scopes = ','.join(["invalid"])
+        protected_url = f"{reverse('googleauth_oauth2login')}?next={next_url}&scopes={serialized_scopes}"
+        response = self.client.get(protected_url, HTTP_HOST=live_server_domain)
+        self.assertEqual(404, response.status_code)
 
     def test_login_respects_additional_scopes(self):
         """
