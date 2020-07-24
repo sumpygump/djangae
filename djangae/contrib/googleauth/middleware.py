@@ -1,7 +1,7 @@
 
 from django.conf import settings
 from django.utils.functional import SimpleLazyObject
-from djangae.contrib.auth import (
+from djangae.contrib.googleauth import (
     BACKEND_SESSION_KEY,
     HASH_SESSION_KEY,
     _get_user_session_key,

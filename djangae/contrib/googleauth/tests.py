@@ -11,7 +11,7 @@ from django.urls import (
 from djangae.contrib.googleauth.decorators import oauth_scopes_required
 from djangae.contrib.googleauth.models import AnonymousUser, User, OAuthUserSession
 from djangae.contrib.googleauth import REDIRECT_FIELD_NAME
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 from django.test import RequestFactory
 
 
@@ -64,7 +64,7 @@ class OAuthTests(LiveServerTestCase):
         self.assertEqual(302, response.status_code)
 
         with patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True) as mocked_session:
-            with patch('djangae.contrib.googleauth.views.google_auth', new_callable=MockedAuth) as mocked_cred:
+            with patch('djangae.contrib.googleauth.views.google_auth', new_callable=MockedAuth):
                 # force mock return values for authorization_url method to be a tuple
                 state = 'oauthstate'
                 authorization_url = 'oauthauthurl'
@@ -94,7 +94,7 @@ class OAuthTests(LiveServerTestCase):
             Middleware should take care of authenticating the
             Django session
         """
-        callback_url = 'googleauth_oauth2callback'
+        pass
 
     def test_login_checks_scope_whitelist(self):
         """
@@ -208,13 +208,13 @@ class OAuthScopesRequiredTests(TestCase):
         request.user = self.user
         func = MagicMock()
         decorated_func_mock = oauth_scopes_required(func, scopes=[])
-        response_mocked = decorated_func_mock(request)
+        decorated_func_mock(request)
         self.assertTrue(func.called)
         self.assertEqual(func.call_count, 1)
 
         func.reset_mock()
         decorated_func_mock = oauth_scopes_required(func, scopes=self._DEFAULT_OAUTH_SCOPES)
-        response_mocked = decorated_func_mock(request)
+        decorated_func_mock(request)
         self.assertTrue(func.called)
         self.assertEqual(func.call_count, 1)
 
