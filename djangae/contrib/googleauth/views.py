@@ -1,10 +1,11 @@
-from django.http import HttpResponseRedirect, Http404
+from django.http import HttpResponseRedirect, Http404, HttpResponseBadRequest
 from django.urls import reverse
 
 import google.auth as google_auth
 from requests_oauthlib import OAuth2Session
 from djangae.contrib import googleauth as auth
 from django.conf import settings
+from oauthlib.oauth2.rfc6749.errors import MismatchingStateError
 
 
 STATE_SESSION_KEY = 'oauth-state'
@@ -64,17 +65,26 @@ def oauth2callback(request):
     original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
 
     credentials, project = google_auth.default()
+
+    if not request.session.has_key(STATE_SESSION_KEY):
+        return HttpResponseBadRequest()
+
     google =  OAuth2Session(
         credentials.client_id,
         state=request.session[STATE_SESSION_KEY],
         redirect_uri=original_url
     )
 
-    token = google.fetch_token(
-        TOKEN_URL,
-        client_secret=credentials.client_secret,
-        authorization_response=request.build_absolute_uri()
-    )
+    token = {}
+    try:
+        token = google.fetch_token(
+            TOKEN_URL,
+            client_secret=credentials.client_secret,
+            authorization_response=request.build_absolute_uri()
+        )
+    except MismatchingStateError:
+        return HttpResponseBadRequest()
+
     next_url = request.session[auth.REDIRECT_FIELD_NAME]
     if google.authorized and next_url:
         r = google.get(GOOGLE_USER_INFO)

@@ -10,6 +10,7 @@ from django.urls import (
 
 from djangae.contrib.googleauth.decorators import oauth_scopes_required
 from djangae.contrib.googleauth.models import AnonymousUser, User, OAuthUserSession
+from djangae.contrib.googleauth import REDIRECT_FIELD_NAME
 from unittest.mock import Mock, MagicMock, patch
 from django.test import RequestFactory
 
@@ -117,10 +118,64 @@ class OAuthTests(LiveServerTestCase):
         pass
 
 
+@override_settings(ROOT_URLCONF=__name__)
 class OAuth2CallbackTests(TestCase):
 
-    def test_invalid_token_raises_404(self):
-        pass
+    def test_session_key_missing_raise_400(self):
+        live_server_domain = self.live_server_url.split('://')[-1]
+        response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_state_raises_400(self):
+        live_server_domain = self.live_server_url.split('://')[-1]
+        session = self.client.session
+        session['oauth-state'] = 'somestate'
+        session.save()
+        response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
+        self.assertEqual(response.status_code, 400)
+
+    @patch('djangae.contrib.googleauth.login', autospec=True)
+    @patch('djangae.contrib.googleauth.authenticate', autospec=True)
+    @patch('djangae.contrib.googleauth.views.google_auth', new_callable=MockedAuth)
+    @patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True)
+    def test_valid_credentials_log_user(self, mocked_session, mocked_cred, mocked_auth, mocked_login):
+        live_server_domain = self.live_server_url.split('://')[-1]
+        session = self.client.session
+        session['oauth-state'] = 'somestate'
+        session[REDIRECT_FIELD_NAME] = '/next_url'
+        session.save()
+
+        response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
+        # check authenticate and login function are called
+        self.assertTrue(mocked_auth.called)
+        self.assertTrue(mocked_login.called)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(session[REDIRECT_FIELD_NAME] in response.url)
+
+    @patch('djangae.contrib.googleauth.login', autospec=True)
+    @patch('djangae.contrib.googleauth.authenticate', autospec=True)
+    @patch('djangae.contrib.googleauth.views.google_auth', new_callable=MockedAuth)
+    @patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True)
+    def test_unauthorized_credentials_redirect_to_login(self, mocked_session, mocked_cred, mocked_auth, mocked_login):
+        # set authorized to return False, this should cause a redirect to login, and restart the flow
+        mocked_session_instance = mocked_session.return_value
+        mocked_session_instance.authorized = False
+
+        live_server_domain = self.live_server_url.split('://')[-1]
+        session = self.client.session
+        session['oauth-state'] = 'somestate'
+        session[REDIRECT_FIELD_NAME] = '/next_url'
+        session.save()
+
+        response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
+
+        # check authenticate and login function are not called
+        self.assertFalse(mocked_auth.called)
+        self.assertFalse(mocked_login.called)
+        # check we're restarting login flow
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(reverse("googleauth_oauth2login") in response.url)
 
     def test_scopes_must_be_whitelisted(self):
         pass
