@@ -5,7 +5,6 @@ from ..models import (
     User,
     UserPermission,
 )
-from django.db import transaction
 
 
 class OAuthBackend(BaseBackend):

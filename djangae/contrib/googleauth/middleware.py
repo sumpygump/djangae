@@ -1,21 +1,13 @@
 
 from django.conf import settings
-from django.contrib.auth import (
+from django.utils.functional import SimpleLazyObject
+from djangae.contrib.auth import (
     BACKEND_SESSION_KEY,
     HASH_SESSION_KEY,
     _get_user_session_key,
     constant_time_compare,
     load_backend,
-    logout,
 )
-
-from .backends.iap import IAPBackend
-from .backends.oauth2 import OAuthBackend
-from .models import OAuthUserSession
-from django.contrib import auth
-from django.urls import reverse
-from django.shortcuts import redirect
-from django.utils.functional import SimpleLazyObject
 
 
 def get_user_object(request):

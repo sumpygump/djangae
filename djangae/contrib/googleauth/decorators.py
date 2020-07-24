@@ -10,7 +10,7 @@ def oauth_scopes_required(function, scopes):
     @functools.wraps(function)
     def wrapper(request, *args, **kwargs):
         login_reverse = f"{reverse('googleauth_oauth2login')}?next={request.get_full_path()}"
-        if request.user.is_authenticated and hasattr(request.user,'oauthusersession'): # Check if has scopes in oauthusersession
+        if request.user.is_authenticated and hasattr(request.user, 'oauthusersession'):
             additional_scopes = set(scopes)
             current_scopes = set(request.user.oauthusersession.scopes)
             if additional_scopes - current_scopes != set():

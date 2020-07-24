@@ -30,9 +30,7 @@ def _get_scopes(request_scopes):
         parsed_scopes = request_scopes.split(',')
         WHITELISTED_SCOPES = getattr(settings, "GOOGLE_OAUTH_SCOPE_WHITELIST", _DEFAULT_WHITELISTED_SCOPES)
         if set(parsed_scopes) - set(WHITELISTED_SCOPES) != set():
-            raise Http404(
-            "Not all scopes were whitelisted for the application."
-        )
+            raise Http404("Not all scopes were whitelisted for the application.")
         return parsed_scopes
 
 
@@ -66,10 +64,10 @@ def oauth2callback(request):
 
     credentials, project = google_auth.default()
 
-    if not request.session.has_key(STATE_SESSION_KEY):
+    if STATE_SESSION_KEY not in request.session:
         return HttpResponseBadRequest()
 
-    google =  OAuth2Session(
+    google = OAuth2Session(
         credentials.client_id,
         state=request.session[STATE_SESSION_KEY],
         redirect_uri=original_url
