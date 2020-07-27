@@ -1,10 +1,10 @@
 # THIRD PARTY
-from django.conf.urls import url
+from django.urls import path
 
 # DJANGAE
 from .views import cleanup_locks
 
 
 urlpatterns = [
-    url(r'^djangae-cleanup-locks/$', cleanup_locks, name="cleanup_locks"),
+    path('djangae-cleanup-locks/', cleanup_locks, name="cleanup_locks"),
 ]
