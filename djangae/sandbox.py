@@ -162,9 +162,11 @@ def stop_emulators(emulators=None):
         return
 
     emulators = emulators or _ALL_EMULATORS
-    for k, v in _ACTIVE_EMULATORS.items():
-        if k in emulators:
-            v.kill()
+    for name, proc in _ACTIVE_EMULATORS.items():
+        if name in emulators:
+            logger.info('Stopping %s emulator', name)
+            proc.terminate()
+            proc.wait()
 
 
 def enable_test_environment_variables():
