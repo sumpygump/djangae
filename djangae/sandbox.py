@@ -81,7 +81,7 @@ def _wait(port, service):
 def start_emulators(
     persist_data: bool,
     project_id: str = DEFAULT_PROJECT_ID,
-    emulators: Optional[Sequence[str]] = None,
+    emulators: Sequence[str] = _ALL_EMULATORS,
     datastore_port: int = DATASTORE_PORT,
     tasks_port: int = TASKS_PORT,
     task_target_port: Optional[int] = None,
@@ -94,7 +94,6 @@ def start_emulators(
     if os.environ.get(DJANGO_AUTORELOAD_ENV) == 'true':
         return
 
-    emulators = emulators or _ALL_EMULATORS
     storage_dir = storage_dir or os.path.join(get_application_root(), ".storage")
     enable_test_environment_variables()
 
