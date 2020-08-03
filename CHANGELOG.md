@@ -21,6 +21,7 @@
   - lib.memcache (memcache doesn't exist on the Python 3 runtime)
 - Control deferred task routing & default to routing tasks to their parent GAE version
 - Make `djangae/contrib/security/middleware.py` Python 3.7 compatible
+- Update `djangae.contrib.backup` and `djangae.contrib.locking` URLs to use the Django 2 `path` function
 
 
 ### Bug fixes:
