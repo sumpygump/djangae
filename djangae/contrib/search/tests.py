@@ -29,6 +29,28 @@ class DocumentTests(TestCase):
 
 
 class IndexingTests(TestCase):
+    def test_indexing_atom_fields(self):
+        class Doc(Document):
+            atom = search.AtomField()
+
+        doc1 = Doc(atom="This is a test")
+        doc2 = Doc(atom="This is also a test")
+        doc3 = Doc(atom="This")
+
+        index = Index(name="MyIndex")
+        index.add(doc1)
+        index.add(doc2)
+
+        # Exact match, or exact field match should return doc1
+        self.assertTrue(doc1 in index.search('atom:"This is a test"'))
+        self.assertFalse(doc2 in index.search('atom:"This is a test"'))
+        self.assertTrue(doc1 in index.search('"This is a test"'))
+
+        # Partial match should only return exact atom matches
+        self.assertTrue(doc3 in index.search('This'))
+        self.assertFalse(doc1 in index.search('This'))
+        self.assertFalse(doc2 in index.search('This'))
+
     def test_indexing_text_fields(self):
         class Doc(Document):
             text = search.TextField()
@@ -76,11 +98,10 @@ class IndexingTests(TestCase):
             [x.id for x in results]
         )
 
-        # FIXME: Exact matching
-        # results = [x for x in index.search('"cheese" OR pickle')]
+        results = [x for x in index.search('"cheese" OR pickle')]
 
         # Both documents should have come back
-        # self.assertCountEqual(
-        #   [doc.id, doc2.id],
-        #   [x.id for x in results]
-        # )
+        self.assertCountEqual(
+          [doc.id, doc2.id],
+          [x.id for x in results]
+        )
