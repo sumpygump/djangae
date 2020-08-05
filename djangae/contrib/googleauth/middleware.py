@@ -1,13 +1,14 @@
 
 from django.conf import settings
-from django.utils.functional import SimpleLazyObject
-from djangae.contrib.googleauth import (
+from django.contrib.auth import (
     BACKEND_SESSION_KEY,
     HASH_SESSION_KEY,
     _get_user_session_key,
     constant_time_compare,
     load_backend,
 )
+from django.utils.deprecation import MiddlewareMixin
+from django.utils.functional import SimpleLazyObject
 
 
 def get_user_object(request):
@@ -45,21 +46,6 @@ def get_user(request):
     if not hasattr(request, '_cached_user'):
         request._cached_user = get_user_object(request)
     return request._cached_user
-
-
-class MiddlewareMixin:
-    def __init__(self, get_response=None):
-        self.get_response = get_response
-        super().__init__()
-
-    def __call__(self, request):
-        response = None
-        if hasattr(self, 'process_request'):
-            response = self.process_request(request)
-        response = response or self.get_response(request)
-        if hasattr(self, 'process_response'):
-            response = self.process_response(request, response)
-        return response
 
 
 class AuthenticationMiddleware(MiddlewareMixin):

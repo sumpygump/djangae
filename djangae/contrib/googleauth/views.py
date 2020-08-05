@@ -1,12 +1,15 @@
-from django.http import HttpResponseRedirect, Http404, HttpResponseBadRequest
-from django.urls import reverse
-
-import google.auth as google_auth
-from requests_oauthlib import OAuth2Session
-from djangae.contrib import googleauth as auth
 from django.conf import settings
-from oauthlib.oauth2.rfc6749.errors import MismatchingStateError
+from django.contrib import auth
+from django.http import (
+    Http404,
+    HttpResponseBadRequest,
+    HttpResponseRedirect,
+)
+from django.urls import reverse
+from google import auth as google_auth
 
+from oauthlib.oauth2.rfc6749.errors import MismatchingStateError
+from requests_oauthlib import OAuth2Session
 
 STATE_SESSION_KEY = 'oauth-state'
 _DEFAULT_OAUTH_SCOPES = [

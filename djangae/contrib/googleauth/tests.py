@@ -1,5 +1,8 @@
-from djangae.test import TestCase
+
+from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.decorators import login_required
+
+from djangae.test import TestCase
 from django.http import HttpResponse
 from django.test import override_settings, LiveServerTestCase
 from django.shortcuts import reverse
@@ -10,7 +13,6 @@ from django.urls import (
 
 from djangae.contrib.googleauth.decorators import oauth_scopes_required
 from djangae.contrib.googleauth.models import AnonymousUser, User, OAuthUserSession
-from djangae.contrib.googleauth import REDIRECT_FIELD_NAME
 from unittest.mock import MagicMock, patch
 from django.test import RequestFactory
 
@@ -134,8 +136,8 @@ class OAuth2CallbackTests(TestCase):
         response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
         self.assertEqual(response.status_code, 400)
 
-    @patch('djangae.contrib.googleauth.login', autospec=True)
-    @patch('djangae.contrib.googleauth.authenticate', autospec=True)
+    @patch('django.contrib.auth.login', autospec=True)
+    @patch('django.contrib.auth.authenticate', autospec=True)
     @patch('djangae.contrib.googleauth.views.google_auth', new_callable=MockedAuth)
     @patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True)
     def test_valid_credentials_log_user(self, mocked_session, mocked_cred, mocked_auth, mocked_login):
@@ -153,8 +155,8 @@ class OAuth2CallbackTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(session[REDIRECT_FIELD_NAME] in response.url)
 
-    @patch('djangae.contrib.googleauth.login', autospec=True)
-    @patch('djangae.contrib.googleauth.authenticate', autospec=True)
+    @patch('django.contrib.auth.login', autospec=True)
+    @patch('django.contrib.auth.authenticate', autospec=True)
     @patch('djangae.contrib.googleauth.views.google_auth', new_callable=MockedAuth)
     @patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True)
     def test_unauthorized_credentials_redirect_to_login(self, mocked_session, mocked_cred, mocked_auth, mocked_login):
