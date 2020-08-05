@@ -6,7 +6,7 @@ from django.http import (
     HttpResponseRedirect,
 )
 from django.urls import reverse
-from google import auth as google_auth
+from djangae.credentials import default as default_credentials
 
 from oauthlib.oauth2.rfc6749.errors import MismatchingStateError
 from requests_oauthlib import OAuth2Session
@@ -49,7 +49,7 @@ def login(request):
     if next_url:
         request.session[auth.REDIRECT_FIELD_NAME] = next_url
 
-    credentials, project = google_auth.default()
+    credentials, project = default_credentials()
     google = OAuth2Session(credentials.client_id, scope=scopes, redirect_uri=original_url)
     authorization_url, state = google.authorization_url(
         AUTHORIZATION_BASE_URL,
@@ -65,7 +65,7 @@ def oauth2callback(request):
 
     original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
 
-    credentials, project = google_auth.default()
+    credentials, project = default_credentials()
 
     if STATE_SESSION_KEY not in request.session:
         return HttpResponseBadRequest()
