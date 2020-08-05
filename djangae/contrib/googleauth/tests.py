@@ -66,27 +66,26 @@ class OAuthTests(LiveServerTestCase):
         self.assertEqual(302, response.status_code)
 
         with patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True) as mocked_session:
-            with patch('djangae.contrib.googleauth.views.google_auth', new_callable=MockedAuth):
-                # force mock return values for authorization_url method to be a tuple
-                state = 'oauthstate'
-                authorization_url = 'oauthauthurl'
-                mocked_session_instance = mocked_session.return_value
-                mocked_session_instance.authorization_url.return_value = (authorization_url, state)
+            # force mock return values for authorization_url method to be a tuple
+            state = 'oauthstate'
+            authorization_url = 'oauthauthurl'
+            mocked_session_instance = mocked_session.return_value
+            mocked_session_instance.authorization_url.return_value = (authorization_url, state)
 
-                response = self.client.get(response.url, HTTP_HOST=live_server_domain)
-                # check OAuthSession has been called properly
-                mocked_session_instance.authorization_url.assert_called_once_with(
-                    'https://accounts.google.com/o/oauth2/v2/auth',
-                    access_type='offline',
-                    prompt='select_account'
-                )
-                # check session contains correct keys and values
-                self.assertEqual(self.client.session.get('oauth-state'), state)
-                self.assertEqual(self.client.session.get('next'), protected_url)
+            response = self.client.get(response.url, HTTP_HOST=live_server_domain)
+            # check OAuthSession has been called properly
+            mocked_session_instance.authorization_url.assert_called_once_with(
+                'https://accounts.google.com/o/oauth2/v2/auth',
+                access_type='offline',
+                prompt='select_account'
+            )
+            # check session contains correct keys and values
+            self.assertEqual(self.client.session.get('oauth-state'), state)
+            self.assertEqual(self.client.session.get('next'), protected_url)
 
-                # check that we're redirecting to authorization url returned from the session instance
-                self.assertEqual(response.status_code, 302)
-                self.assertTrue(authorization_url in response.url)
+            # check that we're redirecting to authorization url returned from the session instance
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(authorization_url in response.url)
 
     def test_oauth_callback_creates_session(self):
         """
@@ -138,9 +137,8 @@ class OAuth2CallbackTests(TestCase):
 
     @patch('django.contrib.auth.login', autospec=True)
     @patch('django.contrib.auth.authenticate', autospec=True)
-    @patch('djangae.contrib.googleauth.views.google_auth', new_callable=MockedAuth)
     @patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True)
-    def test_valid_credentials_log_user(self, mocked_session, mocked_cred, mocked_auth, mocked_login):
+    def test_valid_credentials_log_user(self, mocked_session, mocked_auth, mocked_login):
         live_server_domain = self.live_server_url.split('://')[-1]
         session = self.client.session
         session['oauth-state'] = 'somestate'
@@ -157,9 +155,8 @@ class OAuth2CallbackTests(TestCase):
 
     @patch('django.contrib.auth.login', autospec=True)
     @patch('django.contrib.auth.authenticate', autospec=True)
-    @patch('djangae.contrib.googleauth.views.google_auth', new_callable=MockedAuth)
     @patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True)
-    def test_unauthorized_credentials_redirect_to_login(self, mocked_session, mocked_cred, mocked_auth, mocked_login):
+    def test_unauthorized_credentials_redirect_to_login(self, mocked_session, mocked_auth, mocked_login):
         # set authorized to return False, this should cause a redirect to login, and restart the flow
         mocked_session_instance = mocked_session.return_value
         mocked_session_instance.authorized = False

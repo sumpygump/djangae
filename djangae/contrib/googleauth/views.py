@@ -6,10 +6,14 @@ from django.http import (
     HttpResponseRedirect,
 )
 from django.urls import reverse
-from djangae.credentials import default as default_credentials
 
 from oauthlib.oauth2.rfc6749.errors import MismatchingStateError
 from requests_oauthlib import OAuth2Session
+
+from . import (
+    _CLIENT_ID_SETTING,
+    _CLIENT_SECRET_SETTING,
+)
 
 STATE_SESSION_KEY = 'oauth-state'
 _DEFAULT_OAUTH_SCOPES = [
@@ -49,8 +53,10 @@ def login(request):
     if next_url:
         request.session[auth.REDIRECT_FIELD_NAME] = next_url
 
-    credentials, project = default_credentials()
-    google = OAuth2Session(credentials.client_id, scope=scopes, redirect_uri=original_url)
+    client_id = getattr(settings, _CLIENT_ID_SETTING)
+    assert client_id
+
+    google = OAuth2Session(client_id, scope=scopes, redirect_uri=original_url)
     authorization_url, state = google.authorization_url(
         AUTHORIZATION_BASE_URL,
         access_type="offline",
@@ -65,13 +71,16 @@ def oauth2callback(request):
 
     original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
 
-    credentials, project = default_credentials()
-
     if STATE_SESSION_KEY not in request.session:
         return HttpResponseBadRequest()
 
+    client_id = getattr(settings, _CLIENT_ID_SETTING)
+    client_secret = getattr(settings, _CLIENT_SECRET_SETTING)
+
+    assert client_id and client_secret
+
     google = OAuth2Session(
-        credentials.client_id,
+        client_id,
         state=request.session[STATE_SESSION_KEY],
         redirect_uri=original_url
     )
@@ -80,7 +89,7 @@ def oauth2callback(request):
     try:
         token = google.fetch_token(
             TOKEN_URL,
-            client_secret=credentials.client_secret,
+            client_secret=client_secret,
             authorization_response=request.build_absolute_uri()
         )
     except MismatchingStateError:

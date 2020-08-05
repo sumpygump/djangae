@@ -43,6 +43,9 @@ AUTHENTICATION_BACKENDS = [
     'djangae.contrib.googleauth.backends.oauth2.OAuthBackend',
 ]
 
+GOOGLE_AUTH_CLIENT_ID = "test"
+GOOGLE_AUTH_CLIENT_SECRET = "test"
+
 DATABASES = {
     'default': {
         'ENGINE': 'gcloudc.db.backends.datastore',
