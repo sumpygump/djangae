@@ -22,23 +22,26 @@ CACHES = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'djangae.contrib.googleauth.middleware.AuthenticationMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'djangae.contrib.googleauth.middleware.AuthenticationMiddleware',
     'djangae.tasks.middleware.task_environment_middleware',
 ]
 
 INSTALLED_APPS = (
-    'django.contrib.sessions',
-    'gcloudc',
     'djangae',
-    'djangae.tasks',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
     'djangae.contrib.googleauth',
+    'gcloudc',
+    'djangae.tasks',
 )
 
-AUTH_USER_MODEL = 'djangae.contrib.googleauth.User'
+AUTHENTICATION_BACKENDS = [
+    'djangae.contrib.googleauth.backends.oauth2.OAuthBackend',
+]
 
 DATABASES = {
     'default': {
@@ -73,3 +76,5 @@ ROOT_URLCONF = __name__
 urlpatterns = [
     path('tasks/', include('djangae.tasks.urls')),
 ]
+
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'

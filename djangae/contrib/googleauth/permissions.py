@@ -2,6 +2,7 @@ from django.apps import apps
 from django.conf import settings
 from django.db import models
 
+
 CUSTOM_PERMISSIONS = getattr(settings, "GOOGLEAUTH_CUSTOM_PERMISSIONS", {})
 
 
@@ -51,4 +52,8 @@ class PermissionChoiceField(models.CharField):
     def __init__(self, *args, **kwargs):
         kwargs["max_length"] = 150
         kwargs["choices"] = PermissionChoiceIterator()
+        # FIXME: for some reason, we're receiving two times verbose_name
+        # and this is causing the method to fail
+        if kwargs.get("verbose_name"):
+            del kwargs["verbose_name"]
         super().__init__(self, *args, **kwargs)

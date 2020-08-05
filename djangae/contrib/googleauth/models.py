@@ -1,4 +1,4 @@
-from django.contrib.auth import (
+from djangae.contrib.googleauth import (
     _get_backends,
     load_backend,
 )
@@ -6,12 +6,13 @@ from django.contrib.auth.base_user import (
     AbstractBaseUser,
     BaseUserManager,
 )
-from django.contrib.auth.validators import UnicodeUsernameValidator
+from djangae.contrib.googleauth.validators import UnicodeUsernameValidator
 from django.core.mail import send_mail
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from gcloudc.db.models.fields.iterable import SetField
+from gcloudc.db.models.fields.json import JSONField
 
 from .permissions import PermissionChoiceField
 
@@ -28,7 +29,6 @@ class UserManager(BaseUserManager):
         email = self.normalize_email(email)
         username = self.model.normalize_username(username)
         user = self.model(username=username, email=email, **extra_fields)
-        user.set_password(password)
         user.save(using=self._db)
         return user
 
@@ -163,6 +163,14 @@ class User(AbstractBaseUser):
         default=False,
         help_text=_('Designates whether the user can log into this admin site.'),
     )
+    is_superuser = models.BooleanField(
+        _('superuser status'),
+        default=False,
+        help_text=_(
+            'Designates that this user has all permissions without '
+            'explicitly assigning them.'
+        ),
+    )
     is_active = models.BooleanField(
         _('active'),
         default=True,
@@ -182,7 +190,7 @@ class User(AbstractBaseUser):
     class Meta:
         verbose_name = _('user')
         verbose_name_plural = _('users')
-        abstract = True
+        # abstract = True
 
     def clean(self):
         super().clean()
@@ -248,11 +256,18 @@ _OAUTH_USER_SESSION_SESSION_KEY = "_OAUTH_USER_SESSION_ID"
 
 
 class OAuthUserSession(models.Model):
-    email_address = models.EmailField(primary_key=True)
-    authorization_code = models.CharField(max_length=150)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    authorization_code = models.CharField(max_length=150, blank=True)
 
     access_token = models.CharField(max_length=150, blank=True)
     refresh_token = models.CharField(max_length=150, blank=True)
+    id_token = models.CharField(max_length=1500, blank=True)
+    token_type = models.CharField(max_length=150, blank=True)
+    expires_at = models.CharField(max_length=150, blank=True)
+    expires_in = models.CharField(max_length=150, blank=True)
+
+    scopes = SetField(models.CharField(max_length=1500), blank=True)
+    token = JSONField(blank=True)
 
     def is_valid(self):
         pass
