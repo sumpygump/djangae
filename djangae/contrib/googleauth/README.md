@@ -32,7 +32,11 @@ AUTHENTICATION_BACKENDS = [
 ]
 ```
 
-Then, add djangae.contrib.googleauth.urls to your url patterns.
+You'll also need to add the following settings:
 
-After first launch, you should go to the Django admin and fill out your client_id and client_secret settings
-in the `AppOAuthCredentials` instance that should've been created for you.
+```
+GOOGLE_AUTH_CLIENT_ID = '...'
+GOOGLE_AUTH_CLIENT_SECRET = '...
+```
+
+Then, add djangae.contrib.googleauth.urls to your url patterns.
