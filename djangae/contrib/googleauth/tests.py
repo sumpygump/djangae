@@ -1,20 +1,30 @@
 
+from datetime import timedelta
+from unittest.mock import patch
+
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.decorators import login_required
-
-from djangae.test import TestCase
 from django.http import HttpResponse
-from django.test import override_settings, LiveServerTestCase
 from django.shortcuts import reverse
+from django.test import (
+    LiveServerTestCase,
+    RequestFactory,
+    override_settings,
+)
 from django.urls import (
     include,
     path,
 )
+from django.utils import timezone
 
+from djangae.contrib import sleuth
 from djangae.contrib.googleauth.decorators import oauth_scopes_required
-from djangae.contrib.googleauth.models import AnonymousUser, User, OAuthUserSession
-from unittest.mock import MagicMock, patch
-from django.test import RequestFactory
+from djangae.contrib.googleauth.models import (
+    AnonymousUser,
+    OAuthUserSession,
+    User,
+)
+from djangae.test import TestCase
 
 
 class PermissionTests(TestCase):
@@ -65,27 +75,25 @@ class OAuthTests(LiveServerTestCase):
         self.assertTrue(reverse("googleauth_oauth2login") in response.url)
         self.assertEqual(302, response.status_code)
 
-        with patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True) as mocked_session:
-            # force mock return values for authorization_url method to be a tuple
-            state = 'oauthstate'
-            authorization_url = 'oauthauthurl'
-            mocked_session_instance = mocked_session.return_value
-            mocked_session_instance.authorization_url.return_value = (authorization_url, state)
-
+        with sleuth.fake(
+            'djangae.contrib.googleauth.views.OAuth2Session.authorization_url',
+            return_value=('oauthauthurl', 'oauthstate')
+        ) as auth_url:
             response = self.client.get(response.url, HTTP_HOST=live_server_domain)
             # check OAuthSession has been called properly
-            mocked_session_instance.authorization_url.assert_called_once_with(
-                'https://accounts.google.com/o/oauth2/v2/auth',
-                access_type='offline',
-                prompt='select_account'
-            )
+            self.assertEqual(auth_url.calls[0].args[1], 'https://accounts.google.com/o/oauth2/v2/auth')
+            self.assertEqual(auth_url.calls[0].kwargs, {
+                "access_type": 'offline',
+                "prompt": 'select_account'
+            })
+
             # check session contains correct keys and values
-            self.assertEqual(self.client.session.get('oauth-state'), state)
+            self.assertEqual(self.client.session.get('oauth-state'), 'oauthstate')
             self.assertEqual(self.client.session.get('next'), protected_url)
 
             # check that we're redirecting to authorization url returned from the session instance
             self.assertEqual(response.status_code, 302)
-            self.assertTrue(authorization_url in response.url)
+            self.assertTrue('oauthauthurl' in response.url)
 
     def test_oauth_callback_creates_session(self):
         """
@@ -135,17 +143,33 @@ class OAuth2CallbackTests(TestCase):
         response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
         self.assertEqual(response.status_code, 400)
 
-    @patch('django.contrib.auth.login', autospec=True)
-    @patch('django.contrib.auth.authenticate', autospec=True)
-    @patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True)
-    def test_valid_credentials_log_user(self, mocked_session, mocked_auth, mocked_login):
+    def test_valid_credentials_log_user(self):
         live_server_domain = self.live_server_url.split('://')[-1]
         session = self.client.session
         session['oauth-state'] = 'somestate'
         session[REDIRECT_FIELD_NAME] = '/next_url'
         session.save()
 
-        response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
+        fake_token = {
+            'access_token': '9999',
+            'refresh_token': '8888',
+            'token_type': 'Bearer',
+            'expires_in': '30',
+        }
+
+        fake_profile = {
+            'id': '1',
+            'email': 'test@example.com'
+        }
+
+        with sleuth.fake('djangae.contrib.googleauth.views.OAuth2Session.fetch_token', return_value=fake_token), \
+                sleuth.fake('djangae.contrib.googleauth.views.OAuth2Session.authorized', return_value=True), \
+                sleuth.fake('djangae.contrib.googleauth.views.OAuth2Session.get', return_value=fake_profile), \
+                sleuth.watch('django.contrib.auth.authenticate') as mocked_auth, \
+                sleuth.watch('django.contrib.auth.login') as mocked_login:
+
+            response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
+
         # check authenticate and login function are called
         self.assertTrue(mocked_auth.called)
         self.assertTrue(mocked_login.called)
@@ -197,21 +221,26 @@ class OAuthScopesRequiredTests(TestCase):
         self.factory = RequestFactory()
         self.user = User.objects.create_user(username='test', email='test@domain.com')
         self.oauthsession = OAuthUserSession.objects.create(
-            user=self.user,
             scopes=self._DEFAULT_OAUTH_SCOPES,
+            expires_at=timezone.now() + timedelta(seconds=10)
         )
 
     def test_oauth_scopes_required_call_view_if_no_additional_scopes(self):
         """When there are no additional scopes from the one in session, the view is simply called"""
         request = RequestFactory().get('/')
         request.user = self.user
-        func = MagicMock()
+
+        def func(*args, **kwargs):
+            func.called = True
+        func.called = False
+
         decorated_func_mock = oauth_scopes_required(func, scopes=[])
         decorated_func_mock(request)
         self.assertTrue(func.called)
         self.assertEqual(func.call_count, 1)
 
-        func.reset_mock()
+        func.called = False
+
         decorated_func_mock = oauth_scopes_required(func, scopes=self._DEFAULT_OAUTH_SCOPES)
         decorated_func_mock(request)
         self.assertTrue(func.called)
@@ -220,7 +249,11 @@ class OAuthScopesRequiredTests(TestCase):
     def test_oauth_scopes_required_redirects_to_login_if_anonymous(self):
         request = RequestFactory().get('/')
         request.user = AnonymousUser()
-        func = MagicMock()
+
+        def func(*args, **kwargs):
+            func.called = True
+        func.called = False
+
         decorated_func = oauth_scopes_required(func, scopes=[])
         response_mocked = decorated_func(request)
         self.assertFalse(func.called)
@@ -230,7 +263,11 @@ class OAuthScopesRequiredTests(TestCase):
     def test_oauth_scopes_required_redirects_to_login_if_no_oauthsession(self):
         request = RequestFactory().get('/')
         request.user = User.objects.create_user(username='test2', email='test2@domain.com')
-        func = MagicMock()
+
+        def func(*args, **kwargs):
+            func.called = True
+        func.called = False
+
         decorated_func = oauth_scopes_required(func, scopes=[])
         response_mocked = decorated_func(request)
         self.assertFalse(func.called)
@@ -241,7 +278,11 @@ class OAuthScopesRequiredTests(TestCase):
         scopes = self._DEFAULT_OAUTH_SCOPES + ['https://www.googleapis.com/auth/calendar']
         request = RequestFactory().get('/')
         request.user = self.user
-        func = MagicMock()
+
+        def func(*args, **kwargs):
+            func.called = True
+        func.called = False
+
         decorated_func_mock = oauth_scopes_required(func, scopes=scopes)
         response_mocked = decorated_func_mock(request)
         self.assertFalse(func.called)
