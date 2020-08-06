@@ -6,9 +6,13 @@ from django.contrib.auth import (
     _get_user_session_key,
     constant_time_compare,
     load_backend,
+    logout,
 )
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.functional import SimpleLazyObject
+
+from .backends.oauth2 import OAuthBackend
+from .models import OAuthUserSession
 
 
 def get_user_object(request):
@@ -51,9 +55,23 @@ def get_user(request):
 class AuthenticationMiddleware(MiddlewareMixin):
     def process_request(self, request):
         assert hasattr(request, 'session'), (
-            "The Django authentication middleware requires session middleware "
+            "The djangae.contrib.googleauth middleware requires session middleware "
             "to be installed. Edit your MIDDLEWARE%s setting to insert "
             "'django.contrib.sessions.middleware.SessionMiddleware' before "
-            "'django.contrib.auth.middleware.AuthenticationMiddleware'."
+            "'djangae.contrib.googleauth.middleware.AuthenticationMiddleware'."
         ) % ("_CLASSES" if settings.MIDDLEWARE is None else "")
+
         request.user = SimpleLazyObject(lambda: get_user(request))
+
+        if request.user.is_authenticated:
+            backend_str = request.session.get(BACKEND_SESSION_KEY)
+            if backend_str and isinstance(load_backend(backend_str), OAuthBackend):
+                # The user is authenticated with Django, and they use the OAuth backend, so they
+                # should have a valid oauth session
+                oauth_session = OAuthUserSession.objects.filter(
+                    pk=request.user.username
+                ).first()
+
+                # Their oauth session expired, so let's log them out
+                if not oauth_session or not oauth_session.is_valid:
+                    logout(request.user)

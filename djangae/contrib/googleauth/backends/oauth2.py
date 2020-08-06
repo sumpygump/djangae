@@ -1,47 +1,36 @@
 from .base import BaseBackend
+
 from ..models import (
     Group,
-    OAuthUserSession,
     User,
     UserPermission,
+    UserManager
 )
 
 
 class OAuthBackend(BaseBackend):
     def authenticate(self, request, **kwargs):
-        username = kwargs['email']
-        email = kwargs['email']
-        token = kwargs['token']
+        oauth_session = kwargs.get("oauth_session")
 
-        user, created = User.objects.get_or_create(
-                username=username,
-                defaults={
-                    'email': email,
-                }
+        if (not oauth_session) or (not oauth_session.is_valid):
+            return
+
+        # FIXME: Refresh the token if it's close to expiry?
+
+        profile = oauth_session.profile
+
+        # We use the oauth_session ID as the username
+        username = oauth_session.pk
+
+        email = UserManager.normalize_email(profile["email"])
+        assert email
+
+        user, created = User.objects.update_or_create(
+            username=username,
+            defaults={
+                'email': email,
+            }
         )
-
-        # something is wronk with update_or_create, need to fallback to manually doing it
-        # oauth_user = OAuthUserSession.objects.update_or_create(user=user)
-        defaults = {
-            'access_token': token.get('access_token'),
-            'expires_at': token.get('expires_at'),
-            'expires_in': token.get('expires_in'),
-            'id_token': token.get('id_token'),
-            'refresh_token': token.get('refresh_token'),
-            'scopes': token.get('scope'),
-            'token_type': token.get('token_type'),
-        }
-
-        try:
-            obj = OAuthUserSession.objects.get(user=user)
-            for key, value in defaults.items():
-                setattr(obj, key, value)
-            obj.save()
-        except OAuthUserSession.DoesNotExist:
-            new_values = {'user': user}
-            new_values.update(defaults)
-            obj = OAuthUserSession(**new_values)
-            obj.save()
 
         return user
 

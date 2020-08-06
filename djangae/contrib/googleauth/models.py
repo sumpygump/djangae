@@ -203,21 +203,26 @@ _OAUTH_USER_SESSION_SESSION_KEY = "_OAUTH_USER_SESSION_ID"
 
 
 class OAuthUserSession(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    authorization_code = models.CharField(max_length=150, blank=True)
-
     access_token = models.CharField(max_length=150, blank=True)
     refresh_token = models.CharField(max_length=150, blank=True)
     id_token = models.CharField(max_length=1500, blank=True)
     token_type = models.CharField(max_length=150, blank=True)
-    expires_at = models.CharField(max_length=150, blank=True)
-    expires_in = models.CharField(max_length=150, blank=True)
+
+    expires_at = models.DateTimeField()
 
     scopes = SetField(models.CharField(max_length=1500), blank=True)
     token = JSONField(blank=True)
 
+    # The returned profile data from the last refresh
+    profile = JSONField(blank=True)
+
+    # Related Django user (if any)
+    def user(self):
+        return User.objects.filter(username=self.pk).first()
+
+    @property
     def is_valid(self):
-        pass
+        return timezone.now() < self.expires_at
 
     def refresh(self):
         pass
