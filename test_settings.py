@@ -43,6 +43,8 @@ AUTHENTICATION_BACKENDS = [
     'djangae.contrib.googleauth.backends.oauth2.OAuthBackend',
 ]
 
+AUTH_USER_MODEL = "googleauth.User"
+
 GOOGLE_AUTH_CLIENT_ID = "test"
 GOOGLE_AUTH_CLIENT_SECRET = "test"
 

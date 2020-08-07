@@ -3,7 +3,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import REDIRECT_FIELD_NAME
-from django.contrib.auth.decorators import login_required
+from djangae.contrib.googleauth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import reverse
 from django.test import (
