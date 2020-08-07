@@ -4,6 +4,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime
+from typing import Optional, Sequence
 from urllib.error import (
     HTTPError,
     URLError,
@@ -22,6 +23,11 @@ _DJANGO_DEFAULT_PORT = 8000
 DATASTORE_PORT = 10901
 TASKS_PORT = 10908
 STORAGE_PORT = 10911
+
+DEFAULT_PROJECT_ID = "example"
+DEFAULT_BUCKET = "%s.appspot.com" % DEFAULT_PROJECT_ID
+
+logger = logging.getLogger(__name__)
 
 
 def _launch_process(command_line):
@@ -42,7 +48,7 @@ def _wait_for_storage(port):
 
 
 def _wait(port, service):
-    print("Waiting for %s..." % service)
+    logger.info("Waiting for %s..." % service)
 
     TIMEOUT = 60.0
     start = datetime.now()
@@ -58,7 +64,7 @@ def _wait(port, service):
             time.sleep(1)
             if failures > 5:
                 # Only start logging if this becomes persistent
-                logging.exception("Error connecting to the %s. Retrying..." % service)
+                logger.exception("Error connecting to the %s. Retrying..." % service)
             continue
 
         if response.status == 200:
@@ -72,28 +78,38 @@ def _wait(port, service):
         time.sleep(1)
 
 
-def start_emulators(persist_data, emulators=None, storage_dir=None, task_target_port=None, autodetect_task_port=True):
-    # This prevents restarting of the emulators when Django code reload
-    # kicks in
+def start_emulators(
+    persist_data: bool,
+    project_id: str = DEFAULT_PROJECT_ID,
+    emulators: Sequence[str] = _ALL_EMULATORS,
+    datastore_port: int = DATASTORE_PORT,
+    tasks_port: int = TASKS_PORT,
+    task_target_port: Optional[int] = None,
+    autodetect_task_port: bool = True,
+    storage_port: int = STORAGE_PORT,
+    storage_dir: Optional[str] = None,
+
+):
+    # This prevents restarting of the emulators when Django code reload kicks in
     if os.environ.get(DJANGO_AUTORELOAD_ENV) == 'true':
         return
 
-    emulators = emulators or _ALL_EMULATORS
     storage_dir = storage_dir or os.path.join(get_application_root(), ".storage")
+    enable_test_environment_variables()
 
     if "datastore" in emulators:
-        os.environ["DATASTORE_EMULATOR_HOST"] = "127.0.0.1:%s" % DATASTORE_PORT
-        os.environ["DATASTORE_PROJECT_ID"] = "example"
+        os.environ["DATASTORE_EMULATOR_HOST"] = "127.0.0.1:%s" % datastore_port
+        os.environ["DATASTORE_PROJECT_ID"] = project_id
 
         # Start the cloud datastore emulator
         command = "gcloud beta emulators datastore start --consistency=1.0 --quiet --project=example"
-        command += " --host-port=127.0.0.1:%s" % DATASTORE_PORT
+        command += " --host-port=127.0.0.1:%s" % datastore_port
 
         if not persist_data:
             command += " --no-store-on-disk"
 
         _ACTIVE_EMULATORS["datastore"] = _launch_process(command)
-        _wait_for_datastore(DATASTORE_PORT)
+        _wait_for_datastore(datastore_port)
 
     if "tasks" in emulators:
         from djangae.tasks import cloud_tasks_parent_path, cloud_tasks_project, cloud_tasks_location
@@ -112,7 +128,7 @@ def start_emulators(persist_data, emulators=None, storage_dir=None, task_target_
                 task_target_port = _DJANGO_DEFAULT_PORT
 
         command = "gcloud-tasks-emulator start -q --port=%s --target-port=%s --default-queue=%s" % (
-            TASKS_PORT, task_target_port, default_queue
+            tasks_port, task_target_port, default_queue
         )
 
         # If the project contains a queue.yaml, pass it to the Tasks Emulator so that those queues
@@ -123,28 +139,40 @@ def start_emulators(persist_data, emulators=None, storage_dir=None, task_target_
                 queue_yaml, cloud_tasks_project(), cloud_tasks_location()
             )
 
-        os.environ["TASKS_EMULATOR_HOST"] = "127.0.0.1:%s" % TASKS_PORT
+        os.environ["TASKS_EMULATOR_HOST"] = "127.0.0.1:%s" % tasks_port
         _ACTIVE_EMULATORS["tasks"] = _launch_process(command)
-        _wait_for_tasks(TASKS_PORT)
+        _wait_for_tasks(tasks_port)
 
     if "storage" in emulators:
-        os.environ["STORAGE_EMULATOR_HOST"] = "http://127.0.0.1:%s" % STORAGE_PORT
-        command = "gcloud-storage-emulator start -q --port=%s" % STORAGE_PORT
+        os.environ["STORAGE_EMULATOR_HOST"] = "http://127.0.0.1:%s" % storage_port
+        command = "gcloud-storage-emulator start -q --port=%s --default-bucket=%s" % (
+            storage_port, DEFAULT_BUCKET)
 
         if not persist_data:
             command += " --no-store-on-disk"
 
         _ACTIVE_EMULATORS["storage"] = _launch_process(command)
-        _wait_for_storage(STORAGE_PORT)
+        _wait_for_storage(storage_port)
 
 
 def stop_emulators(emulators=None):
-    # This prevents restarting of the emulators when Django code reload
-    # kicks in
+    # This prevents restarting of the emulators when Django code reload kicks in
     if os.environ.get(DJANGO_AUTORELOAD_ENV) == 'true':
         return
 
     emulators = emulators or _ALL_EMULATORS
-    for k, v in _ACTIVE_EMULATORS.items():
-        if k in emulators:
-            v.kill()
+    for name, proc in _ACTIVE_EMULATORS.items():
+        if name in emulators:
+            logger.info('Stopping %s emulator', name)
+            proc.terminate()
+            proc.wait()
+
+
+def enable_test_environment_variables():
+    """
+        Sets up sample environment variables that are available on production
+    """
+
+    os.environ.setdefault("GOOGLE_CLOUD_PROJECT", DEFAULT_PROJECT_ID)
+    os.environ.setdefault("GAE_APPLICATION", "e~%s" % DEFAULT_PROJECT_ID)
+    os.environ.setdefault("GAE_ENV", "development")

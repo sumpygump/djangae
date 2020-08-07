@@ -60,6 +60,11 @@ def task_queue_name():
         return None
 
 
+def gae_version():
+    """Returns the current GAE version."""
+    return os.environ.get('GAE_VERSION')
+
+
 @memoized
 def get_application_root():
     """Traverse the filesystem upwards and return the directory containing app.yaml"""

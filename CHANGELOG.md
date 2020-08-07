@@ -19,6 +19,11 @@
   - djangae.fields (moved to gcloud-connectors)
   - djangae.forms (used for database fields which no longer exist in djangae)
   - lib.memcache (memcache doesn't exist on the Python 3 runtime)
+- Control deferred task routing & default to routing tasks to their parent GAE version
+- Make `djangae/contrib/security/middleware.py` Python 3.7 compatible
+- Update sandbox to allow caller to control emulator ports
+- Update `djangae.contrib.backup` and `djangae.contrib.locking` URLs to use the Django 2 `path` function
+- Fix backup task credentials for GAE Python 3
 
 
 ### Bug fixes:

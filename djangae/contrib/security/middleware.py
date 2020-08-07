@@ -21,31 +21,33 @@ class ApiSecurityException(Exception):
 
 
 def find_argument_index(function, argument):
-    args = function.func_code.co_varnames[:function.func_code.co_argcount]
+    args = list(function.__code__.co_varnames)
     return args.index(argument)
 
 
 def get_default_argument(function, argument):
     argument_index = find_argument_index(function, argument)
-    num_positional_args = (function.func_code.co_argcount - len(function.func_defaults))
+    defaults = function.__defaults__ or ()
+    num_positional_args = (function.__code__.co_argcount - len(defaults))
     default_position = argument_index - num_positional_args
     if default_position < 0:
         return None
-    return function.func_defaults[default_position]
+    return defaults[default_position]
 
 
 def replace_default_argument(function, argument, replacement):
     argument_index = find_argument_index(function, argument)
-    num_positional_args = (
-        function.func_code.co_argcount -
-        len(function.func_defaults)
-    )
+    defaults = function.__defaults__ or ()
+    num_positional_args = function.__code__.co_argcount - len(defaults)
     default_position = argument_index - num_positional_args
     if default_position < 0:
         raise ApiSecurityException('Attempt to modify positional default value')
-    new_defaults = list(function.func_defaults)
-    new_defaults[default_position] = replacement
-    function.func_defaults = tuple(new_defaults)
+    new_defaults = list(defaults)
+    if default_position < len(new_defaults):
+        new_defaults[default_position] = replacement
+    else:
+        new_defaults.append(replacement)
+    function.__defaults__ = tuple(new_defaults)
 
 
 # JSON.

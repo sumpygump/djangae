@@ -27,7 +27,7 @@ import types
 from datetime import timedelta
 from urllib.parse import unquote
 
-from djangae.environment import task_queue_name
+from djangae.environment import gae_version, task_queue_name
 from djangae.models import DeferIterationMarker
 from djangae.processing import find_key_ranges_for_queryset
 from djangae.utils import retry
@@ -167,7 +167,6 @@ def _schedule_task(
 ):
 
     client = get_cloud_tasks_client()
-
     deferred_task = None
     try:
         # Always use an entity group unless this has been
@@ -197,6 +196,7 @@ def _schedule_task(
                 'relative_uri': deferred_handler_url,
                 'body': pickled_data,
                 'headers': task_headers,
+                'app_engine_routing': task_args["routing"],
             }
         }
 
@@ -218,7 +218,8 @@ def _schedule_task(
             'app_engine_http_request': {  # Specify the type of request.
                 'http_method': 'POST',
                 'relative_uri': deferred_handler_url,
-                'body': pickled
+                'body': pickled,
+                'app_engine_routing': task_args["routing"],
             }
         }
 
@@ -242,16 +243,28 @@ def defer(obj, *args, **kwargs):
 
         It also *always* uses an entity group, unless you pass _small_task=True in which
         case it *never* uses an entity group (but you are limited by 100K)
+
+        :param _service: the GAE service to route the task to
+        :type _service: str, optional
+        :param _version: the GAE app version to route the task to;
+            defaults to using the current GAE version
+        :type _version: str, optional
+        :param _instance: the GAE instance to route the task to
+        :type _instance: str, optional
     """
 
     KWARGS = {
-        "countdown", "eta", "name", "target", "retry_options", "transactional", "using"
+        "countdown", "eta", "name", "retry_options", "transactional",
+        "service", "version", "instance", "using"
     }
 
     task_args = {x: kwargs.pop(("_%s" % x), None) for x in KWARGS}
 
-    if task_args['target'] or task_args['retry_options']:
+    if task_args['retry_options']:
         raise NotImplementedError("FIXME. Implement these options")
+
+    if "_target" in kwargs:
+        raise UserWarning("'_target' parameter is no longer supported, use '_version' instead.")
 
     deferred_handler_url = kwargs.pop("_url", None) or unquote(force_str(_DEFAULT_URL))
 
@@ -271,6 +284,18 @@ def defer(obj, *args, **kwargs):
     task_headers.update(kwargs.pop("_headers", {}))
 
     queue = kwargs.pop("_queue", _DEFAULT_QUEUE) or _DEFAULT_QUEUE
+
+    # build the routing payload
+    # default to using the current GAE version
+    routing = {
+        "version": task_args["version"] or gae_version(),
+    }
+    for key in ("service", "instance"):
+        if task_args.get(key):
+            routing[key] = task_args[key]
+
+    # So we can pass through to the schedule function
+    task_args["routing"] = routing
 
     if wipe_related_caches:
         args = list(args)
