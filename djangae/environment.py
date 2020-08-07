@@ -21,7 +21,7 @@ def is_production_environment():
 
 
 def is_development_environment():
-    return 'SERVER_SOFTWARE' not in os.environ or os.environ['SERVER_SOFTWARE'].startswith("Development")
+    return 'GAE_ENV' not in os.environ or os.environ['GAE_ENV'] != 'standard'
 
 
 def is_in_task():
@@ -58,6 +58,11 @@ def task_queue_name():
         return os.environ["HTTP_X_APPENGINE_QUEUENAME"]
     else:
         return None
+
+
+def gae_version():
+    """Returns the current GAE version."""
+    return os.environ.get('GAE_VERSION')
 
 
 @memoized

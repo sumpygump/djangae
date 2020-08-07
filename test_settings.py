@@ -78,6 +78,7 @@ ROOT_URLCONF = __name__
 
 urlpatterns = [
     path('tasks/', include('djangae.tasks.urls')),
+    path('_ah/', include('djangae.urls')),
 ]
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
