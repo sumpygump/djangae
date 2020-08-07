@@ -1,6 +1,6 @@
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
-from djangae.contrib.googleauth.validators import UnicodeUsernameValidator
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.mail import send_mail
 from django.db import models
 from django.utils import timezone
