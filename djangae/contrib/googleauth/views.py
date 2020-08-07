@@ -131,10 +131,6 @@ def oauth2callback(request):
         profile = google.get(GOOGLE_USER_INFO)
         pk = profile["id"]
 
-        print(pk)
-        print("Token %s" % token)
-        print("Profile %s" % profile)
-
         session, _ = OAuthUserSession.objects.update_or_create(
             pk=pk,
             defaults=dict(

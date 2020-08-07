@@ -219,10 +219,14 @@ class OAuthScopesRequiredTests(TestCase):
                 "https://www.googleapis.com/auth/userinfo.profile"
             ]
         self.factory = RequestFactory()
-        self.user = User.objects.create_user(username='test', email='test@domain.com')
         self.oauthsession = OAuthUserSession.objects.create(
             scopes=self._DEFAULT_OAUTH_SCOPES,
             expires_at=timezone.now() + timedelta(seconds=10)
+        )
+        self.user = User.objects.create_user(
+            google_oauth_id=self.oauthsession.pk,
+            username='test',
+            email='test@domain.com'
         )
 
     def test_oauth_scopes_required_call_view_if_no_additional_scopes(self):
@@ -232,7 +236,10 @@ class OAuthScopesRequiredTests(TestCase):
 
         def func(*args, **kwargs):
             func.called = True
+            func.call_count += 1
+
         func.called = False
+        func.call_count = 0
 
         decorated_func_mock = oauth_scopes_required(func, scopes=[])
         decorated_func_mock(request)
@@ -240,6 +247,7 @@ class OAuthScopesRequiredTests(TestCase):
         self.assertEqual(func.call_count, 1)
 
         func.called = False
+        func.call_count = 0
 
         decorated_func_mock = oauth_scopes_required(func, scopes=self._DEFAULT_OAUTH_SCOPES)
         decorated_func_mock(request)

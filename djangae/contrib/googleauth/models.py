@@ -113,6 +113,9 @@ class AnonymousUser:
 class User(AbstractBaseUser):
     username_validator = UnicodeUsernameValidator()
 
+    # If the user was created via OAuth, this is the oauth ID
+    google_oauth_id = models.IntegerField(unique=True, null=True)
+
     username = models.CharField(
         _('username'),
         max_length=150,
@@ -218,7 +221,7 @@ class OAuthUserSession(models.Model):
 
     # Related Django user (if any)
     def user(self):
-        return User.objects.filter(username=self.pk).first()
+        return User.objects.filter(google_oauth_id=self.pk).first()
 
     @property
     def is_valid(self):

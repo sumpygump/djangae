@@ -1,11 +1,14 @@
-from .base import BaseBackend
+from django.db.models import Q
+
+from gcloudc.db import transaction
 
 from ..models import (
     Group,
     User,
+    UserManager,
     UserPermission,
-    UserManager
 )
+from .base import BaseBackend
 
 
 class OAuthBackend(BaseBackend):
@@ -19,18 +22,33 @@ class OAuthBackend(BaseBackend):
 
         profile = oauth_session.profile
 
-        # We use the oauth_session ID as the username
-        username = oauth_session.pk
-
         email = UserManager.normalize_email(profile["email"])
         assert email
 
-        user, created = User.objects.update_or_create(
-            username=username,
-            defaults={
-                'email': email,
-            }
-        )
+        with transaction.atomic():
+            # Look for a user, either by oauth ID, or email
+            user = User.objects.filter(
+                Q(google_oauth_id=oauth_session.pk) | Q(email=email)
+            )
+
+            # So we previously had a user sign in by email, but not
+            # via OAuth, so let's update their user with their oauth
+            # session ID
+            if user:
+                if not user.google_oauth_id:
+                    user.google_oauth_id = oauth_session.pk
+                else:
+                    assert(user.google_oauth_id == oauth_session.pk)
+                    # We got the user by google_oauth_id, but their email
+                    # might have changed (maybe), so update that just in case
+                    user.email = email
+                user.save()
+            else:
+                # First time we've seen this user
+                user = User.objects.create(
+                    google_oauth_id=oauth_session.pk,
+                    email=email
+                )
 
         return user
 
