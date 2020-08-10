@@ -8,7 +8,8 @@ from django.contrib.auth import (
     load_backend,
     logout,
 )
-from django.utils.deprecation import MiddlewareMixin
+
+from django.contrib.auth.middleware import AuthenticationMiddleware
 from django.utils.functional import SimpleLazyObject
 
 from .backends.oauth2 import OAuthBackend
@@ -52,7 +53,7 @@ def get_user(request):
     return request._cached_user
 
 
-class AuthenticationMiddleware(MiddlewareMixin):
+class AuthenticationMiddleware(AuthenticationMiddleware):
     def process_request(self, request):
         assert hasattr(request, 'session'), (
             "The djangae.contrib.googleauth middleware requires session middleware "
