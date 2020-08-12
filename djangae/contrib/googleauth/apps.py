@@ -1,6 +1,7 @@
 from django.apps import AppConfig
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.db.models.signals import post_migrate
 
 from . import (
     _CLIENT_ID_SETTING,
@@ -25,3 +26,7 @@ class GoogleauthConfig(AppConfig):
                         _CLIENT_ID_SETTING, _CLIENT_SECRET_SETTING
                     )
                 )
+
+        # Disconnect Django's Permission creation signals as we don't need it
+        # (and it slows down everything)
+        post_migrate.disconnect(dispatch_uid='django.contrib.auth.management.create_permissions')

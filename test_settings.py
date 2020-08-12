@@ -19,6 +19,13 @@ CACHES = {
     }
 }
 
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'APP_DIRS': True,
+    },
+]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -26,6 +33,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'djangae.contrib.googleauth.middleware.LocalIAPLoginMiddleware',
     'djangae.contrib.googleauth.middleware.AuthenticationMiddleware',
     'djangae.tasks.middleware.task_environment_middleware',
 ]
@@ -34,12 +42,14 @@ INSTALLED_APPS = (
     'djangae',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'django.contrib.auth',
     'djangae.contrib.googleauth',
     'gcloudc',
     'djangae.tasks',
 )
 
 AUTHENTICATION_BACKENDS = [
+    'djangae.contrib.googleauth.backends.iap.IAPBackend',
     'djangae.contrib.googleauth.backends.oauth2.OAuthBackend',
 ]
 
@@ -54,6 +64,9 @@ DATABASES = {
         'INDEXES_FILE': os.path.join(os.path.abspath(os.path.dirname(__file__)), "djangaeidx.yaml"),
         "PROJECT": "test",
         "NAMESPACE": "ns1",  # Use a non-default namespace to catch edge cases where we forget
+        "OPTIONS": {
+            "BULK_BATCH_SIZE": 25
+        }
     }
 }
 

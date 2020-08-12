@@ -1,16 +1,25 @@
 
+import hashlib
+import logging
+import os
+
+from django import forms
 from django.conf import settings
 from django.contrib.auth import (
     BACKEND_SESSION_KEY,
     HASH_SESSION_KEY,
+    REDIRECT_FIELD_NAME,
     _get_user_session_key,
     constant_time_compare,
     load_backend,
     logout,
 )
-
 from django.contrib.auth.middleware import AuthenticationMiddleware
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
 from django.utils.functional import SimpleLazyObject
+
+from djangae.environment import is_production_environment
 
 from .backends.oauth2 import OAuthBackend
 from .models import OAuthUserSession
@@ -76,3 +85,77 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
                 # Their oauth session expired, so let's log them out
                 if not oauth_session or not oauth_session.is_valid:
                     logout(request.user)
+
+
+class ProfileForm(forms.Form):
+    email = forms.EmailField()
+
+
+_CREDENTIALS_FILE = os.path.join(
+    settings.BASE_DIR, ".iap-credentials"
+)
+
+
+def _login_view(request):
+    if request.method == "POST":
+        form = ProfileForm(request.POST)
+        if form.is_valid():
+
+            with open(_CREDENTIALS_FILE, "w") as f:
+                f.write(
+                    "%s\n" % (
+                        form.cleaned_data["email"]
+                    )
+                )
+
+            dest = request.GET.get(REDIRECT_FIELD_NAME, "/")
+            return HttpResponseRedirect(dest)
+    else:
+        form = ProfileForm()
+
+    subs = {
+        "form": form
+    }
+
+    return render(request, "googleauth/dev_login.html", subs)
+
+
+def id_from_email(email):
+    """
+        Just generates a predictable user ID from the email entered
+    """
+    md5 = hashlib.md5()
+    md5.update(email.encode("utf-8"))
+
+    # Truncate to 32-bit
+    return int(md5.hexdigest(), 16) & 0xFFFFFFFF
+
+
+def local_iap_login_middleware(get_response):
+    def middleware(request):
+        if is_production_environment():
+            logging.warning(
+                "local_iap_login_middleware is for local development only, "
+                "and will not work on production. "
+                "You should remove it from your MIDDLEWARE setting"
+            )
+            response = get_response(request)
+        elif request.path == "/_dj/login/":
+            response = _login_view(request)
+        else:
+            if os.path.exists(_CREDENTIALS_FILE):
+                # Update the request headers with the stored credentials
+                with open(_CREDENTIALS_FILE, "r") as f:
+                    data = f.read()
+                    email = data.strip()
+
+                    request.META["HTTP_X_GOOG_AUTHENTICATED_USER_ID"] = id_from_email(email)
+                    request.META["HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL"] = email
+
+            response = get_response(request)
+
+        return response
+    return middleware
+
+
+LocalIAPLoginMiddleware = local_iap_login_middleware

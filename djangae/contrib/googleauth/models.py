@@ -115,6 +115,7 @@ class User(AbstractBaseUser):
 
     # If the user was created via OAuth, this is the oauth ID
     google_oauth_id = models.IntegerField(unique=True, null=True)
+    google_iap_id = models.IntegerField(unique=True, null=True)
 
     username = models.CharField(
         _('username'),
