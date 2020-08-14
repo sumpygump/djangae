@@ -153,6 +153,10 @@ class User(AbstractBaseUser):
     )
     date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
 
+    # Lower-cased versions of fields for querying on Cloud Datastore
+    username_lower = models.CharField(max_length=150, unique=True, editable=False)
+    email_lower = models.EmailField(unique=True, editable=False)
+
     objects = UserManager()
 
     EMAIL_FIELD = 'email'
@@ -203,6 +207,11 @@ class User(AbstractBaseUser):
 
     def __str__(self):
         return self.email
+
+    def save(self, *args, **kwargs):
+        self.username_lower = self.username.lower()
+        self.email_lower = self.email.lower()
+        super().save(*args, **kwargs)
 
 
 class UserPermission(models.Model):
