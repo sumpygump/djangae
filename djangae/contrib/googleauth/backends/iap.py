@@ -3,13 +3,10 @@ import random
 import string
 
 from django.contrib.auth import get_user_model
-from django.db import (
-    connections,
-    router,
-)
 
 from djangae.contrib.googleauth.models import UserManager
 
+from . import _find_atomic_decorator
 from .base import BaseBackend
 
 User = get_user_model()
@@ -45,14 +42,7 @@ class IAPBackend(BaseBackend):
             "HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL" in request.META
 
     def authenticate(self, request, **kwargs):
-        connection = connections[router.db_for_read(User)]
-
-        # FIXME: When Django GCloud Connectors gets rid of its own atomic decorator
-        # the Django atomic() decorator can be used regardless
-        if connection.settings_dict['ENGINE'] == 'gcloudc.db.backends.datastore':
-            from gcloudc.db.transaction import atomic
-        else:
-            from django.db.transaction import atomic
+        atomic = _find_atomic_decorator(User)
 
         user_id = request.META.get("HTTP_X_GOOG_AUTHENTICATED_USER_ID")
         email = request.META.get("HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL")

@@ -1,6 +1,3 @@
-from django.db.models import Q
-
-from gcloudc.db import transaction
 
 from ..models import (
     Group,
@@ -8,11 +5,14 @@ from ..models import (
     UserManager,
     UserPermission,
 )
+from . import _find_atomic_decorator
 from .base import BaseBackend
 
 
 class OAuthBackend(BaseBackend):
     def authenticate(self, request, **kwargs):
+        atomic = _find_atomic_decorator(User)
+
         oauth_session = kwargs.get("oauth_session")
 
         if (not oauth_session) or (not oauth_session.is_valid):
@@ -25,11 +25,15 @@ class OAuthBackend(BaseBackend):
         email = UserManager.normalize_email(profile["email"])
         assert email
 
-        with transaction.atomic():
-            # Look for a user, either by oauth ID, or email
+        with atomic():
+            # Look for a user, either by oauth session ID, or email
             user = User.objects.filter(
-                Q(google_oauth_id=oauth_session.pk) | Q(email=email)
-            )
+                google_oauth_id=oauth_session.pk
+            ).first()
+
+            if not user:
+                # Only fallback to email if we didn't find by session ID
+                user = User.objects.filter(email_lower=email.lower()).first()
 
             # So we previously had a user sign in by email, but not
             # via OAuth, so let's update their user with their oauth
