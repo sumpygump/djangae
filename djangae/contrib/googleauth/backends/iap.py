@@ -45,22 +45,10 @@ class IAPBackend(BaseBackend):
         atomic = _find_atomic_decorator(User)
 
         user_token = request.META.get("HTTP_X_GOOG_AUTHENTICATED_USER_ID")
-
-        if user_token:
-            auth_domain, user_id = user_token.split(":")
-        else:
-            auth_domain, user_id = None, None
-
         email = request.META.get("HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL")
 
         # User not logged in to IAP
         if not user_token or not email:
-            return
-
-        try:
-            user_id = int(user_id)
-        except (TypeError, ValueError):
-            logging.warning("Invalid IAP user id: %s", user_id)
             return
 
         email = UserManager.normalize_email(email)
@@ -110,8 +98,6 @@ class IAPBackend(BaseBackend):
                     # First time we've seen this user
                     user = User.objects.create(
                         google_iap_token=user_token,
-                        google_iap_id=user_id,
-                        google_iap_auth_domain=auth_domain,
                         email=email,
                         username=_generate_unused_username(username)
                     )

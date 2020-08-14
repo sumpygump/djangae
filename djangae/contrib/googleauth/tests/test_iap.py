@@ -18,7 +18,7 @@ class IAPAuthenticationTests(TestCase):
 
         user = User.objects.get()
 
-        self.assertEqual(user.google_iap_id, 99999)
+        self.assertEqual(user.google_iap_token, 'auth.example.com:99999')
         self.assertEqual(user.email, 'test@example.com')
         self.assertEqual(user.username, 'test')
 
@@ -34,7 +34,7 @@ class IAPAuthenticationTests(TestCase):
 
         user = User.objects.get()
 
-        self.assertEqual(user.google_iap_id, 99999)
+        self.assertEqual(user.google_iap_token, 'auth.example.com:99999')
         self.assertEqual(user.email, 'test@example.com')
         self.assertEqual(user.username, 'test')
 
@@ -47,7 +47,7 @@ class IAPAuthenticationTests(TestCase):
 
         user = User.objects.get()
 
-        self.assertEqual(user.google_iap_id, 99999)
+        self.assertEqual(user.google_iap_token, 'auth.example.com:99999')
         self.assertEqual(user.email, 'test22@example.com')
 
         # Username not updated

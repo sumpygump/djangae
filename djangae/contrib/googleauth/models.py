@@ -124,9 +124,6 @@ class User(AbstractBaseUser):
         blank=True
     )
 
-    google_iap_auth_domain = models.CharField(max_length=150, blank=True, default='')
-    google_iap_id = models.IntegerField(null=True)
-
     username = models.CharField(
         _('username'),
         max_length=150,
