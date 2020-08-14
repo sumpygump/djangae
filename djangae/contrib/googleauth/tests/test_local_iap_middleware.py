@@ -1,8 +1,25 @@
 import os
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
+
 from djangae.test import TestCase
+
+User = get_user_model()
 
 
 class LocalIAPMiddlewareTests(TestCase):
+
+    def setUp(self):
+        super().setUp()
+        settings.MIDDLEWARE.insert(
+            settings.MIDDLEWARE.index('djangae.contrib.googleauth.middleware.AuthenticationMiddleware'),
+            'djangae.contrib.googleauth.middleware.LocalIAPLoginMiddleware'
+        )
+
+    def tearDown(self):
+        super().tearDown()
+        settings.MIDDLEWARE.remove('djangae.contrib.googleauth.middleware.LocalIAPLoginMiddleware')
 
     def test_login_view_displayed(self):
         response = self.client.get("/_dj/login/")
@@ -15,16 +32,23 @@ class LocalIAPMiddlewareTests(TestCase):
             "email": "test@example.com"
         }
 
-        response = self.client.post("/_dj/login/?redirect=/", form_data)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'], "/")
+        response = self.client.post("/_dj/login/?next=/", form_data, follow=True)
+        self.assertEqual(response.status_code, 404)
+
+        self.assertIn('_auth_user_id', self.client.session)
+
+        self.assertTrue(
+            User.objects.filter(
+                email="test@example.com"
+            ).exists()
+        )
 
     def test_login_failure(self):
         form_data = {
             "email": "test"
         }
 
-        response = self.client.post("/_dj/login/?redirect=/", form_data)
+        response = self.client.post("/_dj/login/?next=/", form_data)
         self.assertEqual(response.status_code, 200)
 
     def test_noop_on_production(self):
@@ -34,3 +58,16 @@ class LocalIAPMiddlewareTests(TestCase):
             self.assertEqual(404, response.status_code)
         finally:
             del os.environ['GAE_ENV']
+
+    def test_logout(self):
+        form_data = {
+            "email": "test@example.com"
+        }
+
+        response = self.client.post(
+            "/_dj/logout/?next=/",
+            form_data,
+            follow=True
+        )
+
+        self.assertEqual(response.status_code, 404)

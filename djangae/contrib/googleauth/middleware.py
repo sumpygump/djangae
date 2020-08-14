@@ -10,8 +10,10 @@ from django.contrib.auth import (
     HASH_SESSION_KEY,
     REDIRECT_FIELD_NAME,
     _get_user_session_key,
+    authenticate,
     constant_time_compare,
     load_backend,
+    login,
     logout,
 )
 from django.contrib.auth.middleware import AuthenticationMiddleware
@@ -21,6 +23,7 @@ from django.utils.functional import SimpleLazyObject
 
 from djangae.environment import is_production_environment
 
+from .backends.iap import IAPBackend
 from .backends.oauth2 import OAuthBackend
 from .models import OAuthUserSession
 
@@ -73,8 +76,8 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
 
         request.user = SimpleLazyObject(lambda: get_user(request))
 
+        backend_str = request.session.get(BACKEND_SESSION_KEY)
         if request.user.is_authenticated:
-            backend_str = request.session.get(BACKEND_SESSION_KEY)
             if backend_str and isinstance(load_backend(backend_str), OAuthBackend):
                 # The user is authenticated with Django, and they use the OAuth backend, so they
                 # should have a valid oauth session
@@ -85,6 +88,17 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
                 # Their oauth session expired, so let's log them out
                 if not oauth_session or not oauth_session.is_valid:
                     logout(request.user)
+
+            elif backend_str and isinstance(load_backend(backend_str), IAPBackend):
+                if not IAPBackend.can_authenticate(request):
+                    logout(request.user)
+        else:
+            # Try to authenticate with IAP if the headers
+            # are available
+            if IAPBackend.can_authenticate(request):
+                user = authenticate(request)
+                if user.is_authenticated:
+                    login(request, user)
 
 
 class ProfileForm(forms.Form):
@@ -100,7 +114,10 @@ def _login_view(request):
     if request.method == "POST":
         form = ProfileForm(request.POST)
         if form.is_valid():
-
+            # We write a credentials file for 2 reasons:
+            # 1. It will persist across local server restarts.
+            # 2. It will blow up on production, as the local folder
+            #    is not writable.
             with open(_CREDENTIALS_FILE, "w") as f:
                 f.write(
                     "%s\n" % (
@@ -142,6 +159,14 @@ def local_iap_login_middleware(get_response):
             response = get_response(request)
         elif request.path == "/_dj/login/":
             response = _login_view(request)
+        elif request.path == "/_dj/logout/":
+            if os.path.exists(_CREDENTIALS_FILE):
+                os.remove(_CREDENTIALS_FILE)
+
+            if REDIRECT_FIELD_NAME in request.GET:
+                return HttpResponseRedirect(request.GET[REDIRECT_FIELD_NAME])
+            else:
+                return HttpResponseRedirect("/_dj/login/")
         else:
             if os.path.exists(_CREDENTIALS_FILE):
                 # Update the request headers with the stored credentials

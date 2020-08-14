@@ -13,6 +13,11 @@ User = get_user_model()
 
 class IAPBackend(BaseBackend):
 
+    @classmethod
+    def can_authenticate(cls, request):
+        return "HTTP_X_GOOG_AUTHENTICATED_USER_ID" in request.META and \
+            "HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL" in request.META
+
     def authenticate(self, request, **kwargs):
         user_id = request.META.get("HTTP_X_GOOG_AUTHENTICATED_USER_ID")
         email = request.META.get("HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL")
@@ -34,7 +39,7 @@ class IAPBackend(BaseBackend):
             # Look for a user, either by ID, or email
             user = User.objects.filter(
                 Q(google_iap_id=user_id) | Q(email=email)
-            )
+            ).first()
 
             if user:
                 # So we previously had a user sign in by email, but not

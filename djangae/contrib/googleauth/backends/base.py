@@ -10,6 +10,14 @@ class BaseBackend:
     def authenticate(self, request, **kwargs):
         return None
 
+    @classmethod
+    def can_authenticate(cls, request):
+        """
+            This is a pre-check to see if the credentials are
+            available to try to authenticate.
+        """
+        return True
+
     def get_user(self, user_id):
         return None
 

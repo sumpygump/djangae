@@ -33,7 +33,6 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'djangae.contrib.googleauth.middleware.LocalIAPLoginMiddleware',
     'djangae.contrib.googleauth.middleware.AuthenticationMiddleware',
     'djangae.tasks.middleware.task_environment_middleware',
 ]
