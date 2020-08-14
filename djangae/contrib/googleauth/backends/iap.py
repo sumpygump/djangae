@@ -35,6 +35,8 @@ class IAPBackend(BaseBackend):
         email = UserManager.normalize_email(email)
         assert email
 
+        username = email.split("@", 1)[0]
+
         with transaction.atomic():
             # Look for a user, either by ID, or email
             user = User.objects.filter(
@@ -51,12 +53,17 @@ class IAPBackend(BaseBackend):
                     # We got the user by google_iap_id, but their email
                     # might have changed (maybe), so update that just in case
                     user.email = email
+
+                    # Note we don't update the username, as that may have
+                    # been overridden by something post-creation
+
                 user.save()
             else:
                 # First time we've seen this user
                 user = User.objects.create(
                     google_iap_id=user_id,
-                    email=email
+                    email=email,
+                    username=username
                 )
 
         return user
