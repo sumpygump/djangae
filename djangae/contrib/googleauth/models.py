@@ -183,6 +183,27 @@ class User(AbstractBaseUser):
         """Send an email to this user."""
         send_mail(subject, message, from_email, [self.email], **kwargs)
 
+    def has_perm(self, perm, obj=None):
+        from django.contrib.auth.models import _user_has_perm
+
+        # Active superusers have all permissions.
+        if self.is_active and self.is_superuser:
+            return True
+
+        # Otherwise we need to check the backends.
+        return _user_has_perm(self, perm, obj)
+
+    def has_module_perms(self, app_label):
+        from django.contrib.auth.models import _user_has_module_perms
+
+        if self.is_active and self.is_superuser:
+            return True
+
+        return _user_has_module_perms(self, app_label)
+
+    def __str__(self):
+        return self.email
+
 
 class UserPermission(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="permissions")
