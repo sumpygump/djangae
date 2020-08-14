@@ -1,14 +1,40 @@
 import logging
+import random
+import string
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db import (
+    connections,
+    router,
+)
 
 from djangae.contrib.googleauth.models import UserManager
-from gcloudc.db import transaction
 
 from .base import BaseBackend
 
 User = get_user_model()
+
+
+def _generate_unused_username(ideal):
+    """
+        Check the database for a user with the specified username
+        and return either that ideal username, or an unused generated
+        one using the ideal username as a base
+    """
+
+    if not User.objects.filter(username_lower=ideal.lower()).exists():
+        return ideal
+
+    exists = True
+
+    # We use random digits rather than anything sequential to avoid any kind of
+    # attack vector to get this loop stuck
+    while exists:
+        random_digits = "".join([random.choice(string.digits) for x in range(5)])
+        username = "%s-%s" % (ideal, random_digits)
+        exists = User.objects.filter(username_lower=username.lower).exists()
+
+    return username
 
 
 class IAPBackend(BaseBackend):
@@ -19,6 +45,15 @@ class IAPBackend(BaseBackend):
             "HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL" in request.META
 
     def authenticate(self, request, **kwargs):
+        connection = connections[router.db_for_read(User)]
+
+        # FIXME: When Django GCloud Connectors gets rid of its own atomic decorator
+        # the Django atomic() decorator can be used regardless
+        if connection.settings_dict['ENGINE'] == 'gcloudc.db.backends.datastore':
+            from gcloudc.db.transaction import atomic
+        else:
+            from django.db.transaction import atomic
+
         user_id = request.META.get("HTTP_X_GOOG_AUTHENTICATED_USER_ID")
         email = request.META.get("HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL")
 
@@ -37,11 +72,25 @@ class IAPBackend(BaseBackend):
 
         username = email.split("@", 1)[0]
 
-        with transaction.atomic():
+        with atomic():
             # Look for a user, either by ID, or email
-            user = User.objects.filter(
-                Q(google_iap_id=user_id) | Q(email=email)
-            ).first()
+            user = User.objects.filter(google_iap_id=user_id).first()
+            if not user:
+                # We explicitly don't do an OR query here, because we only want
+                # to search by email if the user doesn't exist by ID. ID takes
+                # precendence.
+                user = User.objects.filter(email_lower=email.lower()).first()
+
+                if user and user.google_iap_id:
+                    logging.warning(
+                        "Found an existing user by email (%s) who had a different "
+                        "IAP user ID (%s != %s). This seems like a bug.",
+                        email, user.google_iap_id, user_id
+                    )
+
+                    # We don't use this to avoid accidentally "stealing" another
+                    # user
+                    user = None
 
             if user:
                 # So we previously had a user sign in by email, but not
@@ -49,21 +98,24 @@ class IAPBackend(BaseBackend):
                 if not user.google_iap_id:
                     user.google_iap_id = user_id
                 else:
+                    # Should be caught above if this isn't the case
                     assert(user.google_iap_id == user_id)
-                    # We got the user by google_iap_id, but their email
-                    # might have changed (maybe), so update that just in case
-                    user.email = email
 
-                    # Note we don't update the username, as that may have
-                    # been overridden by something post-creation
+                # Update the email as it might have changed or perhaps
+                # this user was added through some other means and the
+                # sensitivity of the email differs etc.
+                user.email = email
 
+                # Note we don't update the username, as that may have
+                # been overridden by something post-creation
                 user.save()
             else:
-                # First time we've seen this user
-                user = User.objects.create(
-                    google_iap_id=user_id,
-                    email=email,
-                    username=username
-                )
+                with atomic():
+                    # First time we've seen this user
+                    user = User.objects.create(
+                        google_iap_id=user_id,
+                        email=email,
+                        username=_generate_unused_username(username)
+                    )
 
         return user

@@ -52,3 +52,30 @@ class IAPAuthenticationTests(TestCase):
 
         # Username not updated
         self.assertEqual(user.username, 'test')
+
+    def test_email_case_insensitive(self):
+        """
+            Even though the RFC says that the part of an email
+            address before the '@' is case sensitive, basically no
+            mail provider does that, and to allow differences in case
+            causes more issues than it solves, so we ensure that although
+            we retain the original case of an email, you can't create different
+            users with emails that differ in case alone.
+        """
+
+        user = User.objects.create(
+            email='test22@example.com'
+        )
+
+        self.assertEqual(user.email, 'test22@example.com')
+
+        headers = {
+            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': '99999',
+            'HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL': 'tESt22@example.com'
+        }
+
+        self.client.get("/", **headers)
+
+        user = User.objects.get()
+
+        self.assertEqual(user.email, 'tESt22@example.com')
