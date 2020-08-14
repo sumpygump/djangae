@@ -8,7 +8,7 @@ User = get_user_model()
 class IAPAuthenticationTests(TestCase):
     def test_user_created_if_authenticated(self):
         headers = {
-            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': '99999',
+            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': 'auth.example.com:99999',
             'HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL': 'test@example.com'
         }
 
@@ -24,7 +24,7 @@ class IAPAuthenticationTests(TestCase):
 
     def test_email_change(self):
         headers = {
-            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': '99999',
+            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': 'auth.example.com:99999',
             'HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL': 'test@example.com'
         }
 
@@ -39,7 +39,7 @@ class IAPAuthenticationTests(TestCase):
         self.assertEqual(user.username, 'test')
 
         headers = {
-            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': '99999',
+            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': 'auth.example.com:99999',
             'HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL': 'test22@example.com'
         }
 
@@ -70,7 +70,7 @@ class IAPAuthenticationTests(TestCase):
         self.assertEqual(user.email, 'test22@example.com')
 
         headers = {
-            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': '99999',
+            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': 'auth.example.com:99999',
             'HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL': 'tESt22@example.com'
         }
 

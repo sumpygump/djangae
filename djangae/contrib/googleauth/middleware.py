@@ -97,7 +97,7 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
             # are available
             if IAPBackend.can_authenticate(request):
                 user = authenticate(request)
-                if user.is_authenticated:
+                if user and user.is_authenticated:
                     login(request, user)
 
 
@@ -174,7 +174,7 @@ def local_iap_login_middleware(get_response):
                     data = f.read()
                     email = data.strip()
 
-                    request.META["HTTP_X_GOOG_AUTHENTICATED_USER_ID"] = id_from_email(email)
+                    request.META["HTTP_X_GOOG_AUTHENTICATED_USER_ID"] = "auth.example.com:%s" % id_from_email(email)
                     request.META["HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL"] = email
 
             response = get_response(request)
