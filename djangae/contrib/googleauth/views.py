@@ -4,7 +4,6 @@ import logging
 from django.conf import settings
 from django.contrib import auth
 from django.http import (
-    Http404,
     HttpResponseBadRequest,
     HttpResponseRedirect,
 )
@@ -15,8 +14,10 @@ from oauthlib.oauth2.rfc6749.errors import MismatchingStateError
 from requests_oauthlib import OAuth2Session
 
 from . import (
+    _pop_scopes,
     _CLIENT_ID_SETTING,
     _CLIENT_SECRET_SETTING,
+    _DEFAULT_SCOPES_SETTING
 )
 from .models import OAuthUserSession
 
@@ -31,8 +32,6 @@ TOKEN_URL = "https://www.googleapis.com/oauth2/v4/token"
 
 GOOGLE_USER_INFO = "https://www.googleapis.com/oauth2/v1/userinfo"
 
-_DEFAULT_WHITELISTED_SCOPES = _DEFAULT_OAUTH_SCOPES[:]
-
 # The time in seconds that we take away from the given
 # expires_in value to account for delay from the server
 # to the application. "expires_in" is relative to the time
@@ -40,25 +39,21 @@ _DEFAULT_WHITELISTED_SCOPES = _DEFAULT_OAUTH_SCOPES[:]
 _TOKEN_EXPIRATION_GUARD_TIME = 5
 
 
-def _get_scopes(request_scopes):
-    if not request_scopes:
-        return getattr(settings, "GOOGLEAUTH_OAUTH_SCOPES", _DEFAULT_OAUTH_SCOPES)
-        return _DEFAULT_WHITELISTED_SCOPES
-    else:
-        parsed_scopes = request_scopes.split(',')
-        WHITELISTED_SCOPES = getattr(settings, "GOOGLE_OAUTH_SCOPE_WHITELIST", _DEFAULT_WHITELISTED_SCOPES)
-        if set(parsed_scopes) - set(WHITELISTED_SCOPES) != set():
-            raise Http404("Not all scopes were whitelisted for the application.")
-        return parsed_scopes
+def _get_default_scopes():
+    return getattr(settings, _DEFAULT_SCOPES_SETTING, _DEFAULT_OAUTH_SCOPES)
 
 
-def login(request):
+def oauth_login(request):
     """
         This view should be set as your login_url for using OAuth
         authentication. It will trigger the main oauth flow.
     """
     original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
-    scopes = _get_scopes(request.GET.get('scopes'))
+
+    scopes = _get_default_scopes()
+    additional_scopes = _pop_scopes(request)
+    scopes = set(scopes).union(set(additional_scopes))
+
     next_url = request.GET.get('next')
 
     if next_url:

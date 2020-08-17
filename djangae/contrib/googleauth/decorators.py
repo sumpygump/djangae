@@ -1,16 +1,29 @@
 from functools import wraps
-from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
+from . import _stash_scopes
 from .models import OAuthUserSession
 
 login_required = login_required
 
 
 def oauth_scopes_required(scopes):
+    """
+        When applied to a view, this will trigger an oauth-redirect flow, ensuring that
+        the user has granted access to the required scopes.
+
+        If the user did not login via oauth, they will be forced to do so. If the user
+        already granted access to all scopes, then this will be a no-op.
+
+        Requested scopes are stored temporarily in the session, and are "popped" during
+        the oauth flow. We store in the session, rather than using the querystring, to
+        prevent a possible attack vector where additional (unexpected) scopes could be
+        granted to a hijacked account.
+    """
+
     def func_wrapper(function):
         @wraps(function)
         def wrapper(request, *args, **kwargs):
@@ -30,14 +43,12 @@ def oauth_scopes_required(scopes):
 
                 if additional_scopes - current_scopes:
                     # scopes have been added, we should redirect to login flow with those scopes
-                    serialized_scopes = urlencode(dict(scopes=(current_scopes.union(additional_scopes))))
-                    login_reverse = f"{login_reverse}?{serialized_scopes}"
+                    all_scopes = current_scopes.union(additional_scopes)
+                    _stash_scopes(request, all_scopes)
                     return HttpResponseRedirect(login_reverse)
                 return function(request, *args, **kwargs)
             else:
-                if scopes:
-                    serialized_scopes = urlencode(dict(scopes=scopes))
-                    login_reverse = f"{login_reverse}?{serialized_scopes}"
+                _stash_scopes(request, scopes)
                 return HttpResponseRedirect(login_reverse)
 
         return wrapper

@@ -3,7 +3,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import REDIRECT_FIELD_NAME
-from djangae.contrib.googleauth.decorators import login_required
+from django.contrib.sessions.middleware import SessionMiddleware
 from django.http import HttpResponse
 from django.shortcuts import reverse
 from django.test import (
@@ -18,7 +18,10 @@ from django.urls import (
 from django.utils import timezone
 
 from djangae.contrib import sleuth
-from djangae.contrib.googleauth.decorators import oauth_scopes_required
+from djangae.contrib.googleauth.decorators import (
+    login_required,
+    oauth_scopes_required,
+)
 from djangae.contrib.googleauth.models import (
     AnonymousUser,
     OAuthUserSession,
@@ -104,19 +107,6 @@ class OAuthTests(LiveServerTestCase):
             Django session
         """
         pass
-
-    def test_login_checks_scope_whitelist(self):
-        """
-            Accessing the oauth login page with
-            additional scopes in the GET param
-            should only work for whitelisted scopes
-        """
-        live_server_domain = self.live_server_url.split('://')[-1]
-        next_url = '/protected'
-        serialized_scopes = ','.join(["invalid"])
-        protected_url = f"{reverse('googleauth_oauth2login')}?next={next_url}&scopes={serialized_scopes}"
-        response = self.client.get(protected_url, HTTP_HOST=live_server_domain)
-        self.assertEqual(404, response.status_code)
 
     def test_login_respects_additional_scopes(self):
         """
@@ -261,6 +251,10 @@ class OAuthScopesRequiredTests(TestCase):
         request = RequestFactory().get('/')
         request.user = AnonymousUser()
 
+        middleware = SessionMiddleware()
+        middleware.process_request(request)
+        request.session.save()
+
         def func(*args, **kwargs):
             func.called = True
         func.called = False
@@ -274,6 +268,10 @@ class OAuthScopesRequiredTests(TestCase):
     def test_oauth_scopes_required_redirects_to_login_if_no_oauthsession(self):
         request = RequestFactory().get('/')
         request.user = User.objects.create_user(username='test2', email='test2@domain.com')
+
+        middleware = SessionMiddleware()
+        middleware.process_request(request)
+        request.session.save()
 
         def func(*args, **kwargs):
             func.called = True
@@ -289,6 +287,10 @@ class OAuthScopesRequiredTests(TestCase):
         scopes = self._DEFAULT_OAUTH_SCOPES + ['https://www.googleapis.com/auth/calendar']
         request = RequestFactory().get('/')
         request.user = self.user
+
+        middleware = SessionMiddleware()
+        middleware.process_request(request)
+        request.session.save()
 
         def func(*args, **kwargs):
             func.called = True
