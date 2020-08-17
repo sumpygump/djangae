@@ -175,7 +175,7 @@ def local_iap_login_middleware(get_response):
                     email = data.strip()
 
                     request.META["HTTP_X_GOOG_AUTHENTICATED_USER_ID"] = "auth.example.com:%s" % id_from_email(email)
-                    request.META["HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL"] = email
+                    request.META["HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL"] = "auth.example.com:%s" % email
 
             response = get_response(request)
 
