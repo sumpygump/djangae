@@ -234,25 +234,28 @@ class OAuthScopesRequiredTests(TestCase):
         request = RequestFactory().get('/')
         request.user = self.user
 
-        def func(*args, **kwargs):
-            func.called = True
-            func.call_count += 1
+        @oauth_scopes_required(scopes=[])
+        def no_scopes_func(*args, **kwargs):
+            no_scopes_func.called = True
+            no_scopes_func.call_count += 1
+        no_scopes_func.called = False
+        no_scopes_func.call_count = 0
 
-        func.called = False
-        func.call_count = 0
+        @oauth_scopes_required(scopes=self._DEFAULT_OAUTH_SCOPES)
+        def scopes_func(*args, **kwargs):
+            scopes_func.called = True
+            scopes_func.call_count += 1
+        scopes_func.called = False
+        scopes_func.call_count = 0
 
-        decorated_func_mock = oauth_scopes_required(func, scopes=[])
-        decorated_func_mock(request)
-        self.assertTrue(func.called)
-        self.assertEqual(func.call_count, 1)
+        no_scopes_func(request)
 
-        func.called = False
-        func.call_count = 0
+        self.assertTrue(no_scopes_func.called)
+        self.assertEqual(no_scopes_func.call_count, 1)
 
-        decorated_func_mock = oauth_scopes_required(func, scopes=self._DEFAULT_OAUTH_SCOPES)
-        decorated_func_mock(request)
-        self.assertTrue(func.called)
-        self.assertEqual(func.call_count, 1)
+        scopes_func(request)
+        self.assertTrue(scopes_func.called)
+        self.assertEqual(scopes_func.call_count, 1)
 
     def test_oauth_scopes_required_redirects_to_login_if_anonymous(self):
         request = RequestFactory().get('/')
@@ -262,7 +265,7 @@ class OAuthScopesRequiredTests(TestCase):
             func.called = True
         func.called = False
 
-        decorated_func = oauth_scopes_required(func, scopes=[])
+        decorated_func = oauth_scopes_required(scopes=[])(func)
         response_mocked = decorated_func(request)
         self.assertFalse(func.called)
         self.assertEquals(response_mocked.status_code, 302)
@@ -276,7 +279,7 @@ class OAuthScopesRequiredTests(TestCase):
             func.called = True
         func.called = False
 
-        decorated_func = oauth_scopes_required(func, scopes=[])
+        decorated_func = oauth_scopes_required(scopes=[])(func)
         response_mocked = decorated_func(request)
         self.assertFalse(func.called)
         self.assertEquals(response_mocked.status_code, 302)
@@ -291,7 +294,7 @@ class OAuthScopesRequiredTests(TestCase):
             func.called = True
         func.called = False
 
-        decorated_func_mock = oauth_scopes_required(func, scopes=scopes)
+        decorated_func_mock = oauth_scopes_required(scopes=scopes)(func)
         response_mocked = decorated_func_mock(request)
         self.assertFalse(func.called)
         # check we're redirecting to login url with the correct parameters
