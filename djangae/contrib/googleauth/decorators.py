@@ -1,4 +1,5 @@
 from functools import wraps
+from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect
@@ -29,14 +30,14 @@ def oauth_scopes_required(scopes):
 
                 if additional_scopes - current_scopes:
                     # scopes have been added, we should redirect to login flow with those scopes
-                    serialized_scopes = ",".join(current_scopes.union(additional_scopes))
-                    login_reverse = f"{login_reverse}&scopes={serialized_scopes}"
+                    serialized_scopes = urlencode(dict(scopes=(current_scopes.union(additional_scopes))))
+                    login_reverse = f"{login_reverse}?{serialized_scopes}"
                     return HttpResponseRedirect(login_reverse)
                 return function(request, *args, **kwargs)
             else:
                 if scopes:
-                    serialized_scopes = ",".join(scopes)
-                    login_reverse = f"{login_reverse}&scopes={serialized_scopes}"
+                    serialized_scopes = urlencode(dict(scopes=scopes))
+                    login_reverse = f"{login_reverse}?{serialized_scopes}"
                 return HttpResponseRedirect(login_reverse)
 
         return wrapper
