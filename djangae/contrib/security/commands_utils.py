@@ -27,9 +27,9 @@ def extract_views_from_urlpatterns(urlpatterns, base='', namespace=None, ignored
                     name = p.name
                 if hasattr(p.callback, '__module__'):
                     if p.callback.__module__.split('.')[0] not in ignored_modules:
-                        views.append((p.callback, base, name))
+                        views.append((p.callback, base + str(p.pattern), name))
                 else:
-                    views.append((p.callback, base, name))
+                    views.append((p.callback, base + str(p.pattern), name))
             except ViewDoesNotExist:
                 continue
 
@@ -42,7 +42,7 @@ def extract_views_from_urlpatterns(urlpatterns, base='', namespace=None, ignored
 
             views.extend(
                 extract_views_from_urlpatterns(
-                    patterns, base,
+                    patterns, base + str(p.pattern),
                     namespace=(namespace or p.namespace),
                     ignored_modules=ignored_modules
                 )
@@ -51,7 +51,7 @@ def extract_views_from_urlpatterns(urlpatterns, base='', namespace=None, ignored
         elif hasattr(p, '_get_callback'):
             # Handle string like 'foo.views.view_name' or just function view
             try:
-                views.append((p._get_callback(), base + p.pattern, p.name))
+                views.append((p._get_callback(), base + str(p.pattern), p.name))
             except ViewDoesNotExist:
                 continue
 
@@ -64,7 +64,7 @@ def extract_views_from_urlpatterns(urlpatterns, base='', namespace=None, ignored
 
             views.extend(
                 extract_views_from_urlpatterns(
-                    patterns, base + p.regex.pattern,
+                    patterns, base + str(p.pattern),
                     namespace=namespace, ignored_modules=ignored_modules
                 )
             )
