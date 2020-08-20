@@ -114,14 +114,14 @@ def retry(func, *args, **kwargs):
         # If gcloudc is available, make sure we catch its TransactionFailedError
         from gcloudc.db.transaction import TransactionFailedError
     except ImportError:
-        class TransactionFailedError:
+        class TransactionFailedError(Exception):
             pass
 
     try:
         # Try to import the core GoogleAPIError
         from google.api_core.exceptions import GoogleAPIError
     except ImportError:
-        class GoogleAPIError:
+        class GoogleAPIError(Exception):
             pass
 
     # Slightly weird `.pop(x, None) or default` thing here due to not wanting to repeat the tuple of
