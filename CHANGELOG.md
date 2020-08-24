@@ -25,6 +25,7 @@
 - Update `djangae.contrib.backup` and `djangae.contrib.locking` URLs to use the Django 2 `path` function
 - Fix backup task credentials for GAE Python 3
 - Fix `djangae.contrib.security.commands_utils.extract_views_from_urlpatterns` function
+- Fix an issue with `djangae.storage.CloudStorage` where calling `_open()` or `delete()` wouldn't use the correct bucket
 
 
 ### Bug fixes:
