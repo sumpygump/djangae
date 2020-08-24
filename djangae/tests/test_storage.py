@@ -36,6 +36,7 @@ class ModelWithUploadTo(models.Model):
 
 
 class CloudStorageTests(TestCase):
+
     def setUp(self):
         requests.get('{}/wipe'.format(os.environ["STORAGE_EMULATOR_HOST"]))
         client = _get_storage_client()
@@ -170,3 +171,20 @@ class CloudStorageTests(TestCase):
         instance.save()
         fetched = ModelWithUploadTo.objects.get()
         self.assertEqual(fetched.text_file.read(), content)
+
+    @override_settings(CLOUD_STORAGE_BUCKET='test_bucket')
+    def test_open_uses_correct_bucket(self):
+        storage = CloudStorage()
+        filename = storage.save('file1', ContentFile(b'content', name='file1'))
+
+        storage = CloudStorage()  # new instance
+        storage._open(filename)
+
+    @override_settings(CLOUD_STORAGE_BUCKET='test_bucket')
+    def test_delete_uses_correct_bucket(self):
+        storage = CloudStorage()
+        filename = storage.save('file1', ContentFile(b'content', name='file1'))
+
+        storage = CloudStorage()  # new instance
+        storage.delete(filename)
+        self.assertFalse(storage.exists(filename))

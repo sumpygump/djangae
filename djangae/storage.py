@@ -151,7 +151,7 @@ class CloudStorage(Storage):
         return name
 
     def _open(self, name, mode="r"):
-        return CloudStorageFile(self._bucket, name=name, mode=mode)
+        return CloudStorageFile(self.bucket, name=name, mode=mode)
 
     def size(self, name):
         blob = self.bucket.get_blob(name)
@@ -165,7 +165,7 @@ class CloudStorage(Storage):
         Arguments:
             name {str} -- Name of the object to delete
         """
-        return self._bucket.delete_blob(name)
+        return self.bucket.delete_blob(name)
 
     def url(self, name):
         return self.get_public_url(name)
