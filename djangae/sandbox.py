@@ -83,6 +83,7 @@ def start_emulators(
     project_id: str = DEFAULT_PROJECT_ID,
     emulators: Sequence[str] = _ALL_EMULATORS,
     datastore_port: int = DATASTORE_PORT,
+    datastore_dir: Optional[str] = None,
     tasks_port: int = TASKS_PORT,
     task_target_port: Optional[int] = None,
     autodetect_task_port: bool = True,
@@ -105,6 +106,8 @@ def start_emulators(
         command = "gcloud beta emulators datastore start --consistency=1.0 --quiet --project=example"
         command += " --host-port=127.0.0.1:%s" % datastore_port
 
+        if datastore_dir:
+            command += " --data-dir=%s" % datastore_dir
         if not persist_data:
             command += " --no-store-on-disk"
 
