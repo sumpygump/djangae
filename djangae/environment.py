@@ -1,4 +1,3 @@
-
 import os
 from functools import wraps
 
@@ -56,8 +55,7 @@ def task_queue_name():
     "Returns the name of the current task queue (if this is a task) else 'default'"
     if "HTTP_X_APPENGINE_QUEUENAME" in os.environ:
         return os.environ["HTTP_X_APPENGINE_QUEUENAME"]
-    else:
-        return None
+    return "default"
 
 
 def gae_version():
