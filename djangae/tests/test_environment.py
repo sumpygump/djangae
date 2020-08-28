@@ -1,7 +1,12 @@
 import os
 
 from djangae.tasks.deferred import defer
-from djangae.environment import task_only, is_development_environment, is_production_environment
+from djangae.environment import (
+    is_development_environment,
+    is_production_environment,
+    task_only,
+    task_queue_name,
+)
 from djangae.test import TestCase
 from djangae.contrib import sleuth
 from django.http import HttpResponse
@@ -44,6 +49,7 @@ class TaskOnlyTestCase(TestCase):
 
 
 class EnvironmentUtilsTest(TestCase):
+
     def test_is_production_environment(self):
         self.assertFalse(is_production_environment())
         os.environ["GAE_ENV"] = 'standard'
@@ -55,6 +61,13 @@ class EnvironmentUtilsTest(TestCase):
         os.environ["GAE_ENV"] = 'standard'
         self.assertFalse(is_development_environment())
         del os.environ["GAE_ENV"]
+
+    def test_task_queue_name(self):
+        self.assertEqual(task_queue_name(), "default")
+        os.environ["HTTP_X_APPENGINE_QUEUENAME"] = "demo123"
+        self.assertEqual(task_queue_name(), "demo123")
+        del os.environ["HTTP_X_APPENGINE_QUEUENAME"]
+        self.assertEqual(task_queue_name(), "default")
 
 
 def deferred_func():
