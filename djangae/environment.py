@@ -1,6 +1,6 @@
-
 import os
 from functools import wraps
+from typing import Optional
 
 from djangae.utils import memoized
 from django.http import HttpResponseForbidden
@@ -9,42 +9,37 @@ from django.http import HttpResponseForbidden
 # imports this before the SDK is added to sys.path. See bugs #899, #1055.
 
 
-def application_id():
+def application_id() -> str:
     # Fallback to example on local or if this is not specified in the
     # environment already
     result = os.environ.get("GAE_APPLICATION", "e~example").split("~", 1)[-1]
     return result
 
 
-def is_production_environment():
+def is_production_environment() -> bool:
     return not is_development_environment()
 
 
-def is_development_environment():
+def is_development_environment() -> bool:
     return 'GAE_ENV' not in os.environ or os.environ['GAE_ENV'] != 'standard'
 
 
-def is_in_task():
+def is_in_task() -> bool:
     "Returns True if the request is a task, False otherwise"
-    return bool(task_name()) or bool(queue_name())
+    return bool(task_name())
 
 
-def is_in_cron():
+def is_in_cron() -> bool:
     "Returns True if the request is in a cron, False otherwise"
     return bool(os.environ.get("HTTP_X_APPENGINE_CRON"))
 
 
-def queue_name():
-    "Returns the name of the current task if any, else None"
-    return os.environ.get("HTTP_X_APPENGINE_QUEUENAME")
-
-
-def task_name():
+def task_name() -> Optional[str]:
     "Returns the name of the current task if any, else None"
     return os.environ.get("HTTP_X_APPENGINE_TASKNAME")
 
 
-def task_retry_count():
+def task_retry_count() -> Optional[int]:
     "Returns the task retry count, or None if this isn't a task"
     try:
         return int(os.environ.get("HTTP_X_APPENGINE_TASKRETRYCOUNT"))
@@ -52,21 +47,20 @@ def task_retry_count():
         return None
 
 
-def task_queue_name():
+def task_queue_name() -> Optional[str]:
     "Returns the name of the current task queue (if this is a task) else 'default'"
-    if "HTTP_X_APPENGINE_QUEUENAME" in os.environ:
-        return os.environ["HTTP_X_APPENGINE_QUEUENAME"]
-    else:
-        return None
+    if is_in_task():
+        return os.environ.get("HTTP_X_APPENGINE_QUEUENAME", "default")
+    return None
 
 
-def gae_version():
+def gae_version() -> Optional[str]:
     """Returns the current GAE version."""
     return os.environ.get('GAE_VERSION')
 
 
 @memoized
-def get_application_root():
+def get_application_root() -> str:
     """Traverse the filesystem upwards and return the directory containing app.yaml"""
     from django.conf import settings  # Avoid circular
 
@@ -113,11 +107,11 @@ def task_only(view_function):
     return replacement
 
 
-def default_gcs_bucket_name():
+def default_gcs_bucket_name() -> str:
     return "%s.appspot.com" % application_id()
 
 
-def project_id():
+def project_id() -> str:
     # Environment variable will exist on production servers
     # fallback to "example" locally if it doesn't exist
     return os.environ.get("GOOGLE_CLOUD_PROJECT", "example")
