@@ -63,11 +63,23 @@ class EnvironmentUtilsTest(TestCase):
         del os.environ["GAE_ENV"]
 
     def test_task_queue_name(self):
-        self.assertEqual(task_queue_name(), "default")
+        # when not in task
+        self.assertIsNone(task_queue_name())
         os.environ["HTTP_X_APPENGINE_QUEUENAME"] = "demo123"
-        self.assertEqual(task_queue_name(), "demo123")
+        self.assertIsNone(task_queue_name())
         del os.environ["HTTP_X_APPENGINE_QUEUENAME"]
-        self.assertEqual(task_queue_name(), "default")
+        self.assertIsNone(task_queue_name())
+
+        # when in task, w/o queue set
+        with sleuth.switch('djangae.environment.is_in_task', lambda: True):
+            self.assertEqual(task_queue_name(), "default")
+
+        # when in task, with queue set
+        with sleuth.switch('djangae.environment.is_in_task', lambda: True):
+            os.environ["HTTP_X_APPENGINE_QUEUENAME"] = "demo123"
+            self.assertEqual(task_queue_name(), "demo123")
+            del os.environ["HTTP_X_APPENGINE_QUEUENAME"]
+            self.assertEqual(task_queue_name(), "default")
 
 
 def deferred_func():

@@ -49,9 +49,9 @@ def task_retry_count() -> Optional[int]:
 
 def task_queue_name() -> Optional[str]:
     "Returns the name of the current task queue (if this is a task) else 'default'"
-    if "HTTP_X_APPENGINE_QUEUENAME" in os.environ:
-        return os.environ["HTTP_X_APPENGINE_QUEUENAME"]
-    return "default"
+    if is_in_task():
+        return os.environ.get("HTTP_X_APPENGINE_QUEUENAME", "default")
+    return None
 
 
 def gae_version() -> Optional[str]:

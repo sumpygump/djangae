@@ -343,6 +343,10 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
         logger.warning("DeferIterationMarker with ID: %s has vanished, cancelling task", marker_id)
         return
 
+    queue = task_queue_name()
+    if queue:
+        queue = queue.rsplit("/", 1)[-1]
+
     # Redefer if the task isn't ready to begin
     if not marker.is_ready:
         defer(
@@ -350,7 +354,7 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
             buffer_time=buffer_time,
             args=args,
             kwargs=kwargs,
-            _queue=task_queue_name().rsplit("/", 1)[-1],
+            _queue=queue,
             _countdown=1
         )
         return
@@ -413,7 +417,7 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
                         finalize,
                         *args,
                         _transactional=True,
-                        _queue=task_queue_name().rsplit("/", 1)[-1],
+                        _queue=queue,
                         **kwargs
                     )
 
@@ -441,7 +445,7 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
             buffer_time=buffer_time,
             args=args,
             kwargs=kwargs,
-            _queue=task_queue_name().rsplit("/", 1)[-1],
+            _queue=queue,
             _countdown=1
         )
 
@@ -460,6 +464,10 @@ def _generate_shards(
         callback_name=callback.__name__,
         finalize_name=finalize.__name__
     )
+
+    queue = task_queue_name()
+    if queue:
+        queue = queue.rsplit("/", 1)[-1]
 
     for i, (start, end) in enumerate(key_ranges):
         is_last = i == (len(key_ranges) - 1)
@@ -494,7 +502,7 @@ def _generate_shards(
                 args=args,
                 kwargs=kwargs,
                 buffer_time=buffer_time,
-                _queue=task_queue_name().rsplit("/", 1)[-1],
+                _queue=queue,
                 _transactional=True
             )
 
