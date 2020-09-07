@@ -126,7 +126,11 @@ def oauth2callback(request):
     next_url = request.session[auth.REDIRECT_FIELD_NAME]
     if google.authorized and next_url:
         try:
-            profile = id_token.verify_oauth2_token(token, requests.Request(), client_id)
+            profile = id_token.verify_oauth2_token(
+                token['id_token'],
+                requests.Request(),
+                client_id
+            )
         except ValueError:
             logging.exception("Error verifying OAuth2 token")
         else:
@@ -140,7 +144,7 @@ def oauth2callback(request):
                     token_type=token['token_type'],
                     expires_at=_calc_expires_at(token['expires_in']),
                     profile=profile,
-                    scopes=set(token['scope'].split(" "))
+                    scopes=token['scope']
                 )
             )
 

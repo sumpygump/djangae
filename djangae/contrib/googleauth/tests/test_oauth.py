@@ -137,7 +137,8 @@ class OAuth2CallbackTests(TestCase):
             'refresh_token': '8888',
             'token_type': 'Bearer',
             'expires_in': '30',
-            'scope': 'some.scope another.scope'
+            'scope': ['some.scope another.scope'],
+            'id_token': 'someencryptedstuff'
         }
 
         fake_profile = {
