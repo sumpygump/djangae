@@ -128,7 +128,7 @@ def oauth2callback(request):
         try:
             profile = id_token.verify_oauth2_token(token, requests.Request(), client_id)
         except ValueError:
-            logging.warning("Error verifying OAuth2 token")
+            logging.exception("Error verifying OAuth2 token")
         else:
             pk = profile["sub"]
 
