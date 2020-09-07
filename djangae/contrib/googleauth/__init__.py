@@ -8,13 +8,13 @@ _DEFAULT_SCOPES_SETTING = "GOOGLEAUTH_OAUTH_SCOPES"
 _SCOPE_SESSION_KEY = "_googleauth_scopes_requested"
 
 
-def _stash_scopes(request, scopes):
+def _stash_scopes(request, scopes, offline):
     """
         Stores requested scopes in the session
     """
 
-    request.session[_SCOPE_SESSION_KEY] = scopes
+    request.session[_SCOPE_SESSION_KEY] = (scopes, offline)
 
 
 def _pop_scopes(request):
-    return request.session.pop(_SCOPE_SESSION_KEY, [])
+    return request.session.pop(_SCOPE_SESSION_KEY, ([], False))

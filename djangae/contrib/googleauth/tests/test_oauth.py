@@ -86,8 +86,8 @@ class OAuthTests(LiveServerTestCase):
             # check OAuthSession has been called properly
             self.assertEqual(auth_url.calls[0].args[1], 'https://accounts.google.com/o/oauth2/v2/auth')
             self.assertEqual(auth_url.calls[0].kwargs, {
-                "access_type": 'offline',
-                "prompt": 'select_account'
+                "prompt": 'select_account',
+                "include_granted_scopes": 'true',
             })
 
             # check session contains correct keys and values
@@ -134,7 +134,6 @@ class OAuth2CallbackTests(TestCase):
 
         fake_token = {
             'access_token': '9999',
-            'refresh_token': '8888',
             'token_type': 'Bearer',
             'expires_in': '30',
             'scope': ['some.scope another.scope'],

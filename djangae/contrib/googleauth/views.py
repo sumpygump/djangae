@@ -53,7 +53,7 @@ def oauth_login(request):
     original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
 
     scopes = _get_default_scopes()
-    additional_scopes = _pop_scopes(request)
+    additional_scopes, offline = _pop_scopes(request)
     scopes = set(scopes).union(set(additional_scopes))
 
     next_url = request.GET.get('next')
@@ -65,11 +65,20 @@ def oauth_login(request):
     assert client_id
 
     google = OAuth2Session(client_id, scope=scopes, redirect_uri=original_url)
+
+    kwargs = {
+        "prompt": "select_account",
+        "include_granted_scopes": 'true'
+    }
+
+    if offline:
+        kwargs["access_type"] = "offline"
+
     authorization_url, state = google.authorization_url(
         AUTHORIZATION_BASE_URL,
-        access_type="offline",
-        prompt="select_account"
+        **kwargs
     )
+
     request.session[STATE_SESSION_KEY] = state
 
     return HttpResponseRedirect(authorization_url)
@@ -136,16 +145,22 @@ def oauth2callback(request):
         else:
             pk = profile["sub"]
 
+            defaults = dict(
+                access_token=token['access_token'],
+                token_type=token['token_type'],
+                expires_at=_calc_expires_at(token['expires_in']),
+                profile=profile,
+                scopes=token['scope']
+            )
+
+            # Refresh tokens only exist on the first authorization
+            # or, if you've specified the access_type as "offline"
+            if 'refresh_token' in token:
+                defaults['refresh_token'] = token['refresh_token']
+
             session, _ = OAuthUserSession.objects.update_or_create(
                 pk=pk,
-                defaults=dict(
-                    access_token=token['access_token'],
-                    refresh_token=token['refresh_token'],
-                    token_type=token['token_type'],
-                    expires_at=_calc_expires_at(token['expires_in']),
-                    profile=profile,
-                    scopes=token['scope']
-                )
+                defaults=defaults
             )
 
             # credentials are valid, we should authenticate the user

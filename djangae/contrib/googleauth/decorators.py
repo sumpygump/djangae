@@ -10,7 +10,7 @@ from .models import OAuthUserSession
 login_required = login_required
 
 
-def oauth_scopes_required(scopes):
+def oauth_scopes_required(scopes, offline=False):
     """
         When applied to a view, this will trigger an oauth-redirect flow, ensuring that
         the user has granted access to the required scopes.
@@ -22,6 +22,9 @@ def oauth_scopes_required(scopes):
         the oauth flow. We store in the session, rather than using the querystring, to
         prevent a possible attack vector where additional (unexpected) scopes could be
         granted to a hijacked account.
+
+        Passing offline=True, will ask for an offline access_type and so the
+        response from Google will include a refresh_token
     """
 
     def func_wrapper(function):
@@ -44,11 +47,11 @@ def oauth_scopes_required(scopes):
                 if additional_scopes - current_scopes:
                     # scopes have been added, we should redirect to login flow with those scopes
                     all_scopes = current_scopes.union(additional_scopes)
-                    _stash_scopes(request, all_scopes)
+                    _stash_scopes(request, all_scopes, offline)
                     return HttpResponseRedirect(login_reverse)
                 return function(request, *args, **kwargs)
             else:
-                _stash_scopes(request, scopes)
+                _stash_scopes(request, scopes, offline)
                 return HttpResponseRedirect(login_reverse)
 
         return wrapper
