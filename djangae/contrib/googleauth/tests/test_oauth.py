@@ -204,6 +204,7 @@ class OAuthScopesRequiredTests(TestCase):
             ]
         self.factory = RequestFactory()
         self.oauthsession = OAuthUserSession.objects.create(
+            id='1' * 21,
             scopes=self._DEFAULT_OAUTH_SCOPES,
             expires_at=timezone.now() + timedelta(seconds=10)
         )

@@ -114,7 +114,11 @@ class User(AbstractBaseUser):
     username_validator = UnicodeUsernameValidator()
 
     # If the user was created via OAuth, this is the oauth ID
-    google_oauth_id = models.IntegerField(unique=True, null=True)
+    google_oauth_id = models.CharField(
+        unique=True,
+        null=True,
+        max_length=21
+    )
 
     google_iap_id = models.CharField(
         max_length=150,
@@ -250,6 +254,8 @@ _OAUTH_USER_SESSION_SESSION_KEY = "_OAUTH_USER_SESSION_ID"
 
 
 class OAuthUserSession(models.Model):
+    id = models.CharField(max_length=21, primary_key=True)
+
     access_token = models.CharField(max_length=150, blank=True)
     refresh_token = models.CharField(max_length=150, blank=True)
     id_token = models.CharField(max_length=1500, blank=True)
