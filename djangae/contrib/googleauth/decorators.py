@@ -1,3 +1,5 @@
+import logging
+
 from functools import wraps
 
 from django.contrib.auth.decorators import login_required
@@ -44,7 +46,12 @@ def oauth_scopes_required(scopes, offline=False):
                 additional_scopes = set(scopes)
                 current_scopes = set(oauth_session.scopes)
 
-                if additional_scopes - current_scopes:
+                difference = additional_scopes - current_scopes
+                if difference:
+                    logging.info(
+                        "Additional scopes (%s) requested for user (%s). Initiating auth flow.",
+                        difference, request.user
+                    )
                     # scopes have been added, we should redirect to login flow with those scopes
                     all_scopes = current_scopes.union(additional_scopes)
                     _stash_scopes(request, all_scopes, offline)
