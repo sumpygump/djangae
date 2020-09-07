@@ -108,14 +108,6 @@ class OAuthTests(LiveServerTestCase):
         """
         pass
 
-    def test_login_respects_additional_scopes(self):
-        """
-            Accessing the oauth login page with additional
-            scopes in the GET param should forward those
-            to the authorization url
-        """
-        pass
-
 
 @override_settings(ROOT_URLCONF=__name__)
 class OAuth2CallbackTests(TestCase):
