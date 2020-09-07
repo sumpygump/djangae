@@ -176,6 +176,10 @@ def oauth2callback(request):
                     auth.logout(request)
 
                 auth.login(request, user)
+            else:
+                logging.warning(
+                    "Failed Django authentication after getting oauth credentials"
+                )
 
     # We still redirect to the next_url, as this should trigger
     # the oauth flow again, if we didn't authenticate
