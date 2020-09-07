@@ -145,6 +145,7 @@ class OAuth2CallbackTests(TestCase):
             'refresh_token': '8888',
             'token_type': 'Bearer',
             'expires_in': '30',
+            'scope': 'some.scope another.scope'
         }
 
         fake_profile = {
@@ -152,11 +153,18 @@ class OAuth2CallbackTests(TestCase):
             'email': 'test@example.com'
         }
 
+        idinfo = {
+            'sub': '1',
+            'iss': 'accounts.google.com',
+            'email': 'test@example.com'
+        }
+
         with sleuth.fake('djangae.contrib.googleauth.views.OAuth2Session.fetch_token', return_value=fake_token), \
                 sleuth.fake('djangae.contrib.googleauth.views.OAuth2Session.authorized', return_value=True), \
                 sleuth.fake('djangae.contrib.googleauth.views.OAuth2Session.get', return_value=fake_profile), \
                 sleuth.watch('django.contrib.auth.authenticate') as mocked_auth, \
-                sleuth.watch('django.contrib.auth.login') as mocked_login:
+                sleuth.watch('django.contrib.auth.login') as mocked_login, \
+                sleuth.fake('google.oauth2.id_token.verify_token', idinfo):
 
             response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
 
@@ -188,7 +196,7 @@ class OAuth2CallbackTests(TestCase):
         self.assertFalse(mocked_login.called)
         # check we're restarting login flow
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(reverse("googleauth_oauth2login") in response.url)
+        self.assertTrue("/next_url" in response.url)
 
 
 def a_view(request, *args, **kwargs):

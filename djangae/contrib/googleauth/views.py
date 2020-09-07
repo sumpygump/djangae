@@ -9,15 +9,17 @@ from django.http import (
 )
 from django.urls import reverse
 from django.utils import timezone
+from google.auth.transport import requests
+from google.oauth2 import id_token
 
 from oauthlib.oauth2.rfc6749.errors import MismatchingStateError
 from requests_oauthlib import OAuth2Session
 
 from . import (
-    _pop_scopes,
     _CLIENT_ID_SETTING,
     _CLIENT_SECRET_SETTING,
-    _DEFAULT_SCOPES_SETTING
+    _DEFAULT_SCOPES_SETTING,
+    _pop_scopes,
 )
 from .models import OAuthUserSession
 
@@ -123,23 +125,30 @@ def oauth2callback(request):
 
     next_url = request.session[auth.REDIRECT_FIELD_NAME]
     if google.authorized and next_url:
-        profile = google.get(GOOGLE_USER_INFO)
-        pk = profile["id"]
+        try:
+            profile = id_token.verify_oauth2_token(token, requests.Request(), client_id)
+        except ValueError:
+            logging.warning("Error verifying OAuth2 token")
+        else:
+            pk = profile["sub"]
 
-        session, _ = OAuthUserSession.objects.update_or_create(
-            pk=pk,
-            defaults=dict(
-                access_token=token['access_token'],
-                refresh_token=token['refresh_token'],
-                token_type=token['token_type'],
-                expires_at=_calc_expires_at(token['expires_in']),
-                profile=profile
+            session, _ = OAuthUserSession.objects.update_or_create(
+                pk=pk,
+                defaults=dict(
+                    access_token=token['access_token'],
+                    refresh_token=token['refresh_token'],
+                    token_type=token['token_type'],
+                    expires_at=_calc_expires_at(token['expires_in']),
+                    profile=profile,
+                    scopes=set(token['scope'].split(" "))
+                )
             )
-        )
 
-        # credentials are valid, we should authenticate the user
-        user = auth.authenticate(request, oauth_session=session)
-        auth.login(request, user)
-        return HttpResponseRedirect(next_url)
+            # credentials are valid, we should authenticate the user
+            user = auth.authenticate(request, oauth_session=session)
+            auth.login(request, user)
 
-    return HttpResponseRedirect(reverse("googleauth_oauth2login"))
+    # We still redirect to the next_url, as this should trigger
+    # the oauth flow again, if we didn't authenticate
+    # successfully.
+    return HttpResponseRedirect(next_url)
