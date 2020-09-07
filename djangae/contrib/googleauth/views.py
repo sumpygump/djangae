@@ -173,7 +173,7 @@ def oauth2callback(request):
                 # authenticated with another backend, but we need to re-auth
                 # with the OAuth backend
                 if request.user.is_authenticated:
-                    auth.logout(request.user)
+                    auth.logout(request)
 
                 auth.login(request, user)
 

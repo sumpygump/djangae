@@ -87,11 +87,11 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
 
                 # Their oauth session expired, so let's log them out
                 if not oauth_session or not oauth_session.is_valid:
-                    logout(request.user)
+                    logout(request)
 
             elif backend_str and isinstance(load_backend(backend_str), IAPBackend):
                 if not IAPBackend.can_authenticate(request):
-                    logout(request.user)
+                    logout(request)
         else:
             # Try to authenticate with IAP if the headers
             # are available
