@@ -165,7 +165,17 @@ def oauth2callback(request):
 
             # credentials are valid, we should authenticate the user
             user = auth.authenticate(request, oauth_session=session)
-            auth.login(request, user)
+            if user:
+                logging.info("Successfully authenticated %s via OAuth2", user)
+
+                # If we successfully authenticate, then we need to logout
+                # and back in again. This is because the user may have
+                # authenticated with another backend, but we need to re-auth
+                # with the OAuth backend
+                if request.user.is_authenticated:
+                    auth.logout(request.user)
+
+                auth.login(request, user)
 
     # We still redirect to the next_url, as this should trigger
     # the oauth flow again, if we didn't authenticate
