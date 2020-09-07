@@ -190,12 +190,6 @@ class OAuth2CallbackTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(reverse("googleauth_oauth2login") in response.url)
 
-    def test_scopes_must_be_whitelisted(self):
-        pass
-
-    def test_callback_sets_session_key(self):
-        pass
-
 
 def a_view(request, *args, **kwargs):
     return HttpResponse(status=200)
