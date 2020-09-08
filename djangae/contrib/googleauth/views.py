@@ -122,6 +122,19 @@ def oauth2callback(request):
         redirect_uri=original_url
     )
 
+    # If we have a next_url, then on error we can redirect there
+    # as that will likely restart the flow, if not, we'll raise
+    # a bad request on error
+    has_next_url = auth.REDIRECT_FIELD_NAME in request.session
+
+    next_url = (
+        request.session[auth.REDIRECT_FIELD_NAME]
+        if has_next_url
+        else settings.LOGIN_REDIRECT_URL
+    )
+
+    failed = False
+
     try:
         token = google.fetch_token(
             TOKEN_URL,
@@ -130,10 +143,9 @@ def oauth2callback(request):
         )
     except MismatchingStateError:
         logging.exception("Mismatched state error in oauth handling")
-        return HttpResponseBadRequest()
+        failed = True
 
-    next_url = request.session[auth.REDIRECT_FIELD_NAME]
-    if google.authorized and next_url:
+    if google.authorized:
         try:
             profile = id_token.verify_oauth2_token(
                 token['id_token'],
@@ -142,6 +154,7 @@ def oauth2callback(request):
             )
         except ValueError:
             logging.exception("Error verifying OAuth2 token")
+            failed = True
         else:
             pk = profile["sub"]
 
@@ -177,9 +190,18 @@ def oauth2callback(request):
 
                 auth.login(request, user)
             else:
+                failed = True
                 logging.warning(
                     "Failed Django authentication after getting oauth credentials"
                 )
+    else:
+        failed = True
+        logging.warning(
+            "Something failed during the OAuth authorization process for user: %s",
+        )
+
+    if failed and not has_next_url:
+        return HttpResponseBadRequest()
 
     # We still redirect to the next_url, as this should trigger
     # the oauth flow again, if we didn't authenticate
