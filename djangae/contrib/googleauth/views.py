@@ -179,7 +179,7 @@ def oauth2callback(request):
             # credentials are valid, we should authenticate the user
             user = auth.authenticate(request, oauth_session=session)
             if user:
-                logging.info("Successfully authenticated %s via OAuth2", user)
+                logging.error("Successfully authenticated %s via OAuth2", user)
 
                 # If we successfully authenticate, then we need to logout
                 # and back in again. This is because the user may have
@@ -191,12 +191,12 @@ def oauth2callback(request):
                 auth.login(request, user)
             else:
                 failed = True
-                logging.warning(
+                logging.error(
                     "Failed Django authentication after getting oauth credentials"
                 )
     else:
         failed = True
-        logging.warning(
+        logging.error(
             "Something failed during the OAuth authorization process for user: %s",
         )
 
