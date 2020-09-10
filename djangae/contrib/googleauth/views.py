@@ -21,6 +21,7 @@ from . import (
     _DEFAULT_SCOPES_SETTING,
     _pop_scopes,
 )
+from .backends.oauth2 import OAuthBackend
 from .models import OAuthUserSession
 
 STATE_SESSION_KEY = 'oauth-state'
@@ -177,26 +178,27 @@ def oauth2callback(request):
             )
 
             # credentials are valid, we should authenticate the user
-            user = auth.authenticate(request, oauth_session=session)
+            user = OAuthBackend().authenticate(request, oauth_session=session)
             if user:
-                logging.error("Successfully authenticated %s via OAuth2", user)
+                logging.debug("Successfully authenticated %s via OAuth2", user)
 
                 # If we successfully authenticate, then we need to logout
                 # and back in again. This is because the user may have
                 # authenticated with another backend, but we need to re-auth
                 # with the OAuth backend
+                request.user.refresh_from_db()
                 if request.user.is_authenticated:
                     auth.logout(request)
 
                 auth.login(request, user)
             else:
                 failed = True
-                logging.error(
+                logging.warning(
                     "Failed Django authentication after getting oauth credentials"
                 )
     else:
         failed = True
-        logging.error(
+        logging.warning(
             "Something failed during the OAuth authorization process for user: %s",
         )
 
