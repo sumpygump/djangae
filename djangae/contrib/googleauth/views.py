@@ -182,6 +182,8 @@ def oauth2callback(request):
             if user:
                 logging.debug("Successfully authenticated %s via OAuth2", user)
 
+                user.backend = 'djangae.contrib.googleauth.backends.oauth2.%s' % OAuthBackend.__name__
+
                 # If we successfully authenticate, then we need to logout
                 # and back in again. This is because the user may have
                 # authenticated with another backend, but we need to re-auth
