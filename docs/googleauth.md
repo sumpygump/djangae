@@ -107,3 +107,16 @@ authentication if necessary:
 ```python
 LOGIN_URL = reverse_lazy('oauth_login')
 ```
+
+# Testing Authentication Locally
+
+googleauth ships with a middleware class that simulates IAP authentication.
+
+Adding `djangae.contrib.googleauth.middleware.LocalIAPLoginMiddleware` to your `MIDDLEWARE` setting will give the following
+features:
+
+ - Visiting `/_dj/login/` will give you a login view to set which account to simulate. IAP credentials will then reflect this login
+ - Visiting `/_dj/logout/` will remove the IAP credentials
+
+The middleware will not run if djangae.environment reports that the site is on production. It is highly recommended that you
+don't include this middleware in live production settings.
