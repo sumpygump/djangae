@@ -154,7 +154,7 @@ class OAuth2CallbackTests(TestCase):
         with sleuth.fake('djangae.contrib.googleauth.views.OAuth2Session.fetch_token', return_value=fake_token), \
                 sleuth.fake('djangae.contrib.googleauth.views.OAuth2Session.authorized', return_value=True), \
                 sleuth.fake('djangae.contrib.googleauth.views.OAuth2Session.get', return_value=fake_profile), \
-                sleuth.watch('django.contrib.auth.authenticate') as mocked_auth, \
+                sleuth.watch('djangae.contrib.googleauth.backends.oauth2.OAuthBackend.authenticate') as mocked_auth, \
                 sleuth.watch('django.contrib.auth.login') as mocked_login, \
                 sleuth.fake('google.oauth2.id_token.verify_token', idinfo):
 
