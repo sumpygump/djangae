@@ -36,6 +36,16 @@ Returns true if the code is running in a task on the task queue
 Returns the number of times the task has retried, or 0 if the code is not
 running on a queue
 
-## djangae.environment.task_only
+# Decorators
+
+## djangae.decorators.task_only
 
 View decorator to allow restricting views to tasks (including crons) or admins of the application.
+
+## djangae.decorators.task_or_superuser_only
+
+View decorator that allows through tasks, or users with `is_superuser == True`
+
+## djangae.decorators.csrf_except_if_task
+
+View decorator that marks the view csrf_exempt *only* if it's being requested by Cloud Tasks
