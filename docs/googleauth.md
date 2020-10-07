@@ -64,6 +64,12 @@ urlpatterns = [
 ]
 ```
 
+## Custom User model
+
+Like Django's auth app, googleauth ships a concrete `User` model which you an use directly. However, if you want to customise this, you should
+instead inherit from `AbstractGoogleUser`. This includes all the fields necessary for the googleauth authentication backends, but is an abstract
+model and so avoids multi-table inheritance.
+
 ## Custom Permissions
 
 By default the generated permissions are the standard add, change, delete, and view permissions that Django's auth system

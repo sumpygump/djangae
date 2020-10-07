@@ -1,5 +1,9 @@
 
-from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.conf import settings
+from django.contrib.auth.base_user import (
+    AbstractBaseUser,
+    BaseUserManager,
+)
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.mail import send_mail
 from django.db import models
@@ -110,7 +114,7 @@ class AnonymousUser:
         return self.username
 
 
-class User(AbstractBaseUser):
+class AbstractGoogleUser(AbstractBaseUser):
     username_validator = UnicodeUsernameValidator()
 
     # If the user was created via OAuth, this is the oauth ID
@@ -183,7 +187,7 @@ class User(AbstractBaseUser):
     class Meta:
         verbose_name = _('user')
         verbose_name_plural = _('users')
-        # abstract = True
+        abstract = True
 
     def clean(self):
         super().clean()
@@ -231,8 +235,16 @@ class User(AbstractBaseUser):
         super().save(*args, **kwargs)
 
 
+class User(AbstractGoogleUser):
+    pass
+
+
 class UserPermission(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="permissions")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="permissions"
+    )
     permission = PermissionChoiceField()
     obj_id = models.PositiveIntegerField()
 
