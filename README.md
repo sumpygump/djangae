@@ -1,22 +1,29 @@
 # Djangae
 
-**NOTE: If you are using Django 1.11 / Python 2.7, please use the 1.x branch - master will not work for you**
-
 [![Join the chat at https://gitter.im/potatolondon/djangae](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/potatolondon/djangae?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![build-status-image]][travis]
 
-The best way to run Django on Google App Engine.
+The best way to run Django on Google Cloud.
 
-Djangae (djan-gee) is a Django app that allows you to run Django applications on Google App Engine, including (if you
-want to) using Django's models with the App Engine Datastore as the underlying database.
+Djangae (djan-gee) is a Django app that allows you to run Django applications on the Google Cloud platform, including (if you
+want to) using Django's models with Google Cloud Datastore as the underlying database.
 
 :earth_africa:&nbsp;&nbsp;[Website](https://djangae.org)&nbsp;&nbsp;|&nbsp;&nbsp;
 :octocat:&nbsp;&nbsp;[GitHub](https://github.com/potatolondon/djangae)&nbsp;&nbsp;|&nbsp;&nbsp;
 :closed_book:&nbsp;&nbsp; [Docs](https://djangae.readthedocs.io/)&nbsp;&nbsp;|&nbsp;&nbsp;
-:speech_balloon:&nbsp;&nbsp;[Gitter](https://gitter.im/potatolondon/djangae)&nbsp;&nbsp;|&nbsp;&nbsp;
 :busts_in_silhouette:&nbsp;&nbsp;[Google Group](https://groups.google.com/forum/#!forum/djangae-users)
 
+---
 
-**Note: Djangae is under heavy development, stability is not guaranteed. A 2.0 release will happen when it's ready.**
+## Looking for Commercial Support?
+
+Potato offers Commercial Support for all its Open Source projects and we can tailor a support package to your needs. 
+
+If you're interested in commercial support, training, or consultancy then go ahead and contact us at [opensource@potatolondon.com](mailto:opensource@potatolondon.com)
+
+---
+
+
+**Note: Djangae is under heavy development, stability is not guaranteed. A 2.0 release will happen when it's ready. If you are using Django 1.11 / Python 2.7, please use the 1.x branch**
 
 ## Features
 
@@ -33,11 +40,11 @@ Djangae currently supports Django 2.2.
 
 ## Documentation
 
-https://djangae.readthedocs.io/
+[https://djangae.readthedocs.io/](https://djangae.readthedocs.io/)
 
 # Installation
 
-See https://djangae.readthedocs.io/en/latest/installation/
+See [https://djangae.readthedocs.io/en/latest/installation/](https://djangae.readthedocs.io/en/latest/installation/)
 
 
 # Contributing to Djangae

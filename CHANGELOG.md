@@ -19,7 +19,21 @@
   - djangae.fields (moved to gcloud-connectors)
   - djangae.forms (used for database fields which no longer exist in djangae)
   - lib.memcache (memcache doesn't exist on the Python 3 runtime)
-
+- Control deferred task routing & default to routing tasks to their parent GAE version
+- Make `djangae/contrib/security/middleware.py` Python 3.7 compatible
+- Update sandbox to allow caller to control emulator ports
+- Update `djangae.contrib.backup` and `djangae.contrib.locking` URLs to use the Django 2 `path` function
+- Fix backup task credentials for GAE Python 3
+- Fix `djangae.contrib.security.commands_utils.extract_views_from_urlpatterns` function
+- Fix error classes not inheriting from `Exception`
+- Fix an issue with `djangae.storage.CloudStorage` where calling `_open()` or `delete()` wouldn't use the correct bucket
+- Add parameter to control datastore emulator `--data-dir`
+- Remove `environment.queue_name()` function, use `environment.task_queue_name()` instead
+- Update `environment.task_queue_name()` to return `default` if we're in a task and a queue name is not set, otherwise return `None`
+- Update `djangae/tasks/deferred.py` to handle the case where a queue name is not set
+- Add `google-cloud-tasks` as a requirement
+- Move `@task_only` to `djangae.decorators`
+- Add `@task_or_superuser_only` and `@csrf_exempt_if_task`
 
 ### Bug fixes:
 

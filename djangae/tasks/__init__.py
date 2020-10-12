@@ -19,7 +19,7 @@ def get_cloud_tasks_client():
         force the google cloud tasks dependency if you're not
         using it
     """
-    from google.cloud.tasks_v2 import CloudTasksClient
+    from google.cloud.tasks import CloudTasksClient
 
     is_app_engine = os.environ.get("GAE_ENV") == "standard"
 
@@ -28,7 +28,12 @@ def get_cloud_tasks_client():
     else:
         # Running locally, try to connect to the emulator
 
-        from google.cloud.tasks_v2.gapic.transports.cloud_tasks_grpc_transport import CloudTasksGrpcTransport
+        try:
+            # google-cloud-tasks < 2.0.0 has this here
+            from google.cloud.tasks_v2.gapic.transports.cloud_tasks_grpc_transport import CloudTasksGrpcTransport
+        except ImportError:
+            from google.cloud.tasks_v2.services.cloud_tasks.transports.grpc import CloudTasksGrpcTransport
+
         from google.api_core.client_options import ClientOptions
 
         host = os.environ.get("TASKS_EMULATOR_HOST", "127.0.0.1:9022")
@@ -60,7 +65,10 @@ def ensure_required_queues_exist():
         queue_dict["name"] = "%s/queues/%s" % (parent_path, queue_name)
 
         logging.info("Ensuring task queue: %s", queue_dict["name"])
-        client.create_queue(parent_path, queue_dict)
+        client.create_queue(
+            parent=parent_path,
+            queue=queue_dict
+        )
 
 
 def cloud_tasks_project():
@@ -69,6 +77,12 @@ def cloud_tasks_project():
         project_id = environment.project_id()
 
     return project_id
+
+
+def cloud_tasks_location():
+    location_id = getattr(settings, CLOUD_TASKS_LOCATION_SETTING, None)
+    assert(location_id)
+    return location_id
 
 
 def cloud_tasks_parent_path():

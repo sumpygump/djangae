@@ -18,22 +18,29 @@ This defer is an adapted version of that one, with the following changes:
 """
 
 import copy
+import functools
 import logging
 import os
 import pickle
 import time
 import types
+from datetime import timedelta
 from urllib.parse import unquote
 
-from django.conf import settings
-from django.db import models
-from django.urls import reverse
-
-from djangae.environment import task_queue_name
+from djangae.environment import gae_version, task_queue_name
 from djangae.models import DeferIterationMarker
 from djangae.processing import find_key_ranges_for_queryset
 from djangae.utils import retry
+from django.conf import settings
+from django.db import (
+    connections,
+    models,
+)
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.utils.encoding import force_str
 from gcloudc.db import transaction
+from google.protobuf.timestamp_pb2 import Timestamp
 
 from . import (
     CLOUD_TASKS_LOCATION_SETTING,
@@ -48,7 +55,7 @@ logger = logging.getLogger(__name__)
 DEFERRED_ITERATION_SHARD_INDEX_KEY = "DEFERRED_ITERATION_SHARD_INDEX"
 
 _DEFAULT_QUEUE = "default"
-_DEFAULT_URL = unquote(reverse("tasks_deferred_handler"))
+_DEFAULT_URL = reverse_lazy("tasks_deferred_handler")
 _TASKQUEUE_HEADERS = {
     "Content-Type": "application/octet-stream"
 }
@@ -107,7 +114,7 @@ def _curry_callable(obj, *args, **kwargs):
     """
 
     if isinstance(obj, types.MethodType):
-        return (invoke_member, (obj.im_self, obj.im_func.__name__) + args, kwargs)
+        return (invoke_member, (obj.__self__, obj.__func__.__name__) + args, kwargs)
 
     elif isinstance(obj, types.BuiltinMethodType):
         if not obj.__self__:
@@ -133,7 +140,8 @@ def _wipe_caches(args, kwargs):
     # instances.
     def _wipe_instance(instance):
         for field in (f for f in instance._meta.fields if f.remote_field):
-            field.delete_cached_value(instance)
+            if field.is_cached(instance):
+                field.delete_cached_value(instance)
 
     # We have to copy the instances before wiping the caches
     # otherwise the calling code will suddenly lose their cached things
@@ -148,65 +156,47 @@ def _wipe_caches(args, kwargs):
             _wipe_instance(kwargs[k])
 
 
-def defer(obj, *args, **kwargs):
-    """
-        This is a replacement for google.appengine.ext.deferred.defer which doesn't
-        suffer the bug where tasks are deferred non-transactionally when they hit a
-        certain limit.
+def _serialize(obj, *args, **kwargs):
+    curried = _curry_callable(obj, *args, **kwargs)
+    return pickle.dumps(curried, protocol=pickle.HIGHEST_PROTOCOL)
 
-        It also *always* uses an entity group, unless you pass _small_task=True in which
-        case it *never* uses an entity group (but you are limited by 100K)
-    """
 
-    def serialize(obj, *args, **kwargs):
-        curried = _curry_callable(obj, *args, **kwargs)
-        return pickle.dumps(curried, protocol=pickle.HIGHEST_PROTOCOL)
-
-    KWARGS = {
-        "countdown", "eta", "name", "target", "retry_options"
-    }
-
-    taskargs = {x: kwargs.pop(("_%s" % x), None) for x in KWARGS}
-    taskargs["url"] = kwargs.pop("_url", _DEFAULT_URL)
-
-    transactional = kwargs.pop("_transactional", False)  # noqa FIXME!
-    small_task = kwargs.pop("_small_task", False)
-    wipe_related_caches = kwargs.pop("_wipe_related_caches", True)
-
-    taskargs["headers"] = dict(_TASKQUEUE_HEADERS)
-    taskargs["headers"].update(kwargs.pop("_headers", {}))
-    queue = kwargs.pop("_queue", _DEFAULT_QUEUE) or _DEFAULT_QUEUE
-
-    if wipe_related_caches:
-        args = list(args)
-        _wipe_caches(args, kwargs)
-        args = tuple(args)
-
-    pickled = serialize(obj, *args, **kwargs)
-
-    project_id = cloud_tasks_project()
-    assert(project_id)  # Should be checked in apps.py ready()
-
-    location = getattr(settings, CLOUD_TASKS_LOCATION_SETTING, None)
-    assert(location)  # Should be checked in apps.py
+def _schedule_task(
+    project_id, location, queue, pickled_data,
+    task_args, small_task, deferred_handler_url, task_headers
+):
 
     client = get_cloud_tasks_client()
-
     deferred_task = None
     try:
         # Always use an entity group unless this has been
         # explicitly marked as a small task
         if not small_task:
-            deferred_task = DeferredTask.objects.create(data=pickled)
+            deferred_task = DeferredTask.objects.create(data=pickled_data)
 
         queue = queue or _DEFAULT_QUEUE
         path = client.queue_path(project_id, location, queue)
 
+        schedule_time = task_args['eta']
+        if task_args['countdown']:
+            schedule_time = timezone.now() + timedelta(seconds=task_args['countdown'])
+
+        if schedule_time:
+            # If a schedule time has bee requested, we need to convert
+            # to a Timestamp
+            ts = Timestamp()
+            ts.FromDatetime(schedule_time)
+            schedule_time = ts
+
         task = {
+            'name': task_args['name'],
+            'schedule_time': schedule_time,
             'app_engine_http_request': {  # Specify the type of request.
                 'http_method': 'POST',
-                'relative_uri': _DEFAULT_URL,
-                'body': pickled
+                'relative_uri': deferred_handler_url,
+                'body': pickled_data,
+                'headers': task_headers,
+                'app_engine_routing': task_args["routing"],
             }
         }
 
@@ -222,13 +212,14 @@ def defer(obj, *args, **kwargs):
         if small_task:
             raise
 
-        pickled = serialize(_run_from_datastore, deferred_task.pk)
+        pickled = _serialize(_run_from_datastore, deferred_task.pk)
 
         task = {
             'app_engine_http_request': {  # Specify the type of request.
                 'http_method': 'POST',
-                'relative_uri': _DEFAULT_URL,
-                'body': pickled
+                'relative_uri': deferred_handler_url,
+                'body': pickled,
+                'app_engine_routing': task_args["routing"],
             }
         }
 
@@ -238,6 +229,95 @@ def defer(obj, *args, **kwargs):
         if deferred_task:
             deferred_task.delete()
         raise
+
+
+def defer(obj, *args, **kwargs):
+    """
+        This is a reimplementation of the defer() function that shipped with Google App Engine
+        before the Python 3 runtime.
+
+        It fixes a number of bugs in that implementation, but has some subtle differences. In
+        particular, the _transactional flag is not entirely atomic - deferred tasks will
+        run on successful commit, but they're not *guaranteed* to run if there is an error
+        submitting them.
+
+        It also *always* uses an entity group, unless you pass _small_task=True in which
+        case it *never* uses an entity group (but you are limited by 100K)
+
+        :param _service: the GAE service to route the task to
+        :type _service: str, optional
+        :param _version: the GAE app version to route the task to;
+            defaults to using the current GAE version
+        :type _version: str, optional
+        :param _instance: the GAE instance to route the task to
+        :type _instance: str, optional
+    """
+
+    KWARGS = {
+        "countdown", "eta", "name", "retry_options", "transactional",
+        "service", "version", "instance", "using"
+    }
+
+    task_args = {x: kwargs.pop(("_%s" % x), None) for x in KWARGS}
+
+    if task_args['retry_options']:
+        raise NotImplementedError("FIXME. Implement these options")
+
+    if "_target" in kwargs:
+        raise UserWarning("'_target' parameter is no longer supported, use '_version' instead.")
+
+    deferred_handler_url = kwargs.pop("_url", None) or unquote(force_str(_DEFAULT_URL))
+
+    using = task_args["using"] or "default"
+    connection = connections[using]
+
+    transactional = (
+        task_args["transactional"]
+        if task_args["transactional"] is not None
+        else connection.in_atomic_block
+    )
+
+    small_task = kwargs.pop("_small_task", False)
+    wipe_related_caches = kwargs.pop("_wipe_related_caches", True)
+
+    task_headers = dict(_TASKQUEUE_HEADERS)
+    task_headers.update(kwargs.pop("_headers", {}))
+
+    queue = kwargs.pop("_queue", _DEFAULT_QUEUE) or _DEFAULT_QUEUE
+
+    # build the routing payload
+    # default to using the current GAE version
+    routing = {
+        "version": task_args["version"] or gae_version(),
+    }
+    for key in ("service", "instance"):
+        if task_args.get(key):
+            routing[key] = task_args[key]
+
+    # So we can pass through to the schedule function
+    task_args["routing"] = routing
+
+    if wipe_related_caches:
+        args = list(args)
+        _wipe_caches(args, kwargs)
+        args = tuple(args)
+
+    pickled = _serialize(obj, *args, **kwargs)
+
+    project_id = cloud_tasks_project()
+    assert(project_id)  # Should be checked in apps.py ready()
+
+    location = getattr(settings, CLOUD_TASKS_LOCATION_SETTING, None)
+    assert(location)  # Should be checked in apps.py
+
+    args = (project_id, location, queue, pickled, task_args, small_task, deferred_handler_url, task_headers)
+
+    if transactional:
+        # Django connections have an on_commit message that run things on
+        # post-commit.
+        connection.on_commit(functools.partial(_schedule_task, *args))
+    else:
+        _schedule_task(*args)
 
 
 _TASK_TIME_LIMIT = 10 * 60
@@ -263,6 +343,10 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
         logger.warning("DeferIterationMarker with ID: %s has vanished, cancelling task", marker_id)
         return
 
+    queue = task_queue_name()
+    if queue:
+        queue = queue.rsplit("/", 1)[-1]
+
     # Redefer if the task isn't ready to begin
     if not marker.is_ready:
         defer(
@@ -270,7 +354,7 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
             buffer_time=buffer_time,
             args=args,
             kwargs=kwargs,
-            _queue=task_queue_name().rsplit("/", 1)[-1],
+            _queue=queue,
             _countdown=1
         )
         return
@@ -333,7 +417,7 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
                         finalize,
                         *args,
                         _transactional=True,
-                        _queue=task_queue_name().rsplit("/", 1)[-1],
+                        _queue=queue,
                         **kwargs
                     )
 
@@ -361,7 +445,7 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
             buffer_time=buffer_time,
             args=args,
             kwargs=kwargs,
-            _queue=task_queue_name().rsplit("/", 1)[-1],
+            _queue=queue,
             _countdown=1
         )
 
@@ -381,6 +465,10 @@ def _generate_shards(
         finalize_name=finalize.__name__
     )
 
+    queue = task_queue_name()
+    if queue:
+        queue = queue.rsplit("/", 1)[-1]
+
     for i, (start, end) in enumerate(key_ranges):
         is_last = i == (len(key_ranges) - 1)
         shard_number = i
@@ -395,7 +483,8 @@ def _generate_shards(
         if end:
             filter_kwargs["pk__lt"] = end
 
-        qs = qs.filter(**filter_kwargs)
+        # calling order_by with no args to clear any pre-existing ordering (e.g. from Meta.ordering)
+        qs = qs.filter(**filter_kwargs).order_by()
 
         @transaction.atomic(xg=True)
         def make_shard():
@@ -413,7 +502,7 @@ def _generate_shards(
                 args=args,
                 kwargs=kwargs,
                 buffer_time=buffer_time,
-                _queue=task_queue_name().rsplit("/", 1)[-1],
+                _queue=queue,
                 _transactional=True
             )
 

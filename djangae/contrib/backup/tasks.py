@@ -8,7 +8,7 @@ from djangae.environment import (
     application_id,
     is_production_environment,
 )
-from google.auth import app_engine
+import google.auth
 from google.oauth2 import service_account
 
 from .utils import (
@@ -118,7 +118,7 @@ def _get_authentication_credentials():
     https://developers.google.com/api-client-library/python/auth/service-accounts
     """
     if is_production_environment():
-        credentials = app_engine.Credentials(scopes=AUTH_SCOPES)
+        credentials, _ = google.auth.default(scopes=AUTH_SCOPES)
     else:
         service_account_path = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
         credentials = service_account.Credentials.from_service_account_file(

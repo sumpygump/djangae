@@ -1,6 +1,18 @@
-# Deferred
+# djangae.tasks
 
-# djangae.tasks.deferred.defer
+The djangae.tasks app provides functionality for working with Google Cloud Tasks from your Django application.
+
+The main functionality it provides is the ability to "defer" a function to be run later by Cloud Tasks. It
+also provides a number of helper methods that leverage that ability.
+
+## Google Cloud Tasks Emulator
+
+When developing locally, it is recommended you make use of the [GCloud Tasks Emulator](https://gitlab.com/potato-oss/google-cloud/gcloud-tasks-emulator)
+project that simulates the Cloud Task API locally.
+
+Djangae's sandbox.py provides functionality to start/stop the emulator for you, and djangae.tasks integrates with the emulator when it's running.
+
+## djangae.tasks.deferred.defer
 
 The App Engine SDK provides a utility function called `defer()` which is used to call
 functions and methods from the task queue.
@@ -10,13 +22,16 @@ The built-in `defer()` method suffers from a number of issues with both bugs, an
 `djangae.deferred.defer` is a near-drop-in replacement for `google.appengine.ext.deferred.defer` with a few differences:
 
  - The code has been altered to always use a Datastore entity group unless the task is explicitly marked as being "small" (less than 100k) with the `_small_task=True` flag.
- - Transactional defers are always transactional, even if the task is > 100k (this is a bug in the original defer)
  - If a Django instance is passed as an argument to the called function, then the foreign key caches are wiped before
    deferring to avoid bloating and stale data when the task runs. This can be disabled with `_wipe_related_caches=False`
+ - Transactional tasks do not *guarantee* that the task will run. It's possible (but unlikely) for the transaction to complete
+   successfully, but the queuing of the task to fail. It is not possible for the transaction to fail and the task to queue however.
+ - `_transactional` defaults to `True` if called within an atomic() block, or `False` otherwise.
+ - `_using` is provided to choose which connection should control transactional queuing. Defaults to "default".
 
-Everything else should behave in the same way. The actual running of deferred tasks still uses the Google handler (which is wrapped by Djangae)
+Everything else should behave in the same way.
 
-# djange.tasks.deferred.defer_iteration_with_finalize
+## djange.tasks.deferred.defer_iteration_with_finalize
 
 `defer_iteration_with_finalize(queryset, callback, finalize, args=None, _queue='default', _shards=5, _delete_marker=True, _transactional=False)`
 
@@ -39,7 +54,7 @@ tracks complete shards is deleted. If you want to keep these (as a log of sorts)
 
 `_transactional` and `_queue` work in the same way as `defer()`
 
-## Identifying a task shard
+### Identifying a task shard
 
 From a shard callback, you can identify the current shard by accessing `os.environ["DEFERRED_ITERATION_SHARD_INDEX"]` there is a constant defined for this key:
 
@@ -47,4 +62,3 @@ From a shard callback, you can identify the current shard by accessing `os.envir
 from djangae.deferred import DEFERRED_ITERATION_SHARD_INDEX_KEY
 shard_index = int(os.environ[DEFERRED_ITERATION_SHARD_INDEX_KEY])
 ```
-
