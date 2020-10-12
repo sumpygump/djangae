@@ -63,12 +63,20 @@ class Index(object):
 
                     # FIXME: Update occurrances
                     with transaction.atomic():
-                        obj, updated = WordFieldIndex.objects.update_or_create(
-                            document_data_id=document.id,
-                            index_stats=self.index,
-                            word=token,
-                            field_name=field.attname
-                        )
+                        try:
+                            obj = WordFieldIndex.objects.get(
+                                document_data_id=document.id,
+                                word=token,
+                                index_stats=self.index,
+                                field_name=field.attname
+                            )
+                        except WordFieldIndex.DoesNotExist:
+                            obj = WordFieldIndex.objects.create(
+                                document_data_id=document.id,
+                                index_stats=self.index,
+                                word=token,
+                                field_name=field.attname
+                            )
 
                         data.refresh_from_db()
                         data.word_field_indexes.add(obj)
