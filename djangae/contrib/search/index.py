@@ -35,8 +35,12 @@ class Index(object):
             data = document._data
 
             if data is None:
-                # Generate a database representation of this Document
-                data = DocumentData.objects.create(index_stats=self.index)
+                # Generate a database representation of this Document use
+                # the passed ID if there is one
+                data = DocumentData.objects.create(
+                    index_stats=self.index,
+                    pk=document.id
+                )
                 document._set_data(data)
 
             assert(document.id)  # This should be a thing by now

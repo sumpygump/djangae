@@ -1,10 +1,9 @@
 
-
 from djangae.test import TestCase
 from djangae.contrib import search
 
-from .document import Document
-from .index import Index
+from djangae.contrib.search.document import Document
+from djangae.contrib.search.index import Index
 
 
 class QueryStringParseTests(TestCase):

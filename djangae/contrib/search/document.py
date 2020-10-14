@@ -119,6 +119,15 @@ class NumberField(Field):
 
 
 class Document(object):
+    # All documents have an 'id' property, if this is blank
+    # when indexing, it will be populated with a generated one
+    # This corresponds with the PK of the underlying DocumentRecord
+    id = NumberField()
+
+    @property
+    def pk(self):
+        return self.id
+
     def __init__(self, **kwargs):
         self._data = kwargs.get("_document_data", None)
 

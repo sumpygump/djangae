@@ -8,4 +8,4 @@ from .document import (  # noqa
     TextField,
 )
 
-from .index import Index
+from .index import Index  # noqa
