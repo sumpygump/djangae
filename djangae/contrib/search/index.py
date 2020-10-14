@@ -109,9 +109,11 @@ class Index(object):
     def get(self, document_id):
         pass
 
-    def search(self, query_string, limit=1000):
+    def search(self, query_string, limit=1000, subclass=None):
+        subclass = subclass or Document
+
         from .query import build_document_queryset
         qs = build_document_queryset(query_string, self)[:limit]
 
         for record in qs:
-            yield Document(_record=record, **record.data)
+            yield subclass(_record=record, **record.data)

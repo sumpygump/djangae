@@ -27,8 +27,10 @@ class ModelDocument(object):
 
 def document_from_model_document(model_document, instance):
     fields = getattr(model_document._meta(), "fields", [])
+    model = getattr(model_document._meta(), "model")
 
     mapping = {
+        models.AutoField: search.NumberField,
         models.CharField: search.AtomField,
         models.TextField: search.TextField,
         models.DateTimeField: search.DateTimeField,
@@ -37,14 +39,22 @@ def document_from_model_document(model_document, instance):
         models.PositiveIntegerField: search.NumberField
     }
 
-    attrs = {}
+    pk_type = type(model._meta.pk)
+
+    attrs = {
+        "instance_id": mapping[pk_type]
+    }
 
     for field in fields:
-        field_type = type(instance._meta.get_field(field))
+        # id is always stored as instance_id
+        if field in ("pk", "id"):
+            continue
+
+        field_type = type(model._meta.get_field(field))
         attrs[field] = mapping[field_type]()
 
     Document = type(
-        '%sDocument' % type(instance).__name__,
+        '%sDocument' % model.__name__,
         (search.Document,),
         attrs
     )
@@ -52,11 +62,11 @@ def document_from_model_document(model_document, instance):
     # FIXME: This will fail with non-integer keys, need to
     # decide how to handle that (maybe another default _name field?)
     attrs = {
-        f: instance._meta.get_field(f).value_from_object(instance)
+        f: model._meta.get_field(f).value_from_object(instance)
         for f in fields
     }
 
-    return Document(id=instance.pk, **attrs)
+    return Document(**attrs)
 
 
 def searchable(model_document):
@@ -65,9 +75,12 @@ def searchable(model_document):
 
         class SearchManager(default_manager):
             def search(self, query):
+                document_class = document_from_model_document(model_document)
                 index = model_document.index()
-                documents = [x for x in index.search(query)]
-                keys = [x.id for x in documents]
+                documents = [
+                    x for x in index.search(query, subclass=document_class)
+                ]
+                keys = [x.instance_id for x in documents]
                 return klass.objects.filter(pk__in=keys)
 
         klass.objects.__class__ = SearchManager
