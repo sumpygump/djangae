@@ -157,10 +157,6 @@ class Document(object):
                     # Set default if there was no value
                     setattr(self, attr_name, attr.default)
 
-    @property
-    def id(self):
-        return self._data.pk if self._data else None
-
     def _set_data(self, data):
         self._data = data
 
