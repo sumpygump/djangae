@@ -32,6 +32,11 @@ class Index(object):
             # We go through the document fields, pull out the values that have been set
             # then we index them.
 
+            field_data = {
+                f: getattr(document, document.get_field(f).attname)
+                for f in document.get_fields()
+            }
+
             data = document._data
 
             if data is None:
@@ -39,7 +44,8 @@ class Index(object):
                 # the passed ID if there is one
                 data = DocumentData.objects.create(
                     index_stats=self.index,
-                    pk=document.id
+                    pk=document.id,
+                    data=field_data
                 )
                 document._set_data(data)
 
@@ -97,4 +103,4 @@ class Index(object):
         qs = build_document_queryset(query_string, self)[:limit]
 
         for document in qs:
-            yield Document(_document_data=document)
+            yield Document(**document.data)

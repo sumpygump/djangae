@@ -162,3 +162,6 @@ class Document(object):
 
     def get_fields(self):
         return self._fields
+
+    def get_field(self, name):
+        return self._fields[name]

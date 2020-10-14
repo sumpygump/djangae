@@ -4,6 +4,7 @@ from gcloudc.db.models.fields.iterable import (
 )
 
 from gcloudc.db.models.fields.related import RelatedSetField
+from gcloudc.db.models.fields.json import JSONField
 
 from .document import Document
 
@@ -28,6 +29,10 @@ class DocumentData(models.Model):
     # document. We need this data when deleting a document
     # from the index
     word_field_indexes = RelatedSetField("WordFieldIndex")
+
+    # This is the data at the time the field was indexed so the doc
+    # can be reconstructed on fetch
+    data = JSONField()
 
 
 class WordFieldIndex(models.Model):
