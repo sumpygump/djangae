@@ -2,7 +2,7 @@ from django.db.models import Q
 
 from .models import (
     WORD_DOCUMENT_JOIN_STRING,
-    DocumentData,
+    DocumentRecord,
     WordFieldIndex,
 )
 
@@ -52,7 +52,7 @@ def build_document_queryset(query_string, index):
 
     tokenization = _tokenize_query_string(query_string)
     if not tokenization:
-        return DocumentData.objects.none()
+        return DocumentRecord.objects.none()
 
     filters = Q()
 
@@ -75,4 +75,4 @@ def build_document_queryset(query_string, index):
         for x in WordFieldIndex.objects.filter(filters).values_list("pk", flat=True)
     ])
 
-    return DocumentData.objects.filter(pk__in=document_ids)
+    return DocumentRecord.objects.filter(pk__in=document_ids)

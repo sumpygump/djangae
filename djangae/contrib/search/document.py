@@ -137,7 +137,7 @@ class Document(object):
         return self.id
 
     def __init__(self, **kwargs):
-        self._data = kwargs.get("_document_data", None)
+        self._data = kwargs.get("_record", None)
 
         self._fields = {}
 

@@ -19,7 +19,7 @@ class Index(object):
 
     def add(self, document_or_documents):
         from .models import (  # Prevent import too early
-            DocumentData,
+            DocumentRecord,
             WordFieldIndex,
         )
 
@@ -42,7 +42,7 @@ class Index(object):
             if data is None:
                 # Generate a database representation of this Document use
                 # the passed ID if there is one
-                data = DocumentData.objects.create(
+                data = DocumentRecord.objects.create(
                     index_stats=self.index,
                     pk=document.id,
                     data=field_data
@@ -75,14 +75,14 @@ class Index(object):
                     with transaction.atomic():
                         try:
                             obj = WordFieldIndex.objects.get(
-                                document_data_id=document.id,
+                                record_id=document.id,
                                 word=token,
                                 index_stats=self.index,
                                 field_name=field.attname
                             )
                         except WordFieldIndex.DoesNotExist:
                             obj = WordFieldIndex.objects.create(
-                                document_data_id=document.id,
+                                record_id=document.id,
                                 index_stats=self.index,
                                 word=token,
                                 field_name=field.attname

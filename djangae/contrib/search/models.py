@@ -11,16 +11,16 @@ from .document import Document
 WORD_DOCUMENT_JOIN_STRING = "|"
 
 
-class DocumentData(models.Model):
+class DocumentRecord(models.Model):
     """
         'Document' is intentionally not a model;
         it would ruin the abstraction, and we need to
         store all kinds of data related to a Document.
-        So instead, each Document has an instance of DocumentData
+        So instead, each Document has an instance of DocumentRecord
         this is the closest to a database representation of the doc
         and indeed, is where the document ID comes from.
 
-        DocumentData exists to keep a reference to all word indexes
+        DocumentRecord exists to keep a reference to all word indexes
         and any stats/settings about the document (e.g. its rank).
     """
     index_stats = models.ForeignKey("IndexStats", on_delete=models.CASCADE)
@@ -47,7 +47,7 @@ class WordFieldIndex(models.Model):
     id = models.CharField(primary_key=True, max_length=100, default=None)
 
     index_stats = models.ForeignKey("IndexStats", on_delete=models.CASCADE)
-    document_data = models.ForeignKey("DocumentData", on_delete=models.CASCADE)
+    record = models.ForeignKey("DocumentRecord", on_delete=models.CASCADE)
     word = models.CharField(max_length=500)
     field_name = models.CharField(max_length=500)
 
@@ -67,7 +67,7 @@ class WordFieldIndex(models.Model):
 
     @property
     def document_id(self):
-        return self.document_data_id
+        return self.record_id
 
     @property
     def document(self):
