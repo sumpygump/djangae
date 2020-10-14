@@ -159,6 +159,7 @@ class Document(object):
 
     def _set_data(self, data):
         self._data = data
+        self.id = self._data.pk
 
     def get_fields(self):
         return self._fields

@@ -102,5 +102,5 @@ class Index(object):
         from .query import build_document_queryset
         qs = build_document_queryset(query_string, self)[:limit]
 
-        for document in qs:
-            yield Document(**document.data)
+        for record in qs:
+            yield Document(_record=record, **record.data)

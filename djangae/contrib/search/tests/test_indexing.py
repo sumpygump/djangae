@@ -21,10 +21,10 @@ class DocumentTests(TestCase):
             atom = search.AtomField()
 
         doc = DocOne()
-        self.assertEqual(doc.get_fields(), {})
+        self.assertEqual(list(doc.get_fields().keys()), ['id'])
 
         doc2 = DocTwo()
-        self.assertEqual(2, len(doc2.get_fields()))
+        self.assertEqual(3, len(doc2.get_fields()))
 
 
 class IndexingTests(TestCase):
