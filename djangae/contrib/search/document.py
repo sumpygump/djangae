@@ -137,7 +137,12 @@ class Document(object):
         return self.id
 
     def __init__(self, **kwargs):
-        self._data = kwargs.get("_record", None)
+        self._record = kwargs.get("_record", None)
+
+        if self._record:
+            self.id = self._record.pk
+        else:
+            self.id = kwargs.get("id")
 
         self._fields = {}
 
@@ -150,16 +155,17 @@ class Document(object):
                 attr.attname = attr_name
                 self._fields[attr_name] = attr
 
+                # We set the ID value above based on _record or 'id'
+                # and we don't want to wipe that
+                if attr_name == "id":
+                    continue
+
                 # Apply any field values passed into the init
                 if attr_name in kwargs:
                     setattr(self, attr_name, kwargs[attr_name])
                 else:
                     # Set default if there was no value
                     setattr(self, attr_name, attr.default)
-
-    def _set_data(self, data):
-        self._data = data
-        self.id = self._data.pk
 
     def get_fields(self):
         return self._fields

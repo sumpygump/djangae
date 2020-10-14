@@ -51,11 +51,12 @@ def document_from_model_document(model_document, instance):
 
     # FIXME: This will fail with non-integer keys, need to
     # decide how to handle that (maybe another default _name field?)
-    doc = Document(id=instance.pk)
-    for field in fields:
-        field_type = instance._meta.get_field(field)
-        setattr(doc, field, field_type.value_from_object(instance))
-    return doc
+    attrs = {
+        f: instance._meta.get_field(f).value_from_object(instance)
+        for f in fields
+    }
+
+    return Document(id=instance.pk, **attrs)
 
 
 def searchable(model_document):
@@ -65,7 +66,8 @@ def searchable(model_document):
         class SearchManager(default_manager):
             def search(self, query):
                 index = model_document.index()
-                keys = [x.id for x in index.search(query)]
+                documents = [x for x in index.search(query)]
+                keys = [x.id for x in documents]
                 return klass.objects.filter(pk__in=keys)
 
         klass.objects.__class__ = SearchManager

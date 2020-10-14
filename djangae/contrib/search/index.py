@@ -34,24 +34,35 @@ class Index(object):
 
             field_data = {
                 f: getattr(document, document.get_field(f).attname)
-                for f in document.get_fields()
+                for f in document.get_fields() if f != "id"
             }
 
-            data = document._data
+            record = document._record
 
-            if data is None:
+            created = False
+            if record is None:
                 # Generate a database representation of this Document use
                 # the passed ID if there is one
-                data = DocumentRecord.objects.create(
-                    index_stats=self.index,
+                record, created = DocumentRecord.objects.get_or_create(
                     pk=document.id,
-                    data=field_data
+                    defaults={
+                        "index_stats": self.index,
+                        "data": field_data
+                    }
                 )
-                document._set_data(data)
+                document.id = record.id
+                document._record = record
+
+            if not created:
+                record.data = field_data
+                record.save()
 
             assert(document.id)  # This should be a thing by now
 
             for field_name, field in document.get_fields().items():
+                if field_name == "id":
+                    continue
+
                 # Get the field value, use the default if it's not set
                 value = getattr(document, field.attname, None)
                 value = field.default if value is None else value
@@ -88,9 +99,9 @@ class Index(object):
                                 field_name=field.attname
                             )
 
-                        data.refresh_from_db()
-                        data.word_field_indexes.add(obj)
-                        data.save()
+                        record.refresh_from_db()
+                        record.word_field_indexes.add(obj)
+                        record.save()
 
     def remove(self, document_or_documents):
         pass
