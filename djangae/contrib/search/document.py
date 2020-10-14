@@ -115,7 +115,15 @@ class DateTimeField(Field):
 
 
 class NumberField(Field):
-    pass
+    def normalize_value(self, value):
+        # FIXME: Validation?
+        return int(value)
+
+    def clean_token(self, value):
+        return int(value)
+
+    def tokenize_value(self, value):
+        return [value]
 
 
 class Document(object):
