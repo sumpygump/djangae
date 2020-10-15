@@ -1,10 +1,8 @@
 
 from djangae.credentials import default
-from djangae.credentials import default, ServiceAccountCredentials
 from djangae.test import TestCase
-from google.auth import credentials
-from google.auth.exceptions import DefaultCredentialsError
-from unittest.mock import patch, Mock
+from unittest.mock import patch
+
 
 class CredentialsTestCase(TestCase):
 
@@ -19,6 +17,3 @@ class CredentialsTestCase(TestCase):
     def test_default_for_prod(self, ServiceAccountCredentialsmock, is_production_environment_mock):
         default()
         ServiceAccountCredentialsmock.assert_called_once()
-
-
-
