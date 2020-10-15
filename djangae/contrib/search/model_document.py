@@ -67,14 +67,33 @@ def register(model, model_document):
     default_manager = type(getattr(model, "objects", Manager()))
     document_class = document_from_model_document(model, model_document)
 
-    class SearchManager(default_manager):
-        def search(self, query):
+    def _do_search(query):
+        """
+            Return a list of model instance_ids from the results
+            of the specified query
+        """
 
-            index = model_document.index()
-            documents = [
-                x for x in index.search(query, subclass=document_class)
-            ]
-            keys = [x.instance_id for x in documents]
+        index = model_document.index()
+        documents = index.search(query, subclass=document_class)
+        return [x.instance_id for x in documents]
+
+    class SearchQueryset(models.QuerySet):
+        def search(self, query):
+            keys = _do_search(query)
+            return self.filter(pk__in=keys)
+
+    class SearchManager(default_manager):
+        def get_queryset(self):
+            qs = SearchQueryset(model, using=self._db)
+
+            # Apply any filtering from any parent manager
+            parent_qs = super().get_queryset()
+            qs.query = parent_qs.query
+
+            return qs
+
+        def search(self, query):
+            keys = _do_search(query)
             return model.objects.filter(pk__in=keys)
 
     # FIXME: Is this safe? I feel like it should be but 'objects' is
