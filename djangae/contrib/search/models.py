@@ -44,7 +44,7 @@ class WordFieldIndex(models.Model):
 
     # Querying for documents or fields containing the word
     # will just be a key__startswith query (effectively)
-    id = models.CharField(primary_key=True, max_length=100, default=None)
+    id = models.CharField(primary_key=True, max_length=1500, default=None)
 
     index_stats = models.ForeignKey("IndexStats", on_delete=models.CASCADE)
     record = models.ForeignKey("DocumentRecord", on_delete=models.CASCADE)
