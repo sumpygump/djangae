@@ -9,3 +9,4 @@ from .document import (  # noqa
 )
 
 from .index import Index  # noqa
+from .model_document import ModelDocument, register  # noqa

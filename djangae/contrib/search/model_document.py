@@ -63,44 +63,38 @@ def document_from_model_document(model, model_document):
     return Document
 
 
-def searchable(model_document):
-    def decorator(klass):
-        default_manager = type(getattr(klass, "objects", Manager()))
+def register(model, model_document):
+    default_manager = type(getattr(model, "objects", Manager()))
+    document_class = document_from_model_document(model, model_document)
 
-        class SearchManager(default_manager):
-            def search(self, query):
-                document_class = document_from_model_document(klass, model_document)
-                index = model_document.index()
-                documents = [
-                    x for x in index.search(query, subclass=document_class)
-                ]
-                keys = [x.instance_id for x in documents]
-                return klass.objects.filter(pk__in=keys)
+    class SearchManager(default_manager):
+        def search(self, query):
 
-        # FIXME: Is this safe? I feel like it should be but 'objects' is
-        # a ManagerDescriptor so this might not be doing what I think it
-        # is.
-        klass.objects.__class__ = SearchManager
+            index = model_document.index()
+            documents = [
+                x for x in index.search(query, subclass=document_class)
+            ]
+            keys = [x.instance_id for x in documents]
+            return model.objects.filter(pk__in=keys)
 
-        def save_decorator(func):
-            @wraps(func)
-            def wrapped(self, *args, **kwargs):
-                func(self, *args, **kwargs)
-                Document = document_from_model_document(klass, model_document)
+    # FIXME: Is this safe? I feel like it should be but 'objects' is
+    # a ManagerDescriptor so this might not be doing what I think it
+    # is.
+    model.objects.__class__ = SearchManager
 
-                attrs = {
-                    f: klass._meta.get_field(f).value_from_object(self)
-                    for f in getattr(model_document._meta(), "fields", [])
-                }
+    def save_decorator(func):
+        @wraps(func)
+        def wrapped(self, *args, **kwargs):
+            func(self, *args, **kwargs)
 
-                attrs["instance_id"] = self.pk
-                doc = Document(**attrs)
+            attrs = {
+                f: model._meta.get_field(f).value_from_object(self)
+                for f in getattr(model_document._meta(), "fields", [])
+            }
 
-                model_document.index().add(doc)
-            return wrapped
+            attrs["instance_id"] = self.pk
+            doc = document_class(**attrs)
+            model_document.index().add(doc)
+        return wrapped
 
-        klass.save = save_decorator(klass.save)
-
-        return klass
-
-    return decorator
+    model.save = save_decorator(model.save)

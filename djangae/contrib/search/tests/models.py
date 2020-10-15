@@ -1,8 +1,8 @@
 from django.db import models
 
-from djangae.contrib.search.decorators import (
+from djangae.contrib.search import (
     ModelDocument,
-    searchable,
+    register,
 )
 
 
@@ -14,6 +14,8 @@ class SearchableModelDocument(ModelDocument):
         )
 
 
-@searchable(SearchableModelDocument)
 class SearchableModel1(models.Model):
     name = models.CharField(max_length=128)
+
+
+register(SearchableModel1, SearchableModelDocument)
