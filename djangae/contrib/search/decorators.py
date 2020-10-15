@@ -25,9 +25,8 @@ class ModelDocument(object):
             return Index(name="")
 
 
-def document_from_model_document(model_document, instance):
+def document_from_model_document(model, model_document):
     fields = getattr(model_document._meta(), "fields", [])
-    model = getattr(model_document._meta(), "model")
 
     mapping = {
         models.AutoField: search.NumberField,
@@ -42,12 +41,14 @@ def document_from_model_document(model_document, instance):
     pk_type = type(model._meta.pk)
 
     attrs = {
-        "instance_id": mapping[pk_type]
+        "instance_id": mapping[pk_type]()
     }
+
+    fields = list(fields) + ["instance_id"]
 
     for field in fields:
         # id is always stored as instance_id
-        if field in ("pk", "id"):
+        if field == "instance_id":
             continue
 
         field_type = type(model._meta.get_field(field))
@@ -59,14 +60,7 @@ def document_from_model_document(model_document, instance):
         attrs
     )
 
-    # FIXME: This will fail with non-integer keys, need to
-    # decide how to handle that (maybe another default _name field?)
-    attrs = {
-        f: model._meta.get_field(f).value_from_object(instance)
-        for f in fields
-    }
-
-    return Document(**attrs)
+    return Document
 
 
 def searchable(model_document):
@@ -75,7 +69,7 @@ def searchable(model_document):
 
         class SearchManager(default_manager):
             def search(self, query):
-                document_class = document_from_model_document(model_document)
+                document_class = document_from_model_document(klass, model_document)
                 index = model_document.index()
                 documents = [
                     x for x in index.search(query, subclass=document_class)
@@ -83,13 +77,25 @@ def searchable(model_document):
                 keys = [x.instance_id for x in documents]
                 return klass.objects.filter(pk__in=keys)
 
+        # FIXME: Is this safe? I feel like it should be but 'objects' is
+        # a ManagerDescriptor so this might not be doing what I think it
+        # is.
         klass.objects.__class__ = SearchManager
 
         def save_decorator(func):
             @wraps(func)
             def wrapped(self, *args, **kwargs):
                 func(self, *args, **kwargs)
-                doc = document_from_model_document(model_document, self)
+                Document = document_from_model_document(klass, model_document)
+
+                attrs = {
+                    f: klass._meta.get_field(f).value_from_object(self)
+                    for f in getattr(model_document._meta(), "fields", [])
+                }
+
+                attrs["instance_id"] = self.pk
+                doc = Document(**attrs)
+
                 model_document.index().add(doc)
             return wrapped
 
