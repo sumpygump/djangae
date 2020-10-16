@@ -1,9 +1,8 @@
-import re
-
 from .constants import (
-    SPLIT_RE,
     STOP_WORDS,
 )
+
+from .tokens import tokenize_content
 
 
 class Field(object):
@@ -32,7 +31,7 @@ class Field(object):
         if value is None:
             return value
 
-        return re.split(SPLIT_RE, value)
+        return tokenize_content(value)
 
     def clean_token(self, token):
         """

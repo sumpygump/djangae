@@ -1,16 +1,16 @@
-import re
-
 from django.db.models import Q
 
 from .constants import (
-    SPLIT_RE,
     STOP_WORDS,
 )
+
 from .models import (
     WORD_DOCUMENT_JOIN_STRING,
     DocumentRecord,
     WordFieldIndex,
 )
+
+from .tokens import tokenize_content
 
 
 def _tokenize_query_string(query_string):
@@ -59,7 +59,7 @@ def _tokenize_query_string(query_string):
             continue
 
         # Split on punctuation, remove double-spaces
-        content = re.split(SPLIT_RE, content)
+        content = tokenize_content(content)
         content = [x.replace(" ", "") for x in content]
 
         if len(content) == 1:

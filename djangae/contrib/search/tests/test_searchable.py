@@ -1,6 +1,18 @@
+from djangae.contrib import search
 from djangae.test import TestCase
 
 from .models import SearchableModel1
+
+
+class SearchableModelDocument(search.ModelDocument):
+    class Meta:
+        index = "index1"
+        fields = (
+            "name",
+        )
+
+
+search.register(SearchableModel1, SearchableModelDocument)
 
 
 class SearchableTest(TestCase):
