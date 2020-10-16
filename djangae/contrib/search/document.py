@@ -1,6 +1,7 @@
+import re
 
 from .constants import (
-    PUNCTUATION,
+    SPLIT_RE,
     STOP_WORDS,
 )
 
@@ -31,7 +32,7 @@ class Field(object):
         if value is None:
             return value
 
-        return value.split()  # Just split on whitespace, normalization would've done the work
+        return re.split(SPLIT_RE, value)
 
     def clean_token(self, token):
         """
@@ -42,9 +43,6 @@ class Field(object):
         token = token.strip()  # Just in case
         if token in STOP_WORDS:
             return None  # Ignore stop words
-
-        if token in PUNCTUATION:
-            return None  # Ignore standalone punctuation
 
         # Remove + signs, unless they are trailing
         if "+" in token:

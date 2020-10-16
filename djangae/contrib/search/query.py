@@ -1,12 +1,16 @@
+import re
+
 from django.db.models import Q
 
+from .constants import (
+    SPLIT_RE,
+    STOP_WORDS,
+)
 from .models import (
     WORD_DOCUMENT_JOIN_STRING,
     DocumentRecord,
     WordFieldIndex,
 )
-
-from .constants import PUNCTUATION, STOP_WORDS
 
 
 def _tokenize_query_string(query_string):
@@ -54,12 +58,8 @@ def _tokenize_query_string(query_string):
         if kind == "exact":
             continue
 
-        # Replace punctuation that doesn't require special casing
-        for symbol in PUNCTUATION:
-            content = content.replace(symbol, " ")
-
-        # Split on spaces, remove double-spaces
-        content = content.split(" ")
+        # Split on punctuation, remove double-spaces
+        content = re.split(SPLIT_RE, content)
         content = [x.replace(" ", "") for x in content]
 
         if len(content) == 1:
