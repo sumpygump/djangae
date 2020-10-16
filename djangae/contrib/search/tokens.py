@@ -1,5 +1,4 @@
-import re
-from .constants import SPLIT_RE
+from .constants import PUNCTUATION
 
 
 def tokenize_content(content):
@@ -13,4 +12,19 @@ def tokenize_content(content):
         https://cloud.google.com/appengine/docs/standard/python/search#special-treatment
     """
 
-    return re.split(SPLIT_RE, content)
+    tokens = []
+    current = ""
+
+    STOP_CHARS = list(PUNCTUATION) + [" "]
+
+    for c in content:
+        if c in STOP_CHARS:
+            tokens.append(current)
+            tokens.append(c)
+            current = ""
+        else:
+            current += c
+    else:
+        tokens.append(current)
+
+    return tokens

@@ -11,4 +11,4 @@ class QueryTests(TestCase):
         words = [x[-1] for x in tokens]
 
         self.assertEqual(kinds, {"word"})  # All tokens should be recognised as words
-        self.assertEqual(words, ["hi", "100", "chance", "works", "honest"])
+        self.assertEqual(words, ["hi", ",", "100", "%", "chance", "works", "[", "honest", "]"])
