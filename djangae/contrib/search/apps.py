@@ -7,4 +7,5 @@ class SearchConfig(AppConfig):
     verbose_name = "Search"
 
     def ready(self):
-        pass
+        super().ready()
+        self.module.autodiscover()

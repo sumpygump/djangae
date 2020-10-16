@@ -63,6 +63,9 @@ def document_from_model_document(model, model_document):
     return Document
 
 
+_registry = {}
+
+
 def register(model, model_document):
     default_manager = type(getattr(model, "objects", Manager()))
     document_class = document_from_model_document(model, model_document)
