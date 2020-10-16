@@ -6,6 +6,8 @@ from .models import (
     WordFieldIndex,
 )
 
+from .constants import PUNCTUATION, STOP_WORDS
+
 
 def _tokenize_query_string(query_string):
     """
@@ -34,8 +36,48 @@ def _tokenize_query_string(query_string):
     # Note that exact matches will have quotes around them
 
     result = [
-        ("exact" if x[1][0] == '"' and x[1][-1] == '"' else "word", x[0], x[1].strip('"'))
+        [
+            "exact" if x[1][0] == '"' and x[1][-1] == '"' else "word",
+            x[0],
+            x[1].strip('"')
+        ]
         for x in field_queries
+    ]
+
+    # Expand
+    # For non exact matches, we may have multiple words separated by spaces that need
+    # to be expanded into seperate entries
+
+    start_length = len(result)
+    for i in range(start_length):
+        kind, field, content = result[i]
+        if kind == "exact":
+            continue
+
+        # Replace punctuation that doesn't require special casing
+        for symbol in PUNCTUATION:
+            content = content.replace(symbol, " ")
+
+        # Split on spaces, remove double-spaces
+        content = content.split(" ")
+        content = [x.replace(" ", "") for x in content]
+
+        if len(content) == 1:
+            # Do nothing, this was a single word
+            continue
+        else:
+            # Replace this entry with the first word
+            result[i][-1] = content[0]
+
+            # Append the rest to result
+            for word in content[1:]:
+                result.append(("word", field, word))
+
+    # Remove empty entries, and stop-words and then tuple-ify
+    result = [
+        (kind, field, content)
+        for (kind, field, content) in result
+        if content and content not in STOP_WORDS
     ]
 
     # Now we should have
