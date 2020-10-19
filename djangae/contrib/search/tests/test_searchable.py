@@ -1,4 +1,5 @@
 from djangae.contrib import search
+from djangae.contrib.search import fields
 from djangae.test import TestCase
 
 from .models import SearchableModel1
@@ -10,6 +11,8 @@ class SearchableModelDocument(search.ModelDocument):
         fields = (
             "name",
         )
+
+    name = fields.FuzzyTextField()
 
 
 search.register(SearchableModel1, SearchableModelDocument)

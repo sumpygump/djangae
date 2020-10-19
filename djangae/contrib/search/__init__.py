@@ -1,14 +1,8 @@
 from django.utils.module_loading import autodiscover_modules
 
 from . import model_document
-from .document import (  # noqa
-    AtomField,
-    DateTimeField,
-    Document,
-    NumberField,
-    TextField,
-)
 from .index import Index  # noqa
+from .document import Document  # noqa
 from .model_document import (  # noqa
     ModelDocument,
     register,

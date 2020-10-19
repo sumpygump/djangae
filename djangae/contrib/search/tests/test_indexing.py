@@ -1,9 +1,9 @@
 
 from djangae.test import TestCase
-from djangae.contrib import search
 
 from djangae.contrib.search.document import Document
 from djangae.contrib.search.index import Index
+from djangae.contrib.search import fields
 
 
 class QueryStringParseTests(TestCase):
@@ -17,8 +17,8 @@ class DocumentTests(TestCase):
             pass
 
         class DocTwo(Document):
-            text = search.TextField()
-            atom = search.AtomField()
+            text = fields.TextField()
+            atom = fields.AtomField()
 
         doc = DocOne()
         self.assertEqual(list(doc.get_fields().keys()), ['id'])
@@ -30,7 +30,7 @@ class DocumentTests(TestCase):
 class IndexingTests(TestCase):
     def test_indexing_atom_fields(self):
         class Doc(Document):
-            atom = search.AtomField()
+            atom = fields.AtomField()
 
         doc1 = Doc(atom="This is a test")
         doc2 = Doc(atom="This is also a test")
@@ -52,7 +52,7 @@ class IndexingTests(TestCase):
 
     def test_indexing_text_fields(self):
         class Doc(Document):
-            text = search.TextField()
+            text = fields.TextField()
 
         doc = Doc(text="This is a test. Cheese.")
         doc2 = Doc(text="This is also a test. Pickle.")

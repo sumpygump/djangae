@@ -4,6 +4,7 @@ from django.db import models
 from django.db.models import Manager
 
 from djangae.contrib import search
+from djangae.contrib.search import fields as search_fields
 
 from .index import Index
 
@@ -29,13 +30,13 @@ def document_from_model_document(model, model_document):
     fields = getattr(model_document._meta(), "fields", [])
 
     mapping = {
-        models.AutoField: search.NumberField,
-        models.CharField: search.AtomField,
-        models.TextField: search.TextField,
-        models.DateTimeField: search.DateTimeField,
-        models.IntegerField: search.NumberField,
-        models.FloatField: search.AtomField,
-        models.PositiveIntegerField: search.NumberField
+        models.AutoField: search_fields.NumberField,
+        models.CharField: search_fields.AtomField,
+        models.TextField: search_fields.TextField,
+        models.DateTimeField: search_fields.DateTimeField,
+        models.IntegerField: search_fields.NumberField,
+        models.FloatField: search_fields.AtomField,
+        models.PositiveIntegerField: search_fields.NumberField
     }
 
     pk_type = type(model._meta.pk)
