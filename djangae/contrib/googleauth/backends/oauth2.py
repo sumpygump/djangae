@@ -7,6 +7,7 @@ from ..models import (
 )
 from . import _find_atomic_decorator
 from .base import BaseBackend
+from .iap import _generate_unused_username
 
 
 class OAuthBackend(BaseBackend):
@@ -24,6 +25,7 @@ class OAuthBackend(BaseBackend):
 
         email = UserManager.normalize_email(profile["email"])
         assert email
+        username = email.split("@", 1)[0]
 
         with atomic():
             # Look for a user, either by oauth session ID, or email
@@ -51,7 +53,8 @@ class OAuthBackend(BaseBackend):
                 # First time we've seen this user
                 user = User.objects.create(
                     google_oauth_id=oauth_session.pk,
-                    email=email
+                    email=email,
+                    username=_generate_unused_username(username)
                 )
 
         return user
