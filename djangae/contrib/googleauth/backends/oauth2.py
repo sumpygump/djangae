@@ -5,9 +5,8 @@ from ..models import (
     UserManager,
     UserPermission,
 )
-from . import _find_atomic_decorator
+from . import _find_atomic_decorator, _generate_unused_username
 from .base import BaseBackend
-from .iap import _generate_unused_username
 
 
 class OAuthBackend(BaseBackend):
