@@ -77,6 +77,8 @@ class Index(object):
                     # Nothing to index
                     continue
 
+                tokens = set(tokens)  # Remove duplicates
+
                 for token in tokens:
                     token = field.clean_token(token)
                     if token is None:

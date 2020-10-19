@@ -1,6 +1,7 @@
 from djangae.contrib import search
 from djangae.contrib.search import fields
 from djangae.test import TestCase
+from djangae.contrib.search.model_document import document_from_model_document
 
 from .models import SearchableModel1
 
@@ -42,3 +43,9 @@ class SearchableTest(TestCase):
         ).search("luke")
 
         self.assertCountEqual(qs, [self.i1])
+
+    def test_field_override(self):
+        document = document_from_model_document(SearchableModel1, SearchableModelDocument)
+
+        # The name field should be overridden, it would default to
+        self.assertEqual(type(document.name), fields.FuzzyTextField)

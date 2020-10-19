@@ -1,3 +1,4 @@
+import copy
 from functools import wraps
 
 from django.db import models
@@ -31,11 +32,11 @@ def document_from_model_document(model, model_document):
 
     mapping = {
         models.AutoField: search_fields.NumberField,
-        models.CharField: search_fields.AtomField,
+        models.CharField: search_fields.TextField,
         models.TextField: search_fields.TextField,
         models.DateTimeField: search_fields.DateTimeField,
         models.IntegerField: search_fields.NumberField,
-        models.FloatField: search_fields.AtomField,
+        models.FloatField: search_fields.NumberField,
         models.PositiveIntegerField: search_fields.NumberField
     }
 
@@ -53,7 +54,13 @@ def document_from_model_document(model, model_document):
             continue
 
         field_type = type(model._meta.get_field(field))
-        attrs[field] = mapping[field_type]()
+
+        # First, do we have an override on the model document itself?
+        if hasattr(model_document, field):
+            # We copy, so we don't mess with the class version of this
+            attrs[field] = copy.deepcopy(getattr(model_document, field))
+        else:
+            attrs[field] = mapping[field_type]()
 
     Document = type(
         '%sDocument' % model.__name__,
