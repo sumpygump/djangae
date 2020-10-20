@@ -115,8 +115,7 @@ class Index(object):
         limit=1000,
         subclass=None,
         use_stemming=False,
-        use_startswith=False,
-        startswith_min_length=3
+        use_startswith=False
     ):
         """
             Perform a search of the index.
@@ -135,7 +134,6 @@ class Index(object):
             query_string, self,
             use_stemming=use_stemming,
             use_startswith=use_startswith,
-            startswith_min_length=startswith_min_length
         )[:limit]
 
         for record in qs:

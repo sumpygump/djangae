@@ -100,7 +100,7 @@ def _append_exact_word_filters(filters, prefix, field, string):
     return filters
 
 
-def _append_startswith_word_filters(filters, prefix, field, string, startswith_min_length=3):
+def _append_startswith_word_filters(filters, prefix, field, string):
     start = "%s%s" % (prefix, string)
     end = "%s%s%s" % (prefix, string, chr(0x10FFFF))
 
@@ -121,7 +121,6 @@ def build_document_queryset(
     query_string, index,
     use_stemming=False,
     use_startswith=False,
-    startswith_min_length=3
 ):
 
     assert(index.id)
@@ -140,8 +139,7 @@ def build_document_queryset(
             filters = _append_exact_word_filters(filters, prefix, field, string)
             if use_startswith:
                 filters = _append_startswith_word_filters(
-                    filters, prefix, field, string,
-                    startswith_min_length=startswith_min_length
+                    filters, prefix, field, string
                 )
 
             if use_stemming:
