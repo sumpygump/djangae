@@ -1,5 +1,4 @@
 from djangae.contrib.googleauth.backends.iap import IAPBackend
-from django.conf import settings
 from djangae.contrib.googleauth.models import AnonymousUser
 from djangae.test import TestCase
 from unittest.mock import patch, Mock
@@ -14,10 +13,7 @@ class AuthBackendTests(TestCase):
 
     def setUp(self):
         super().setUp()
-        settings.AUTHENTICATION_BACKENDS = (
-             "djangae.contrib.googleauth.backends.oauth2.OAuthBackend",
-             "djangae.contrib.googleauth.backends.iap.IAPBackend",
-        )
+
         self.middleware = AuthenticationMiddleware()
         self.request = RequestFactory().get('/')
         self.request.session = {}
