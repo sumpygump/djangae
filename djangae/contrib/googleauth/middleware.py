@@ -10,7 +10,7 @@ from django.contrib.auth import (
     HASH_SESSION_KEY,
     REDIRECT_FIELD_NAME,
     _get_user_session_key,
-    authenticate,
+    get_backends,
     constant_time_compare,
     load_backend,
     login,
@@ -75,14 +75,14 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
         ) % ("_CLASSES" if settings.MIDDLEWARE is None else "")
 
         request.user = SimpleLazyObject(lambda: get_user(request))
-
         backend_str = request.session.get(BACKEND_SESSION_KEY)
+
         if request.user.is_authenticated:
             if backend_str and isinstance(load_backend(backend_str), OAuthBackend):
                 # The user is authenticated with Django, and they use the OAuth backend, so they
                 # should have a valid oauth session
                 oauth_session = OAuthUserSession.objects.filter(
-                    pk=request.user.username
+                    pk=request.user.google_oauth_id
                 ).first()
 
                 # Their oauth session expired, so let's log them out
@@ -93,11 +93,18 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
                 if not IAPBackend.can_authenticate(request):
                     logout(request)
         else:
+            backends = get_backends()
+            try:
+                iap_backend = next(filter(lambda be: isinstance(be, IAPBackend), backends))
+            except StopIteration:
+                iap_backend = None
+
             # Try to authenticate with IAP if the headers
             # are available
-            if IAPBackend.can_authenticate(request):
-                user = authenticate(request)
+            if iap_backend and IAPBackend.can_authenticate(request):
+                user = iap_backend.authenticate(request)
                 if user and user.is_authenticated:
+                    user.backend = 'djangae.contrib.googleauth.backends.iap.%s' % IAPBackend.__name__
                     login(request, user)
 
 
