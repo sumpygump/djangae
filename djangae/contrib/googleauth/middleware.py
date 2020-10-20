@@ -104,6 +104,7 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
             if iap_backend and IAPBackend.can_authenticate(request):
                 user = iap_backend.authenticate(request)
                 if user and user.is_authenticated:
+                    user.backend = 'djangae.contrib.googleauth.backends.iap.%s' % IAPBackend.__name__
                     login(request, user)
 
 
