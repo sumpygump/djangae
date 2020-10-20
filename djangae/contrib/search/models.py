@@ -38,8 +38,8 @@ class DocumentRecord(models.Model):
 class WordFieldIndex(models.Model):
     # key should be of the format WWWW|XXXX|YYYY|ZZZZ where:
     # WWWW = index ID
-    # XXXX = field_name
-    # YYYY = normalised word
+    # XXXX = normalised word
+    # YYYY = field_name
     # ZZZZ = document id
 
     # Querying for documents or fields containing the word

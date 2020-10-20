@@ -89,7 +89,41 @@ def _tokenize_query_string(query_string):
     return result
 
 
-def build_document_queryset(query_string, index):
+def _append_exact_word_filters(filters, prefix, field, string):
+    start = "%s%s%s" % (prefix, string, WORD_DOCUMENT_JOIN_STRING)
+    end = "%s%s%s%s" % (prefix, string, chr(0x10FFFF), WORD_DOCUMENT_JOIN_STRING)
+    if not field:
+        filters |= Q(pk__gte=start, pk__lt=end)
+    else:
+        filters |= Q(pk__gte=start, pk__lt=end, field_name=field)
+
+    return filters
+
+
+def _append_startswith_word_filters(filters, prefix, field, string, startswith_min_length=3):
+    start = "%s%s" % (prefix, string)
+    end = "%s%s%s" % (prefix, string, chr(0x10FFFF))
+
+    if not field:
+        filters |= Q(pk__gte=start, pk__lt=end)
+    else:
+        filters |= Q(pk__gte=start, pk__lt=end, field_name=field)
+
+    return filters
+
+
+def _append_stemming_word_filters(filters, prefix, field, string):
+    # FIXME: Implement
+    return filters
+
+
+def build_document_queryset(
+    query_string, index,
+    use_stemming=False,
+    use_startswith=False,
+    startswith_min_length=3
+):
+
     assert(index.id)
 
     tokenization = _tokenize_query_string(query_string)
@@ -103,12 +137,17 @@ def build_document_queryset(query_string, index):
 
     for kind, field, string in tokenization:
         if kind == "word":
-            start = "%s%s%s" % (prefix, string, WORD_DOCUMENT_JOIN_STRING)
-            end = "%s%s%s%s" % (prefix, string, chr(0x10FFFF), WORD_DOCUMENT_JOIN_STRING)
-            if not field:
-                filters |= Q(pk__gte=start, pk__lt=end)
-            else:
-                filters |= Q(pk__gte=start, pk__lt=end, field_name=field)
+            filters = _append_exact_word_filters(filters, prefix, field, string)
+            if use_startswith:
+                filters = _append_startswith_word_filters(
+                    filters, prefix, field, string,
+                    startswith_min_length=startswith_min_length
+                )
+
+            if use_stemming:
+                filters = _append_stemming_word_filters(
+                    filters, prefix, field, string,
+                )
         else:
             raise NotImplementedError("Need to implement exact matching")
 

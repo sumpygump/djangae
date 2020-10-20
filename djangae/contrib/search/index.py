@@ -31,7 +31,6 @@ class Index(object):
         for document in documents:
             # We go through the document fields, pull out the values that have been set
             # then we index them.
-
             field_data = {
                 f: getattr(document, document.get_field(f).attname)
                 for f in document.get_fields() if f != "id"
@@ -100,7 +99,6 @@ class Index(object):
                                 word=token,
                                 field_name=field.attname
                             )
-
                         record.refresh_from_db()
                         record.word_field_indexes.add(obj)
                         record.save()
@@ -111,11 +109,34 @@ class Index(object):
     def get(self, document_id):
         pass
 
-    def search(self, query_string, limit=1000, subclass=None):
+    def search(
+        self,
+        query_string,
+        limit=1000,
+        subclass=None,
+        use_stemming=False,
+        use_startswith=False,
+        startswith_min_length=3
+    ):
+        """
+            Perform a search of the index.
+            query_string: The query we're making using query syntax
+            limit: The max number of results to return
+            subclass: A document subclass to return the results as
+            use_stemming: If true, this will query for variations of the token
+            use_startswith: If true, will return results where the beginning of searched tokens match
+            startswith_min_length: When use_startswith == True, Will not match tokens with fewer characters than this
+        """
+
         subclass = subclass or Document
 
         from .query import build_document_queryset
-        qs = build_document_queryset(query_string, self)[:limit]
+        qs = build_document_queryset(
+            query_string, self,
+            use_stemming=use_stemming,
+            use_startswith=use_startswith,
+            startswith_min_length=startswith_min_length
+        )[:limit]
 
         for record in qs:
             yield subclass(_record=record, **record.data)
