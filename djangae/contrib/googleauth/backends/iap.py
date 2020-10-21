@@ -1,6 +1,4 @@
 import logging
-import random
-import string
 
 from django.contrib.auth import get_user_model
 
