@@ -92,6 +92,10 @@ def default_gcs_bucket_name() -> str:
     return "%s.appspot.com" % application_id()
 
 
+def default_app_host() -> str:
+    return "%s.appspot.com" % application_id()
+
+
 def project_id() -> str:
     # Environment variable will exist on production servers
     # fallback to "example" locally if it doesn't exist

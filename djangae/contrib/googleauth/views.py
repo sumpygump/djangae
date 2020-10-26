@@ -1,6 +1,8 @@
 import datetime
 import logging
 
+from djangae import environment
+
 from django.conf import settings
 from django.contrib import auth
 from django.http import (
@@ -51,7 +53,15 @@ def oauth_login(request):
         This view should be set as your login_url for using OAuth
         authentication. It will trigger the main oauth flow.
     """
-    original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
+
+    # Use default application for oauth flow to avoid having to set redirect_urls
+    # for every single new app version
+    if environment.is_production_environment():
+        host = environment.default_app_host()
+    else:
+        host = request.META['HTTP_HOST']
+
+    original_url = f"{request.scheme}://{host}{reverse('googleauth_oauth2callback')}"
 
     scopes = _get_default_scopes()
     additional_scopes, offline = _pop_scopes(request)
