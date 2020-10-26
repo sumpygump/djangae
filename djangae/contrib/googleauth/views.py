@@ -53,12 +53,13 @@ def _get_default_scopes():
     return getattr(settings, _DEFAULT_SCOPES_SETTING, _DEFAULT_OAUTH_SCOPES)
 
 
-def _google_oauth2_session(additional_scopes=None, **kwargs):
+def _google_oauth2_session(additional_scopes=None, with_scope=True, **kwargs):
     scopes = _get_default_scopes()
     if additional_scopes:
         scopes = set(scopes).union(set(additional_scopes))
 
-    kwargs['scope'] = sorted(scopes)
+    if with_scope:
+        kwargs['scope'] = sorted(scopes)
 
     # Use hardcoded uri for oauth flow to avoid having to set redirect_urls
     # for every single new app version
@@ -183,7 +184,7 @@ def oauth2callback(request):
 
     assert client_id and client_secret
 
-    google = _google_oauth2_session(state=request.session[STATE_SESSION_KEY])
+    google = _google_oauth2_session(with_scope=False, state=request.session[STATE_SESSION_KEY])
 
     # If we have a next_url, then on error we can redirect there
     # as that will likely restart the flow, if not, we'll raise
