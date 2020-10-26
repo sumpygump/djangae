@@ -1,8 +1,11 @@
 import datetime
+import json
 import logging
+import os
 
 from djangae import environment
 
+from django import shortcuts
 from django.conf import settings
 from django.contrib import auth
 from django.http import (
@@ -43,6 +46,8 @@ GOOGLE_USER_INFO = "https://www.googleapis.com/oauth2/v1/userinfo"
 # the token was granted, not the time we process it
 _TOKEN_EXPIRATION_GUARD_TIME = 5
 
+GOOGLE_OAUTH_URI = getattr(settings, 'GOOGLE_OAUTH_URI', None)
+
 
 def _get_default_scopes():
     return getattr(settings, _DEFAULT_SCOPES_SETTING, _DEFAULT_OAUTH_SCOPES)
@@ -54,12 +59,9 @@ def oauth_login(request):
         authentication. It will trigger the main oauth flow.
     """
 
-    # Use default application for oauth flow to avoid having to set redirect_urls
+    # Use hardcoded uri for oauth flow to avoid having to set redirect_urls
     # for every single new app version
-    if environment.is_production_environment():
-        host = environment.default_app_host()
-    else:
-        host = request.META['HTTP_HOST']
+    host = GOOGLE_OAUTH_URI if GOOGLE_OAUTH_URI else request.META['HTTP_HOST']
 
     original_url = f"{request.scheme}://{host}{reverse('googleauth_oauth2callback')}"
 
@@ -77,7 +79,13 @@ def oauth_login(request):
 
     google = OAuth2Session(client_id, scope=scopes, redirect_uri=original_url)
 
+    oauth2_state = json.dumps({
+        'token': google.new_state(),
+        'version': environment.gae_version(),
+    })
+
     kwargs = {
+        "state": oauth2_state,
         "prompt": "select_account",
         "include_granted_scopes": 'true'
     }
@@ -117,9 +125,51 @@ def _calc_expires_at(expires_in):
 
 
 def oauth2callback(request):
+
+    logging.info("Start OAuth callback")
+
     original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
 
+    if environment.is_development_environment():
+        # hack required for login to work when running the app locally;
+        # the required env var `OAUTHLIB_INSECURE_TRANSPORT` cannot be set in the shell or
+        # `manage.py` because dev_appserver ignores env vars not set in `app.yaml`'s
+        # `env_variables` section;
+        # see https://oauthlib.readthedocs.io/en/latest/oauth2/security.html#environment-variables
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+    try:
+        encoded_state = request.GET['state']
+        logging.info("Using oauth state: %s", encoded_state)
+    except KeyError:
+        msg = 'Missing state'
+        logging.exception(msg)
+        return HttpResponseBadRequest(msg)
+
+    try:
+        state = json.loads(encoded_state)
+        version = state['version']
+        logging.exception("Using state %s")
+    except (ValueError, KeyError):
+        msg = 'Invalid state'
+        logging.exception(msg)
+        return HttpResponseBadRequest(msg)
+
+    # If we began the auth flow on a non-default version then (optionaly) redirect
+    # back to the version we started on. This avoids having to add authorized
+    # redirect URIs to the console for every deployed version.
+    if GOOGLE_OAUTH_URI and version != environment.gae_version():
+        logging.info('Redirect to version %s', version)
+        return shortcuts.redirect(
+            'https://{}-dot-{}{}'.format(
+                version,
+                environment.default_app_host(),
+                request.get_full_path()
+            )
+        )
+
     if STATE_SESSION_KEY not in request.session:
+        logging.exception("Missing oauth state from session")
         return HttpResponseBadRequest()
 
     client_id = getattr(settings, _CLIENT_ID_SETTING)
