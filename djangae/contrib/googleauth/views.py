@@ -133,11 +133,6 @@ def _calc_expires_at(expires_in):
 
 
 def oauth2callback(request):
-
-    logging.info("Start OAuth callback")
-
-    original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
-
     if environment.is_development_environment():
         # hack required for login to work when running the app locally;
         # the required env var `OAUTHLIB_INSECURE_TRANSPORT` cannot be set in the shell or
@@ -148,7 +143,6 @@ def oauth2callback(request):
 
     try:
         encoded_state = request.GET['state']
-        logging.info("Using oauth state: %s", encoded_state)
     except KeyError:
         msg = 'Missing state'
         logging.exception(msg)
