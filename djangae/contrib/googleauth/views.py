@@ -46,11 +46,29 @@ GOOGLE_USER_INFO = "https://www.googleapis.com/oauth2/v1/userinfo"
 # the token was granted, not the time we process it
 _TOKEN_EXPIRATION_GUARD_TIME = 5
 
-GOOGLE_OAUTH_URI = getattr(settings, 'GOOGLE_OAUTH_URI', None)
+OAUTH2_REDIRECT = getattr(settings, 'OAUTH2_REDIRECT', None)
 
 
 def _get_default_scopes():
     return getattr(settings, _DEFAULT_SCOPES_SETTING, _DEFAULT_OAUTH_SCOPES)
+
+
+def _google_oauth2_session(additional_scopes=None, **kwargs):
+    scopes = _get_default_scopes()
+    if additional_scopes:
+        scopes = set(scopes).union(set(additional_scopes))
+
+    kwargs['scope'] = sorted(scopes)
+
+    # Use hardcoded uri for oauth flow to avoid having to set redirect_urls
+    # for every single new app version
+    kwargs['redirect_uri'] = '{}{}'.format(OAUTH2_REDIRECT, reverse('googleauth_oauth2callback'))
+    logging.info('Create google oauth2 session with redirect uri: %s', kwargs['redirect_uri'])
+
+    client_id = getattr(settings, _CLIENT_ID_SETTING)
+    assert client_id
+
+    return OAuth2Session(client_id, **kwargs)
 
 
 def oauth_login(request):
@@ -59,25 +77,14 @@ def oauth_login(request):
         authentication. It will trigger the main oauth flow.
     """
 
-    # Use hardcoded uri for oauth flow to avoid having to set redirect_urls
-    # for every single new app version
-    host = GOOGLE_OAUTH_URI if GOOGLE_OAUTH_URI else request.META['HTTP_HOST']
-
-    original_url = f"{request.scheme}://{host}{reverse('googleauth_oauth2callback')}"
-
-    scopes = _get_default_scopes()
     additional_scopes, offline = _pop_scopes(request)
-    scopes = set(scopes).union(set(additional_scopes))
 
     next_url = request.GET.get('next')
 
     if next_url:
         request.session[auth.REDIRECT_FIELD_NAME] = next_url
 
-    client_id = getattr(settings, _CLIENT_ID_SETTING)
-    assert client_id
-
-    google = OAuth2Session(client_id, scope=scopes, redirect_uri=original_url)
+    google = _google_oauth2_session(additional_scopes=additional_scopes)
 
     oauth2_state = json.dumps({
         'token': google.new_state(),
@@ -149,7 +156,6 @@ def oauth2callback(request):
     try:
         state = json.loads(encoded_state)
         version = state['version']
-        logging.exception("Using state %s")
     except (ValueError, KeyError):
         msg = 'Invalid state'
         logging.exception(msg)
@@ -158,7 +164,7 @@ def oauth2callback(request):
     # If we began the auth flow on a non-default version then (optionaly) redirect
     # back to the version we started on. This avoids having to add authorized
     # redirect URIs to the console for every deployed version.
-    if GOOGLE_OAUTH_URI and version != environment.gae_version():
+    if OAUTH2_REDIRECT and version != environment.gae_version():
         logging.info('Redirect to version %s', version)
         return shortcuts.redirect(
             'https://{}-dot-{}{}'.format(
@@ -177,11 +183,7 @@ def oauth2callback(request):
 
     assert client_id and client_secret
 
-    google = OAuth2Session(
-        client_id,
-        state=request.session[STATE_SESSION_KEY],
-        redirect_uri=original_url
-    )
+    google = _google_oauth2_session(state=request.session[STATE_SESSION_KEY])
 
     # If we have a next_url, then on error we can redirect there
     # as that will likely restart the flow, if not, we'll raise
