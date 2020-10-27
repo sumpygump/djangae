@@ -1,3 +1,4 @@
+import json
 
 from datetime import timedelta
 from unittest.mock import patch
@@ -85,10 +86,12 @@ class OAuthTests(LiveServerTestCase):
             response = self.client.get(response.url, HTTP_HOST=live_server_domain)
             # check OAuthSession has been called properly
             self.assertEqual(auth_url.calls[0].args[1], 'https://accounts.google.com/o/oauth2/v2/auth')
-            self.assertEqual(auth_url.calls[0].kwargs, {
+            self.assertTrue(auth_url.calls[0].kwargs.items() > {
                 "prompt": 'select_account',
                 "include_granted_scopes": 'true',
-            })
+            }.items())
+
+            self.assertEqual(set(json.loads(auth_url.calls[0].kwargs['state']).keys()), {'version', 'token'})
 
             # check session contains correct keys and values
             self.assertEqual(self.client.session.get('oauth-state'), 'oauthstate')
@@ -158,7 +161,14 @@ class OAuth2CallbackTests(TestCase):
                 sleuth.watch('django.contrib.auth.login') as mocked_login, \
                 sleuth.fake('google.oauth2.id_token.verify_token', idinfo):
 
-            response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
+            state = json.dumps({
+                "version": "someversion",
+            })
+            response = self.client.get(
+                reverse("googleauth_oauth2callback"),
+                data={"state": state},
+                HTTP_HOST=live_server_domain
+            )
 
         # check authenticate and login function are called
         self.assertTrue(mocked_auth.called)
@@ -181,7 +191,14 @@ class OAuth2CallbackTests(TestCase):
         session[REDIRECT_FIELD_NAME] = '/next_url'
         session.save()
 
-        response = self.client.get(reverse("googleauth_oauth2callback"), HTTP_HOST=live_server_domain)
+        state = json.dumps({
+            "version": "someversion",
+        })
+        response = self.client.get(
+            reverse("googleauth_oauth2callback"),
+            data={"state": state},
+            HTTP_HOST=live_server_domain
+        )
 
         # check authenticate and login function are not called
         self.assertFalse(mocked_auth.called)
