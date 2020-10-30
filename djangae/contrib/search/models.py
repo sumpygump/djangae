@@ -7,8 +7,7 @@ from gcloudc.db.models.fields.related import RelatedSetField
 from gcloudc.db.models.fields.json import JSONField
 
 from .document import Document
-
-WORD_DOCUMENT_JOIN_STRING = "|"
+from .constants import WORD_DOCUMENT_JOIN_STRING
 
 
 class DocumentRecord(models.Model):
@@ -74,6 +73,9 @@ class WordFieldIndex(models.Model):
         return Document.objects.get(pk=self.document_id)
 
     def save(self, *args, **kwargs):
+        assert(self.word.strip())  # Check we're not indexing whitespace or nothing
+        assert(WORD_DOCUMENT_JOIN_STRING not in self.word)  # Don't index this special symbol
+
         orig_pk = self.pk
 
         self.pk = WORD_DOCUMENT_JOIN_STRING.join(

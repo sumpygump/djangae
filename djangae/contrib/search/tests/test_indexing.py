@@ -185,3 +185,18 @@ class IndexingTests(TestCase):
 
         self.assertFalse([x for x in i1.search("text:Three")])
         self.assertFalse([x for x in i1.search("text:3")])
+
+    def test_pipe_not_indexed(self):
+        """
+            The | symbols is used for WordFieldIndex key generation
+            so shouldn't be indexed... ever!
+        """
+
+        class Doc(Document):
+            name = fields.TextField()
+
+        index = Index(name="test")
+        index.add(Doc(name="|| Pipes"))
+
+        self.assertEqual(index.document_count(), 1)
+        self.assertEqual(WordFieldIndex.objects.count(), 1)  # Just "pipes"

@@ -107,7 +107,7 @@ class NumberField(Field):
         return int(value)
 
     def clean_token(self, value):
-        return int(value)
+        return str(int(value))
 
     def tokenize_value(self, value):
         return [value]

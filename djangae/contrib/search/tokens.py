@@ -1,4 +1,7 @@
-from .constants import PUNCTUATION
+from .constants import (
+    PUNCTUATION,
+    WORD_DOCUMENT_JOIN_STRING,
+)
 
 
 def tokenize_content(content):
@@ -19,13 +22,17 @@ def tokenize_content(content):
 
     for c in content:
         if c in STOP_CHARS:
-            tokens.append(current)
-            if c.strip():
+            if current.strip():
+                tokens.append(current)
+
+            if c.strip() and c != WORD_DOCUMENT_JOIN_STRING:
                 tokens.append(c)
+
             current = ""
         else:
             current += c
     else:
-        tokens.append(current)
+        if current.strip():
+            tokens.append(current)
 
     return tokens

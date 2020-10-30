@@ -37,3 +37,6 @@ STOP_WORDS = [
     "shouldn't", 'wasn', "wasn't", 'weren', "weren't", 'won', "won't",
     'wouldn', "wouldn't"
 ]
+
+# Symbol used to seperate the parts of WordFieldIndex keys
+WORD_DOCUMENT_JOIN_STRING = "|"
