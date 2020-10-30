@@ -5,6 +5,8 @@ from djangae.contrib.search.document import Document
 from djangae.contrib.search.index import Index
 from djangae.contrib.search import fields
 
+from djangae.contrib.search.models import WordFieldIndex
+
 
 class QueryStringParseTests(TestCase):
     pass
@@ -65,7 +67,7 @@ class IndexingTests(TestCase):
         self.assertTrue(doc.id)
         self.assertTrue(doc2.id)
 
-        results = [x for x in index.search("test")]
+        results = [x for x in index.search("test", subclass=Doc)]
 
         # Both documents should have come back
         self.assertCountEqual(
@@ -73,7 +75,7 @@ class IndexingTests(TestCase):
             [x.id for x in results]
         )
 
-        results = [x for x in index.search("TEST")]
+        results = [x for x in index.search("TEST", subclass=Doc)]
 
         # Both documents should have come back
         self.assertCountEqual(
@@ -81,7 +83,7 @@ class IndexingTests(TestCase):
             [x.id for x in results]
         )
 
-        results = [x for x in index.search("cheese OR pickle")]
+        results = [x for x in index.search("cheese OR pickle", subclass=Doc)]
 
         # Both documents should have come back
         self.assertCountEqual(
@@ -89,7 +91,7 @@ class IndexingTests(TestCase):
             [x.id for x in results]
         )
 
-        results = [x for x in index.search('cheese OR text:pickle')]
+        results = [x for x in index.search('cheese OR text:pickle', subclass=Doc)]
 
         # Both documents should have come back
         self.assertCountEqual(
@@ -97,10 +99,89 @@ class IndexingTests(TestCase):
             [x.id for x in results]
         )
 
-        results = [x for x in index.search('"cheese" OR pickle')]
+        results = [x for x in index.search('"cheese" OR pickle', subclass=Doc)]
 
         # Both documents should have come back
         self.assertCountEqual(
           [doc.id, doc2.id],
           [x.id for x in results]
         )
+
+    def test_removing_document(self):
+
+        class Doc(Document):
+            text = fields.TextField()
+
+        i0 = Index(name="index1")
+        i1 = Index(name="index2")
+
+        d0 = i0.add(Doc(text="One"))
+
+        # One field, one word
+        self.assertEqual(
+            WordFieldIndex.objects.count(),
+            1
+        )
+
+        self.assertEqual(i0.document_count(), 1)
+        self.assertEqual(i1.document_count(), 0)
+
+        d1 = i0.add(Doc(text="Two"))
+
+        # Two fields, one word each
+        self.assertEqual(
+            WordFieldIndex.objects.count(),
+            2
+        )
+
+        self.assertEqual(i0.document_count(), 2)
+        self.assertEqual(i1.document_count(), 0)
+
+        d2 = i1.add(Doc(text="Three 3"))
+
+        # Three fields, one word each except last which has 2
+        self.assertEqual(
+            WordFieldIndex.objects.count(),
+            4
+        )
+
+        self.assertEqual(i0.document_count(), 2)
+        self.assertEqual(i1.document_count(), 1)
+
+        self.assertTrue(i0.remove(d0))
+        self.assertFalse(i0.remove(d0))
+
+        self.assertEqual(i0.document_count(), 1)
+        self.assertEqual(i1.document_count(), 1)
+
+        self.assertEqual(
+            WordFieldIndex.objects.count(),
+            3
+        )
+
+        self.assertFalse([x for x in i0.search("text:One")])
+
+        self.assertTrue(i0.remove(d1))
+
+        self.assertEqual(i0.document_count(), 0)
+        self.assertEqual(i1.document_count(), 1)
+
+        self.assertEqual(
+            WordFieldIndex.objects.count(),
+            2
+        )
+
+        self.assertFalse([x for x in i0.search("text:Two")])
+
+        self.assertTrue(i1.remove(d2))
+
+        self.assertEqual(i0.document_count(), 0)
+        self.assertEqual(i1.document_count(), 0)
+
+        self.assertEqual(
+            WordFieldIndex.objects.count(),
+            0
+        )
+
+        self.assertFalse([x for x in i1.search("text:Three")])
+        self.assertFalse([x for x in i1.search("text:3")])

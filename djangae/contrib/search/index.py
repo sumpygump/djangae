@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 from gcloudc.db import transaction
 
 from .document import Document
@@ -18,14 +20,30 @@ class Index(object):
         return self.index.pk if self.index else None
 
     def add(self, document_or_documents):
+        """
+            Add a document, or documents to the index.
+
+            Returns the IDs of *new* documents that have been
+            added. If document_or_documents was a list, the result
+            will also be a list.
+
+            FIXME: Handle errors gracefully. If an exception is thrown
+            it should be possible for the caller to work out which
+            documents were indexed, and which weren't.
+        """
+
         from .models import (  # Prevent import too early
             DocumentRecord,
             WordFieldIndex,
         )
 
+        added_document_ids = []
+
         if isinstance(document_or_documents, Document):
+            was_list = False
             documents = [document_or_documents]
         else:
+            was_list = True
             documents = document_or_documents[:]
 
         for document in documents:
@@ -52,7 +70,9 @@ class Index(object):
                 document.id = record.id
                 document._record = record
 
-            if not created:
+            if created:
+                added_document_ids.append(record.id)
+            else:
                 record.data = field_data
                 record.save()
 
@@ -103,8 +123,50 @@ class Index(object):
                         record.word_field_indexes.add(obj)
                         record.save()
 
+        return added_document_ids if was_list else added_document_ids[0]
+
     def remove(self, document_or_documents):
-        pass
+        """
+            Removes a document, or documents, from the index. Document
+            instances, or document IDs are accepted.
+
+            Returns the number of documents that were successfully removed
+            from the index.
+        """
+
+        from .models import (
+            DocumentRecord,
+            WordFieldIndex,
+        )
+
+        if not document_or_documents:
+            return 0
+
+        document_or_documents = (
+            document_or_documents[:]
+            if isinstance(document_or_documents, Iterable)
+            else [document_or_documents]
+        )
+
+        removed_count = 0
+
+        for doc_or_id in document_or_documents:
+            doc_id = doc_or_id.id if isinstance(doc_or_id, Document) else doc_or_id
+
+            try:
+                doc = DocumentRecord.objects.get(pk=doc_id)
+                removed_count += 1
+            except DocumentRecord.DoesNotExist:
+                continue
+
+            WordFieldIndex.objects.filter(
+                record_id=doc.pk,
+                index_stats_id=self.index.pk
+            ).delete()
+
+            doc.delete()
+
+        return removed_count
 
     def get(self, document_id):
         pass
@@ -138,3 +200,8 @@ class Index(object):
 
         for record in qs:
             yield subclass(_record=record, **record.data)
+
+    def document_count(self):
+        from .models import DocumentRecord  # Prevent import too early
+
+        return DocumentRecord.objects.filter(index_stats=self.index).count()

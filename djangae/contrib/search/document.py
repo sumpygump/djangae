@@ -14,8 +14,8 @@ class Document(object):
     def pk(self):
         return self.id
 
-    def __init__(self, **kwargs):
-        self._record = kwargs.get("_record", None)
+    def __init__(self, _record=None, **kwargs):
+        self._record = _record
 
         if self._record:
             self.id = self._record.pk
@@ -44,6 +44,11 @@ class Document(object):
                 else:
                     # Set default if there was no value
                     setattr(self, attr_name, attr.default)
+
+        for key in kwargs.keys():
+            # Throw an error if the kwarg doesn't match a field
+            if key not in self._fields:
+                raise ValueError("Unknown field: %s" % key)
 
     def get_fields(self):
         return self._fields

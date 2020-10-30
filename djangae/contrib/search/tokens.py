@@ -20,7 +20,8 @@ def tokenize_content(content):
     for c in content:
         if c in STOP_CHARS:
             tokens.append(current)
-            tokens.append(c)
+            if c.strip():
+                tokens.append(c)
             current = ""
         else:
             current += c
