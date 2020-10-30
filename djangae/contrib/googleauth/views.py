@@ -46,14 +46,14 @@ GOOGLE_USER_INFO = "https://www.googleapis.com/oauth2/v1/userinfo"
 # the token was granted, not the time we process it
 _TOKEN_EXPIRATION_GUARD_TIME = 5
 
-OAUTH2_REDIRECT_HOST = getattr(settings, 'OAUTH2_REDIRECT_HOST', None)
+OAUTH2_REDIRECT_URL = getattr(settings, 'OAUTH2_REDIRECT_URL', None)
 
 
 def _get_default_scopes():
     return getattr(settings, _DEFAULT_SCOPES_SETTING, _DEFAULT_OAUTH_SCOPES)
 
 
-def _google_oauth2_session(additional_scopes=None, with_scope=True, **kwargs):
+def _google_oauth2_session(request, additional_scopes=None, with_scope=True, **kwargs):
     scopes = _get_default_scopes()
     if additional_scopes:
         scopes = set(scopes).union(set(additional_scopes))
@@ -61,10 +61,12 @@ def _google_oauth2_session(additional_scopes=None, with_scope=True, **kwargs):
     if with_scope:
         kwargs['scope'] = sorted(scopes)
 
+    original_url = f"{request.scheme}://{request.META['HTTP_HOST']}"
+
     # Use hardcoded uri for oauth flow to avoid having to set redirect_urls
-    # for every single new app version
-    host = OAUTH2_REDIRECT_HOST if OAUTH2_REDIRECT_HOST else environment.app_host()
-    kwargs['redirect_uri'] = '{}{}'.format(host, reverse('googleauth_oauth2callback'))
+    # for every single new app version.
+    url = OAUTH2_REDIRECT_URL if OAUTH2_REDIRECT_URL else original_url
+    kwargs['redirect_uri'] = f"{url}{reverse('googleauth_oauth2callback')}"
     logging.info('Create google oauth2 session with redirect uri: %s', kwargs['redirect_uri'])
 
     client_id = getattr(settings, _CLIENT_ID_SETTING)
@@ -86,7 +88,7 @@ def oauth_login(request):
     if next_url:
         request.session[auth.REDIRECT_FIELD_NAME] = next_url
 
-    google = _google_oauth2_session(additional_scopes=additional_scopes)
+    google = _google_oauth2_session(request, additional_scopes=additional_scopes)
 
     oauth2_state = json.dumps({
         'token': google.new_state(),
@@ -160,7 +162,7 @@ def oauth2callback(request):
     # If we began the auth flow on a non-default version then (optionaly) redirect
     # back to the version we started on. This avoids having to add authorized
     # redirect URIs to the console for every deployed version.
-    if OAUTH2_REDIRECT_HOST and version != environment.gae_version():
+    if OAUTH2_REDIRECT_URL and version != environment.gae_version():
         logging.info('Redirect to version %s', version)
         return shortcuts.redirect(
             'https://{}-dot-{}{}'.format(
@@ -179,7 +181,7 @@ def oauth2callback(request):
 
     assert client_id and client_secret
 
-    google = _google_oauth2_session(with_scope=False, state=request.session[STATE_SESSION_KEY])
+    google = _google_oauth2_session(request, with_scope=False, state=request.session[STATE_SESSION_KEY])
 
     # If we have a next_url, then on error we can redirect there
     # as that will likely restart the flow, if not, we'll raise
