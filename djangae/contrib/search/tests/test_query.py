@@ -68,3 +68,25 @@ class QueryTests(TestCase):
 
         results = [x.company_name for x in index.search("pota", subclass=CompanyDocument, use_startswith=True)]
         self.assertCountEqual(results, ["Potato"])
+
+    def test_number_field_querying(self):
+        class Doc(Document):
+            number = fields.NumberField()
+
+        index = Index(name="test")
+
+        index.add(Doc(number=1))
+        index.add(Doc(number=2341920))
+
+        results = [x for x in index.search("number:1", subclass=Doc)]
+
+        # Should only return the exact match
+        self.assertEqual(len(results), 1)
+
+        results = [x for x in index.search("1", subclass=Doc)]
+
+        # Should only return the exact match
+        self.assertEqual(len(results), 1)
+
+        results = [x for x in index.search("2341920", subclass=Doc)]
+        self.assertEqual(len(results), 1)
