@@ -7,7 +7,7 @@ from .constants import (
 from .models import (
     WORD_DOCUMENT_JOIN_STRING,
     DocumentRecord,
-    WordFieldIndex,
+    TokenFieldIndex,
 )
 
 from .tokens import tokenize_content
@@ -49,7 +49,7 @@ def _tokenize_query_string(query_string):
     ]
 
     # Expand
-    # For non exact matches, we may have multiple words separated by spaces that need
+    # For non exact matches, we may have multiple tokens separated by spaces that need
     # to be expanded into seperate entries
 
     start_length = len(result)
@@ -63,15 +63,15 @@ def _tokenize_query_string(query_string):
         content = [x.replace(" ", "") for x in content]
 
         if len(content) == 1:
-            # Do nothing, this was a single word
+            # Do nothing, this was a single token
             continue
         else:
-            # Replace this entry with the first word
+            # Replace this entry with the first token
             result[i][-1] = content[0]
 
             # Append the rest to result
-            for word in content[1:]:
-                result.append(("word", field, word))
+            for token in content[1:]:
+                result.append(("word", field, token))
 
     # Remove empty entries, and stop-words and then tuple-ify
     result = [
@@ -150,8 +150,8 @@ def build_document_queryset(
             raise NotImplementedError("Need to implement exact matching")
 
     document_ids = set([
-        WordFieldIndex.document_id_from_pk(x)
-        for x in WordFieldIndex.objects.filter(filters).values_list("pk", flat=True)
+        TokenFieldIndex.document_id_from_pk(x)
+        for x in TokenFieldIndex.objects.filter(filters).values_list("pk", flat=True)
     ])
 
     return DocumentRecord.objects.filter(pk__in=document_ids)

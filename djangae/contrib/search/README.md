@@ -23,11 +23,11 @@ use:
 marathon OR race OR run
 ```
 
-The OR can be lower case, as 'or' is a common word that is not indexed
+The OR can be lower case, as 'or' is a common token that is not indexed
 
 ## Exact match
 
-You can combine words together to return documents that have an exact match by using quotes. e.g.
+You can combine tokens together to return documents that have an exact match by using quotes. e.g.
 
 ```
 "tallest building"

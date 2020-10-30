@@ -38,5 +38,5 @@ STOP_WORDS = [
     'wouldn', "wouldn't"
 ]
 
-# Symbol used to seperate the parts of WordFieldIndex keys
+# Symbol used to seperate the parts of TokenFieldIndex keys
 WORD_DOCUMENT_JOIN_STRING = "|"

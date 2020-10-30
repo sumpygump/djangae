@@ -34,7 +34,7 @@ class Index(object):
 
         from .models import (  # Prevent import too early
             DocumentRecord,
-            WordFieldIndex,
+            TokenFieldIndex,
         )
 
         added_document_ids = []
@@ -106,21 +106,21 @@ class Index(object):
                     # FIXME: Update occurrances
                     with transaction.atomic():
                         try:
-                            obj = WordFieldIndex.objects.get(
+                            obj = TokenFieldIndex.objects.get(
                                 record_id=document.id,
-                                word=token,
+                                token=token,
                                 index_stats=self.index,
                                 field_name=field.attname
                             )
-                        except WordFieldIndex.DoesNotExist:
-                            obj = WordFieldIndex.objects.create(
+                        except TokenFieldIndex.DoesNotExist:
+                            obj = TokenFieldIndex.objects.create(
                                 record_id=document.id,
                                 index_stats=self.index,
-                                word=token,
+                                token=token,
                                 field_name=field.attname
                             )
                         record.refresh_from_db()
-                        record.word_field_indexes.add(obj)
+                        record.token_field_indexes.add(obj)
                         record.save()
 
         return added_document_ids if was_list else added_document_ids[0]
@@ -136,7 +136,7 @@ class Index(object):
 
         from .models import (
             DocumentRecord,
-            WordFieldIndex,
+            TokenFieldIndex,
         )
 
         if not document_or_documents:
@@ -159,7 +159,7 @@ class Index(object):
             except DocumentRecord.DoesNotExist:
                 continue
 
-            WordFieldIndex.objects.filter(
+            TokenFieldIndex.objects.filter(
                 record_id=doc.pk,
                 index_stats_id=self.index.pk
             ).delete()

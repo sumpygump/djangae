@@ -20,10 +20,10 @@ class QueryTests(TestCase):
 
         tokens = _tokenize_query_string(q)
         kinds = set(x[0] for x in tokens)
-        words = [x[-1] for x in tokens]
+        tokens = [x[-1] for x in tokens]
 
-        self.assertEqual(kinds, {"word"})  # All tokens should be recognised as words
-        self.assertEqual(words, ["hi", ",", "100", "%", "chance", "works", "[", "honest", "]"])
+        self.assertEqual(kinds, {"word"})  # All tokens should be recognised as tokens
+        self.assertEqual(tokens, ["hi", ",", "100", "%", "chance", "works", "[", "honest", "]"])
 
     def test_fuzzy_matching(self):
         index = Index(name="test")

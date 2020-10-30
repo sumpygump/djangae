@@ -5,7 +5,7 @@ from djangae.contrib.search.document import Document
 from djangae.contrib.search.index import Index
 from djangae.contrib.search import fields
 
-from djangae.contrib.search.models import WordFieldIndex
+from djangae.contrib.search.models import TokenFieldIndex
 
 
 class QueryStringParseTests(TestCase):
@@ -119,9 +119,9 @@ class IndexingTests(TestCase):
 
         d0 = i0.add(Doc(text="One"))
 
-        # One field, one word
+        # One field, one token
         self.assertEqual(
-            WordFieldIndex.objects.count(),
+            TokenFieldIndex.objects.count(),
             1
         )
 
@@ -130,9 +130,9 @@ class IndexingTests(TestCase):
 
         d1 = i0.add(Doc(text="Two"))
 
-        # Two fields, one word each
+        # Two fields, one token each
         self.assertEqual(
-            WordFieldIndex.objects.count(),
+            TokenFieldIndex.objects.count(),
             2
         )
 
@@ -141,9 +141,9 @@ class IndexingTests(TestCase):
 
         d2 = i1.add(Doc(text="Three 3"))
 
-        # Three fields, one word each except last which has 2
+        # Three fields, one token each except last which has 2
         self.assertEqual(
-            WordFieldIndex.objects.count(),
+            TokenFieldIndex.objects.count(),
             4
         )
 
@@ -157,7 +157,7 @@ class IndexingTests(TestCase):
         self.assertEqual(i1.document_count(), 1)
 
         self.assertEqual(
-            WordFieldIndex.objects.count(),
+            TokenFieldIndex.objects.count(),
             3
         )
 
@@ -169,7 +169,7 @@ class IndexingTests(TestCase):
         self.assertEqual(i1.document_count(), 1)
 
         self.assertEqual(
-            WordFieldIndex.objects.count(),
+            TokenFieldIndex.objects.count(),
             2
         )
 
@@ -181,7 +181,7 @@ class IndexingTests(TestCase):
         self.assertEqual(i1.document_count(), 0)
 
         self.assertEqual(
-            WordFieldIndex.objects.count(),
+            TokenFieldIndex.objects.count(),
             0
         )
 
@@ -190,7 +190,7 @@ class IndexingTests(TestCase):
 
     def test_pipe_not_indexed(self):
         """
-            The | symbols is used for WordFieldIndex key generation
+            The | symbols is used for TokenFieldIndex key generation
             so shouldn't be indexed... ever!
         """
 
@@ -201,4 +201,4 @@ class IndexingTests(TestCase):
         index.add(Doc(name="|| Pipes"))
 
         self.assertEqual(index.document_count(), 1)
-        self.assertEqual(WordFieldIndex.objects.count(), 1)  # Just "pipes"
+        self.assertEqual(TokenFieldIndex.objects.count(), 1)  # Just "pipes"
