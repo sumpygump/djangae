@@ -1,4 +1,4 @@
-
+from unittest import skip
 from djangae.test import TestCase
 
 from djangae.contrib.search.document import Document
@@ -30,6 +30,7 @@ class DocumentTests(TestCase):
 
 
 class IndexingTests(TestCase):
+    @skip("Atom fields not implemented")
     def test_indexing_atom_fields(self):
         class Doc(Document):
             atom = fields.AtomField()
@@ -99,13 +100,14 @@ class IndexingTests(TestCase):
             [x.id for x in results]
         )
 
-        results = [x for x in index.search('"cheese" OR pickle', subclass=Doc)]
+        # FIXME: Uncomment when exact matching is implemented
+        # results = [x for x in index.search('"cheese" OR pickle', subclass=Doc)]
 
-        # Both documents should have come back
-        self.assertCountEqual(
-          [doc.id, doc2.id],
-          [x.id for x in results]
-        )
+        # # Both documents should have come back
+        # self.assertCountEqual(
+        #   [doc.id, doc2.id],
+        #   [x.id for x in results]
+        # )
 
     def test_removing_document(self):
 
