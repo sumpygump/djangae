@@ -1,6 +1,7 @@
 import copy
 from functools import wraps
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import Manager
 
@@ -44,7 +45,7 @@ class ModelDocument(object):
 
 
 def document_from_model_document(model, model_document):
-    fields = getattr(model_document._meta(), "fields", [])
+    fields = model_document._meta().all_fields
 
     mapping = {
         models.AutoField: search_fields.NumberField,
@@ -69,7 +70,12 @@ def document_from_model_document(model, model_document):
         if field == "instance_id":
             continue
 
-        field_type = type(model._meta.get_field(field))
+        try:
+            field_type = type(model._meta.get_field(field))
+        except FieldDoesNotExist:
+            # This would happen if we added a field override for
+            # a model field that didn't exist
+            continue
 
         # First, do we have an override on the model document itself?
         if hasattr(model_document, field):
@@ -145,10 +151,11 @@ def register(model, model_document):
 
             attrs = {
                 f: model._meta.get_field(f).value_from_object(self)
-                for f in getattr(model_document._meta(), "fields", [])
+                for f in model_document._meta().all_fields
             }
 
             attrs["instance_id"] = self.pk
+
             doc = document_class(**attrs)
             model_document.index().add(doc)
         return wrapped
