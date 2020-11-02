@@ -1,10 +1,8 @@
-from djangae.environment import gae_version
 import json
-from unittest import mock
 from unittest.mock import (
+    Mock,
     create_autospec,
     patch,
-    Mock,
 )
 
 from django.contrib import auth
@@ -12,19 +10,13 @@ from django.test.utils import override_settings
 from django.urls import reverse
 from requests_oauthlib import OAuth2Session
 
-from djangae.contrib.googleauth import (
-    _DEFAULT_SCOPES_SETTING,
-    _SCOPE_SESSION_KEY,
-)
+from djangae.contrib.googleauth import _SCOPE_SESSION_KEY
 from djangae.contrib.googleauth.views import STATE_SESSION_KEY
-from djangae.settings_base import ALLOWED_HOSTS
 from djangae.test import TestCase
 
 host = "test.appspot.com"
 state_str = "state"
 authorization_url = "http://authorization_url.com"
-
-
 
 
 @override_settings(ROOT_URLCONF="djangae.contrib.googleauth.urls", ALLOWED_HOSTS=[host])
@@ -73,7 +65,7 @@ class LoginViewTestCase(TestCase):
 
         self.OAuthSessionMock.assert_called_once()
         scope = self.OAuthSessionMock.call_args[1]["scope"]
-        self.assertEqual(set(scope), {"openid", "profile", "email",})
+        self.assertEqual(set(scope), {"openid", "profile", "email", })
 
     @override_settings(GOOGLEAUTH_OAUTH_SCOPES=["email", "somethingelse"])
     def test_create_a_oauth_session_with_settings_scopes(self, ):
