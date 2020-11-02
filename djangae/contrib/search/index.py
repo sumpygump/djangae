@@ -47,64 +47,63 @@ class Index(object):
             documents = document_or_documents[:]
 
         for document in documents:
-            # We go through the document fields, pull out the values that have been set
-            # then we index them.
-            field_data = {
-                f: getattr(document, document.get_field(f).attname)
-                for f in document.get_fields() if f != "id"
-            }
+            with transaction.atomic(independent=True):
+                # We go through the document fields, pull out the values that have been set
+                # then we index them.
+                field_data = {
+                    f: getattr(document, document.get_field(f).attname)
+                    for f in document.get_fields() if f != "id"
+                }
 
-            record = document._record
+                record = document._record
 
-            created = False
-            if record is None:
-                # Generate a database representation of this Document use
-                # the passed ID if there is one
-                record, created = DocumentRecord.objects.get_or_create(
-                    pk=document.id,
-                    defaults={
-                        "index_stats": self.index,
-                        "data": field_data
-                    }
-                )
-                document.id = record.id
-                document._record = record
+                created = False
+                if record is None:
+                    # Generate a database representation of this Document use
+                    # the passed ID if there is one
+                    record, created = DocumentRecord.objects.get_or_create(
+                        pk=document.id,
+                        defaults={
+                            "index_stats": self.index,
+                            "data": field_data
+                        }
+                    )
+                    document.id = record.id
+                    document._record = record
 
-            if created:
-                added_document_ids.append(record.id)
-            else:
-                record.data = field_data
-                record.save()
+                if created:
+                    added_document_ids.append(record.id)
+                else:
+                    record.data = field_data
 
-            assert(document.id)  # This should be a thing by now
+                assert(document.id)  # This should be a thing by now
 
-            for field_name, field in document.get_fields().items():
-                if field_name == "id":
-                    continue
-
-                # Get the field value, use the default if it's not set
-                value = getattr(document, field.attname, None)
-                value = field.default if value is None else value
-                value = field.normalize_value(value)
-
-                # Tokenize the value, this will effectively mean lower-casing
-                # removing punctuation etc. and returning a list of things
-                # to index
-                tokens = field.tokenize_value(value)
-
-                if tokens is None:
-                    # Nothing to index
-                    continue
-
-                tokens = set(tokens)  # Remove duplicates
-
-                for token in tokens:
-                    token = field.clean_token(token)
-                    if token is None:
+                for field_name, field in document.get_fields().items():
+                    if field_name == "id":
                         continue
 
-                    # FIXME: Update occurrances
-                    with transaction.atomic():
+                    # Get the field value, use the default if it's not set
+                    value = getattr(document, field.attname, None)
+                    value = field.default if value is None else value
+                    value = field.normalize_value(value)
+
+                    # Tokenize the value, this will effectively mean lower-casing
+                    # removing punctuation etc. and returning a list of things
+                    # to index
+                    tokens = field.tokenize_value(value)
+
+                    if tokens is None:
+                        # Nothing to index
+                        continue
+
+                    tokens = set(tokens)  # Remove duplicates
+
+                    for token in tokens:
+                        token = field.clean_token(token)
+                        if token is None:
+                            continue
+
+                        # FIXME: Update occurrances
                         try:
                             obj = TokenFieldIndex.objects.get(
                                 record_id=document.id,
@@ -119,9 +118,8 @@ class Index(object):
                                 token=token,
                                 field_name=field.attname
                             )
-                        record.refresh_from_db()
                         record.token_field_indexes.add(obj)
-                        record.save()
+                record.save()
 
         return added_document_ids if was_list else added_document_ids[0]
 
