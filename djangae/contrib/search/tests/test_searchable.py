@@ -13,7 +13,7 @@ class SearchableModelDocument(search.ModelDocument):
             "name",
         )
 
-    name = fields.FuzzyTextField()
+    other_thing = fields.NumberField()
 
 
 search.register(SearchableModel1, SearchableModelDocument)
@@ -48,4 +48,4 @@ class SearchableTest(TestCase):
         document = document_from_model_document(SearchableModel1, SearchableModelDocument)
 
         # The name field should be overridden, it would default to
-        self.assertEqual(type(document.name), fields.FuzzyTextField)
+        self.assertEqual(type(document.other_thing), fields.NumberField)

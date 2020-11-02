@@ -71,7 +71,7 @@ class TextField(Field):
 
 class FuzzyTextField(TextField):
     DEFAULT_INDEXERS = (
-        search_indexers.starts_with,
+        search_indexers.stemming,
     )
 
     def __init__(self, default=None, null=True, indexers=None, min_index_length=3, **kwargs):
