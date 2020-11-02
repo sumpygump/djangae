@@ -16,7 +16,23 @@ class ModelDocument(object):
 
     @classmethod
     def _meta(cls):
-        return getattr(cls, "Meta", None)
+        class Meta(getattr(cls, "Meta")):
+            @property
+            def all_fields(self):
+                additional_fields = []
+
+                # Gather fields added directly on the model document as
+                # overrides, rather than added on the fields list
+                for attr_name in dir(cls):
+                    attr = getattr(cls, attr_name, None)
+                    if isinstance(attr, search_fields.Field):
+                        additional_fields.append(attr_name)
+
+                return list(self.fields) + [
+                    x for x in additional_fields if x not in self.fields
+                ]
+
+        return Meta()
 
     @classmethod
     def index(cls):
