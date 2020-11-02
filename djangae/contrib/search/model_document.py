@@ -99,8 +99,8 @@ def register(model, model_document):
         return [x.instance_id for x in documents]
 
     class SearchQueryset(models.QuerySet):
-        def search(self, query):
-            keys = _do_search(query)
+        def search(self, query, **options):
+            keys = _do_search(query, **options)
             return self.filter(pk__in=keys)
 
     class SearchManager(default_manager, SearchManagerBase):
