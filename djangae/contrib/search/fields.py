@@ -66,7 +66,11 @@ class AtomField(Field):
 
 
 class TextField(Field):
-    pass
+    def normalize_value(self, value):
+        if value is not None:
+            value = str(value)
+
+        return super().normalize_value(value)
 
 
 class FuzzyTextField(TextField):

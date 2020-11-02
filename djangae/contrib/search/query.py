@@ -91,7 +91,8 @@ def _tokenize_query_string(query_string):
 
 def _append_exact_word_filters(filters, prefix, field, string):
     start = "%s%s%s" % (prefix, string, WORD_DOCUMENT_JOIN_STRING)
-    end = "%s%s%s%s" % (prefix, string, chr(0x10FFFF), WORD_DOCUMENT_JOIN_STRING)
+    end = "%s%s%s%s" % (prefix, string, WORD_DOCUMENT_JOIN_STRING, chr(0x10FFFF))
+
     if not field:
         filters |= Q(pk__gte=start, pk__lt=end)
     else:

@@ -1,9 +1,12 @@
 from djangae.contrib import search
 from djangae.contrib.search import fields
-from djangae.test import TestCase
 from djangae.contrib.search.model_document import document_from_model_document
+from djangae.test import TestCase
 
-from .models import SearchableModel1
+from .models import (
+    SearchableModel1,
+    SearchableModel2,
+)
 
 
 class SearchableModelDocument(search.ModelDocument):
@@ -16,14 +19,22 @@ class SearchableModelDocument(search.ModelDocument):
     other_thing = fields.NumberField()
 
 
+class CharFieldPK(search.ModelDocument):
+    class Meta:
+        fields = (
+            "sid",
+        )
+
+
 search.register(SearchableModel1, SearchableModelDocument)
+search.register(SearchableModel2, CharFieldPK)
 
 
 class SearchableTest(TestCase):
     def setUp(self):
         super().setUp()
 
-        self.i1 = SearchableModel1.objects.create(name="Luke")
+        self.i1 = SearchableModel1.objects.create(id=1, name="Luke")
         self.i2 = SearchableModel1.objects.create(name="Jimmy")  # noqa
         self.i3 = SearchableModel1.objects.create(name="Paolo")  # noqa
         self.i4 = SearchableModel1.objects.create(name="Purvi")  # noqa
@@ -49,3 +60,14 @@ class SearchableTest(TestCase):
 
         # The name field should be overridden, it would default to
         self.assertEqual(type(document.other_thing), fields.NumberField)
+
+    def test_charfield_pk(self):
+        i1 = SearchableModel2.objects.create(sid="test")
+        i2 = SearchableModel2.objects.create(sid=1)  # Intentional integer
+        i2.refresh_from_db()
+
+        results = SearchableModel2.objects.search("test")
+        self.assertCountEqual([i1], results)
+
+        results = SearchableModel2.objects.search("sid:1")
+        self.assertCountEqual([i2], results)
