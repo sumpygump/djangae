@@ -74,8 +74,18 @@ def document_from_model_document(model, model_document):
 _registry = {}
 
 
+class SearchManagerBase(object):
+    pass
+
+
 def register(model, model_document):
     default_manager = type(getattr(model, "objects", Manager()))
+
+    if isinstance(default_manager, SearchManagerBase):
+        # Already patched!
+        # FIXME: Use the registry instead?
+        return
+
     document_class = document_from_model_document(model, model_document)
 
     def _do_search(query, **options):
@@ -93,7 +103,7 @@ def register(model, model_document):
             keys = _do_search(query)
             return self.filter(pk__in=keys)
 
-    class SearchManager(default_manager):
+    class SearchManager(default_manager, SearchManagerBase):
         def get_queryset(self):
             qs = SearchQueryset(model, using=self._db)
 
