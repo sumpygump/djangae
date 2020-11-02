@@ -85,11 +85,13 @@ class OAuthTests(LiveServerTestCase):
         ) as auth_url:
             response = self.client.get(response.url, HTTP_HOST=live_server_domain)
             # check OAuthSession has been called properly
+            self.assertTrue(auth_url.called)
             self.assertEqual(auth_url.calls[0].args[1], 'https://accounts.google.com/o/oauth2/v2/auth')
-            self.assertTrue(auth_url.calls[0].kwargs.items() > {
+
+            self.assertTrue(set({
                 "prompt": 'select_account',
                 "include_granted_scopes": 'true',
-            }.items())
+            }.items()).issubset(set(auth_url.calls[0].kwargs.items())))
 
             self.assertEqual(set(json.loads(auth_url.calls[0].kwargs['state']).keys()), {'version', 'token'})
 

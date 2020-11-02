@@ -83,7 +83,6 @@ def oauth_login(request):
         This view should be set as your login_url for using OAuth
         authentication. It will trigger the main oauth flow.
     """
-
     additional_scopes, offline = _pop_scopes(request)
 
     next_url = request.GET.get('next')
