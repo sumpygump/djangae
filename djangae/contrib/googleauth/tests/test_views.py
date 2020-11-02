@@ -33,15 +33,15 @@ class LoginViewTestCase(TestCase):
         self.oAuthSessionMock = create_autospec(OAuth2Session)
         self.oAuthSessionMock.authorization_url.return_value = (authorization_url, state_str,)
         self.oAuthSessionMock.new_state.return_value = state_str
-        patcher = patch(
+        self.patcher = patch(
             'djangae.contrib.googleauth.views.OAuth2Session',
             Mock(return_value=self.oAuthSessionMock)
         )
-        self.OAuthSessionMock = patcher.start()
+        self.OAuthSessionMock = self.patcher.start()
 
     def tearDown(self):
         super().tearDown()
-        self.OAuthSessionMock.stop()
+        self.patcher.stop()
 
     def test_store_next_url_in_session(self, ):
         """Tests it persists next in the session"""
@@ -150,11 +150,15 @@ class OAuthCallbackTestCase(TestCase):
         self.oAuthSessionMock = create_autospec(OAuth2Session)
         self.oAuthSessionMock.authorization_url.return_value = (authorization_url, state_str,)
         self.oAuthSessionMock.new_state.return_value = state_str
-        patcher = patch(
+        self.patcher = patch(
             'djangae.contrib.googleauth.views.OAuth2Session',
             Mock(return_value=self.oAuthSessionMock)
         )
-        self.OAuthSessionMock = patcher.start()
+        self.OAuthSessionMock = self.patcher.start()
+
+    def tearDown(self):
+        super().tearDown()
+        self.patcher.stop()
 
     def test_bad_request_no_state(self, mock_id_token):
         "Test bad request if state is not provided"
