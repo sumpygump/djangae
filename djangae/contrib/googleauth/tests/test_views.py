@@ -1,3 +1,4 @@
+from djangae.environment import gae_version
 import json
 from unittest import mock
 from unittest.mock import (
@@ -96,7 +97,7 @@ class LoginViewTestCase(TestCase):
         scope = self.OAuthSessionMock.call_args[1]["scope"]
         self.assertEqual(set(scope), {"openid", "profile", "email", "additional"})
 
-    @override_settings(OAUTH2_REDIRECT_URL="http://redirect.appspot.com", )
+    @override_settings(OAUTH2_REDIRECT_BASE_URL="http://redirect.appspot.com", )
     def test_create_a_oauth_session_with_oauth_redirect_provided(self, ):
         """Tests it creates a oauth session with the redirect provided in settings"""
         self.client.get(self.login_url)
@@ -135,3 +136,58 @@ class LoginViewTestCase(TestCase):
         self.assertRedirects(response, authorization_url, fetch_redirect_response=False)
 
 
+@override_settings(ROOT_URLCONF="djangae.contrib.googleauth.urls", ALLOWED_HOSTS=[host])
+@patch("djangae.contrib.googleauth.views.id_token")
+class OAuthCallbackTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.next_url = "go/here"
+        self.token = "atoken"
+        self.valid_state = json.dumps({
+            'token': self.token,
+            'version': 1,
+        })
+        self.session = self.client.session
+        self.session['next_url'] = "go/here"
+        self.session[STATE_SESSION_KEY] = self.token
+        self.session.save()
+        self.client.defaults["HTTP_HOST"] = host
+        self.callback_url = reverse("googleauth_oauth2callback")
+
+        # Patch oauth session
+        self.oAuthSessionMock = create_autospec(OAuth2Session)
+        self.oAuthSessionMock.authorization_url.return_value = (authorization_url, state_str,)
+        self.oAuthSessionMock.new_state.return_value = state_str
+        patcher = patch(
+            'djangae.contrib.googleauth.views.OAuth2Session',
+            Mock(return_value=self.oAuthSessionMock)
+        )
+        self.OAuthSessionMock = patcher.start()
+
+    def test_bad_request_no_state(self, mock_id_token):
+        "Test bad request if state is not provided"
+        response = self.client.get(self.callback_url)
+        self.assertEqual(response.status_code, 400)
+
+    def test_bad_request_invalid_state(self, mock_id_token):
+        "Test bad request if state is invalid"
+        response = self.client.get("{}?state=invalidstate".format(self.callback_url))
+        self.assertEqual(response.status_code, 400)
+
+    @override_settings(OAUTH2_REDIRECT_BASE_URL="http://redirect.com")
+    @patch('djangae.contrib.googleauth.views.environment.gae_version', return_value=2)
+    @patch('djangae.contrib.googleauth.views.environment.default_app_host', return_value='default_host.com')
+    def test_it_redirects_to_version_if_OAUTH2_REDIRECT_BASE_URL(self, mock_app_host, mock_gae_version, mock_id_token):
+        "Test bad request if state is invalid"
+        response = self.client.get(self.callback_url, {
+             'state': self.valid_state,
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("https://1-dot-default_host.com/oauth2/callback/", response.url)
+
+    def test_bad_request_no_session_state_key(self, mock_id_token):
+        "Test bad request if session doesn't have state key"
+        del self.session[STATE_SESSION_KEY]
+        self.session.save()
+        response = self.client.get("{}?state={}".format(self.callback_url, self.valid_state))
+        self.assertEqual(response.status_code, 400)
