@@ -162,3 +162,26 @@ def register(model, model_document):
         return wrapped
 
     model.save = save_decorator(model.save)
+
+    def delete_decoator(func):
+        @wraps(func)
+        def wrapped(self, *args, **kwargs):
+            instance_id = self.pk
+
+            func(self, *args, **kwargs)
+
+            results = [
+                x for x in
+                model_document.index().search(
+                    "instance_id:%s" % instance_id, document_class
+                )
+            ]
+
+            assert(len(results) <= 1)
+
+            if results:
+                model_document.index().remove(results[0])
+
+        return wrapped
+
+    model.delete = delete_decoator(model.delete)

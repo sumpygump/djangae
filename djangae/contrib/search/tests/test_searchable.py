@@ -1,6 +1,7 @@
 from djangae.contrib import search
 from djangae.contrib.search import fields
 from djangae.contrib.search.model_document import document_from_model_document
+from djangae.contrib.search.models import TokenFieldIndex
 from djangae.test import TestCase
 
 from .models import (
@@ -71,3 +72,20 @@ class SearchableTest(TestCase):
 
         results = SearchableModel2.objects.search("sid:1")
         self.assertCountEqual([i2], results)
+
+    def test_deletion(self):
+        results = SearchableModel1.objects.search("jimmy")
+        self.assertTrue([x for x in results])
+
+        count = TokenFieldIndex.objects.count()
+        idx = SearchableModelDocument.index()
+
+        doc_count = idx.document_count()
+        self.i2.delete()
+        self.assertEqual(idx.document_count(), doc_count - 1)
+
+        new_count = TokenFieldIndex.objects.count()
+        self.assertTrue(new_count < count)
+
+        results = SearchableModel1.objects.search("jimmy")
+        self.assertFalse([x for x in results])
