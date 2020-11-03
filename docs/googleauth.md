@@ -108,7 +108,7 @@ GOOGLEAUTH_CLIENT_SECRET = "..."
 You must generate these values in the Google Cloud Console.
 
 When you configure OAuth Consent Screen and Credentials on Google Cloud Platform you are 
-required to configure a list of Authorised domains and Oauth redirects.
+required to configure a list of Authorised domains and OAuth redirects.
 
 While working on multiple AppEngine versions it's quite inconvenient to have to update those lists for every new version you deploy.
 In order to workaround the problem we've added the `OAUTH2_REDIRECT_BASE_URL` setting. 
