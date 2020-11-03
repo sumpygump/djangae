@@ -1,6 +1,11 @@
+import logging
+from datetime import datetime
+
+from django.utils import dateparse
+
+from . import indexers as search_indexers
 from .constants import STOP_WORDS
 from .tokens import tokenize_content
-from . import indexers as search_indexers
 
 
 class Field(object):
@@ -60,6 +65,14 @@ class Field(object):
 
         return token
 
+    def convert_from_index(self, value):
+        """
+            Convert a value returned from the index (these values)
+            are stored in JSON format, so value will be a string, number, bool
+            or None
+        """
+        return value
+
 
 class AtomField(Field):
     pass
@@ -101,8 +114,38 @@ class FuzzyTextField(TextField):
         return result
 
 
-class DateTimeField(Field):
-    pass
+class DateField(Field):
+    def normalize_value(self, value):
+        if value is None:
+            return value
+
+        if isinstance(value, str):
+            return dateparse.parse_datetime(value)
+
+        assert(isinstance(value, datetime))
+
+        return value
+
+    def tokenize_value(self, value):
+        if value is None:
+            return value
+
+        # FIXME: It would be great to make this a datetime field
+        # and handle times but that gets tricky quickly when you
+        # consider timezones...
+        return [
+            value.strftime("%Y-%m-%d"),
+        ]
+
+    def convert_from_index(self, value):
+        if value is None:
+            return value
+
+        try:
+            return dateparse.parse_datetime(value)
+        except ValueError:
+            logging.warning("Unable to convert datetime back")
+            return None
 
 
 class NumberField(Field):

@@ -197,7 +197,13 @@ class Index(object):
         )[:limit]
 
         for record in qs:
-            yield subclass(_record=record, **record.data)
+            data = {}
+
+            for k, v in record.data.items():
+                field = subclass().get_field(k)
+                data[k] = field.convert_from_index(v)
+
+            yield subclass(_record=record, **data)
 
     def document_count(self):
         from .models import DocumentRecord  # Prevent import too early

@@ -51,7 +51,8 @@ def document_from_model_document(model, model_document):
         models.AutoField: search_fields.NumberField,
         models.CharField: search_fields.TextField,
         models.TextField: search_fields.TextField,
-        models.DateTimeField: search_fields.DateTimeField,
+        models.DateTimeField: search_fields.DateField,
+        models.DateField: search_fields.DateField,
         models.IntegerField: search_fields.NumberField,
         models.FloatField: search_fields.NumberField,
         models.PositiveIntegerField: search_fields.NumberField

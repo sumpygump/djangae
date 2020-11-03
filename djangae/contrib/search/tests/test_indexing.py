@@ -1,11 +1,11 @@
 from unittest import skip
-from djangae.test import TestCase
 
+from djangae.contrib.search import fields
 from djangae.contrib.search.document import Document
 from djangae.contrib.search.index import Index
-from djangae.contrib.search import fields
-
 from djangae.contrib.search.models import TokenFieldIndex
+from djangae.contrib.search.tokens import tokenize_content
+from djangae.test import TestCase
 
 
 class QueryStringParseTests(TestCase):
@@ -202,3 +202,16 @@ class IndexingTests(TestCase):
 
         self.assertEqual(index.document_count(), 1)
         self.assertEqual(TokenFieldIndex.objects.count(), 1)  # Just "pipes"
+
+    def test_tokenization_of_acronyms(self):
+        """
+            Hyphens are stop characters except when they are part
+            of an ancronym (e.g I-B-M), this handling also covers dates
+            (e.g. 2020-01-01)
+        """
+        text = "This-is some text with - hyphens. I-B-M"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["This", "-", "is", "some", "text", "with", "-", "hyphens.", "I-B-M", "IBM", "I.B.M"]
+        )

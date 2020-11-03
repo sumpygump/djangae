@@ -1,10 +1,16 @@
+from datetime import (
+    datetime,
+    timedelta,
+)
 from unittest import skip
-from djangae.test import TestCase
-from djangae.contrib.search.query import _tokenize_query_string
 
-from djangae.contrib.search import Document
-from djangae.contrib.search import Index
-from djangae.contrib.search import fields
+from djangae.contrib.search import (
+    Document,
+    Index,
+    fields,
+)
+from djangae.contrib.search.query import _tokenize_query_string
+from djangae.test import TestCase
 
 
 class CompanyDocument(Document):
@@ -92,3 +98,18 @@ class QueryTests(TestCase):
 
         results = [x for x in index.search("2341920", subclass=Doc)]
         self.assertEqual(len(results), 1)
+
+    def test_datefield_querying(self):
+        class Doc(Document):
+            datefield = fields.DateField()
+
+        date = datetime(year=2020, month=1, day=1, hour=6, minute=15)
+        tomorrow = date + timedelta(days=1)
+
+        index = Index(name="test")
+        index.add(Doc(datefield=date))
+        index.add(Doc(datefield=tomorrow))
+
+        results = [x for x in index.search("2020-01-01", subclass=Doc)]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].datefield, date)
