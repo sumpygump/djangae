@@ -27,12 +27,12 @@ class CharFieldPK(search.ModelDocument):
         )
 
 
-search.register(SearchableModel1, SearchableModelDocument)
-search.register(SearchableModel2, CharFieldPK)
-
-
 class SearchableTest(TestCase):
     def setUp(self):
+        # Ensure that the model has been registered
+        search.register(SearchableModel1, SearchableModelDocument)
+        search.register(SearchableModel2, CharFieldPK)
+
         super().setUp()
 
         self.i1 = SearchableModel1.objects.create(id=1, name="Luke")
