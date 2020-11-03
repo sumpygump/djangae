@@ -89,3 +89,16 @@ class SearchableTest(TestCase):
 
         results = SearchableModel1.objects.search("jimmy")
         self.assertFalse([x for x in results])
+
+    def test_update(self):
+        results = SearchableModel1.objects.search("jimmy")
+        self.assertTrue([x for x in results])
+
+        self.i2.name = "bob"
+        self.i2.save()
+
+        results = SearchableModel1.objects.search("jimmy")
+        self.assertFalse([x for x in results])
+
+        results = SearchableModel1.objects.search("bob")
+        self.assertTrue([x for x in results])

@@ -145,25 +145,7 @@ def register(model, model_document):
     # is.
     model.objects.__class__ = SearchManager
 
-    def save_decorator(func):
-        @wraps(func)
-        def wrapped(self, *args, **kwargs):
-            func(self, *args, **kwargs)
-
-            attrs = {
-                f: model._meta.get_field(f).value_from_object(self)
-                for f in model_document._meta().all_fields
-            }
-
-            attrs["instance_id"] = self.pk
-
-            doc = document_class(**attrs)
-            model_document.index().add(doc)
-        return wrapped
-
-    model.save = save_decorator(model.save)
-
-    def delete_decoator(func):
+    def delete_decorator(func):
         @wraps(func)
         def wrapped(self, *args, **kwargs):
             instance_id = self.pk
@@ -184,4 +166,25 @@ def register(model, model_document):
 
         return wrapped
 
-    model.delete = delete_decoator(model.delete)
+    model.delete = delete_decorator(model.delete)
+
+    def save_decorator(func):
+        @wraps(func)
+        def wrapped(self, *args, **kwargs):
+            func(self, *args, **kwargs)
+
+            # Force un-indexing before re-index
+            delete_decorator(lambda self: None)(self)
+
+            attrs = {
+                f: model._meta.get_field(f).value_from_object(self)
+                for f in model_document._meta().all_fields
+            }
+
+            attrs["instance_id"] = self.pk
+
+            doc = document_class(**attrs)
+            model_document.index().add(doc)
+        return wrapped
+
+    model.save = save_decorator(model.save)
