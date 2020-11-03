@@ -65,8 +65,10 @@ The App Engine Search API had an array of field types. Currently djangae.contrib
 supports the following:
 
  - TextField - A blob of text up to 1024 ** 2 chars in length
- - AtomField - A text field that is up to 1000 chars in length
  - DateField - A field for storing a Python datetime or date field.
  - NumberField - A field for storing an integer
 
-AtomFields are only matched on exact matches.
+Fields under construction (do not use!):
+
+ - AtomField - A field
+ - FuzzyTextField - A field that supports stemmed matching

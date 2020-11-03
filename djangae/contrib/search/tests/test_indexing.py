@@ -161,7 +161,7 @@ class IndexingTests(TestCase):
             3
         )
 
-        self.assertFalse([x for x in i0.search("text:One")])
+        self.assertFalse([x for x in i0.search("text:One", Doc)])
 
         self.assertTrue(i0.remove(d1))
 
@@ -173,7 +173,7 @@ class IndexingTests(TestCase):
             2
         )
 
-        self.assertFalse([x for x in i0.search("text:Two")])
+        self.assertFalse([x for x in i0.search("text:Two", Doc)])
 
         self.assertTrue(i1.remove(d2))
 
@@ -185,8 +185,8 @@ class IndexingTests(TestCase):
             0
         )
 
-        self.assertFalse([x for x in i1.search("text:Three")])
-        self.assertFalse([x for x in i1.search("text:3")])
+        self.assertFalse([x for x in i1.search("text:Three", Doc)])
+        self.assertFalse([x for x in i1.search("text:3", Doc)])
 
     def test_pipe_not_indexed(self):
         """

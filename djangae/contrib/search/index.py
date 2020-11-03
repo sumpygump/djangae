@@ -172,16 +172,16 @@ class Index(object):
     def search(
         self,
         query_string,
+        subclass,
         limit=1000,
-        subclass=None,
         use_stemming=False,
         use_startswith=False
     ):
         """
             Perform a search of the index.
             query_string: The query we're making using query syntax
+            subclass: The `Document` subclass to return the results as
             limit: The max number of results to return
-            subclass: A document subclass to return the results as
             use_stemming: If true, this will query for variations of the token
             use_startswith: If true, will return results where the beginning of searched tokens match
             startswith_min_length: When use_startswith == True, Will not match tokens with fewer characters than this
