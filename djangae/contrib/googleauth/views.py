@@ -1,6 +1,11 @@
 import datetime
+import json
 import logging
+import os
 
+from djangae import environment
+
+from django import shortcuts
 from django.conf import settings
 from django.contrib import auth
 from django.http import (
@@ -46,28 +51,54 @@ def _get_default_scopes():
     return getattr(settings, _DEFAULT_SCOPES_SETTING, _DEFAULT_OAUTH_SCOPES)
 
 
+def _get_default_oauth_redirect_base_url():
+    return getattr(settings, 'OAUTH2_REDIRECT_BASE_URL', None)
+
+
+def _google_oauth2_session(request, additional_scopes=None, with_scope=True, **kwargs):
+    scopes = _get_default_scopes()
+    if additional_scopes:
+        scopes = set(scopes).union(set(additional_scopes))
+
+    if with_scope:
+        kwargs['scope'] = sorted(scopes)
+
+    original_url = f"{request.scheme}://{request.META['HTTP_HOST']}"
+
+    # Use hardcoded uri for oauth flow to avoid having to set redirect_urls
+    # for every single new app version.
+    redirect_url = _get_default_oauth_redirect_base_url()
+    url = redirect_url if redirect_url is not None else original_url
+    kwargs['redirect_uri'] = f"{url}{reverse('googleauth_oauth2callback')}"
+    logging.info('Create google oauth2 session with redirect uri: %s', kwargs['redirect_uri'])
+
+    client_id = getattr(settings, _CLIENT_ID_SETTING)
+    assert client_id
+
+    return OAuth2Session(client_id, **kwargs)
+
+
 def oauth_login(request):
     """
         This view should be set as your login_url for using OAuth
         authentication. It will trigger the main oauth flow.
     """
-    original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
-
-    scopes = _get_default_scopes()
     additional_scopes, offline = _pop_scopes(request)
-    scopes = set(scopes).union(set(additional_scopes))
 
     next_url = request.GET.get('next')
 
     if next_url:
         request.session[auth.REDIRECT_FIELD_NAME] = next_url
 
-    client_id = getattr(settings, _CLIENT_ID_SETTING)
-    assert client_id
+    google = _google_oauth2_session(request, additional_scopes=additional_scopes)
 
-    google = OAuth2Session(client_id, scope=scopes, redirect_uri=original_url)
+    oauth2_state = json.dumps({
+        'token': google.new_state(),
+        'version': environment.gae_version(),
+    })
 
     kwargs = {
+        "state": oauth2_state,
         "prompt": "select_account",
         "include_granted_scopes": 'true'
     }
@@ -107,9 +138,44 @@ def _calc_expires_at(expires_in):
 
 
 def oauth2callback(request):
-    original_url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse('googleauth_oauth2callback')}"
+    if environment.is_development_environment():
+        # hack required for login to work when running the app locally;
+        # the required env var `OAUTHLIB_INSECURE_TRANSPORT` cannot be set in the shell or
+        # `manage.py` because dev_appserver ignores env vars not set in `app.yaml`'s
+        # `env_variables` section;
+        # see https://oauthlib.readthedocs.io/en/latest/oauth2/security.html#environment-variables
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+    try:
+        encoded_state = request.GET['state']
+    except KeyError:
+        msg = 'Missing state'
+        logging.exception(msg)
+        return HttpResponseBadRequest(msg)
+
+    try:
+        state = json.loads(encoded_state)
+        version = state['version']
+    except (ValueError, KeyError):
+        msg = 'Invalid state'
+        logging.exception(msg)
+        return HttpResponseBadRequest(msg)
+
+    # If we began the auth flow on a non-default version then (optionaly) redirect
+    # back to the version we started on. This avoids having to add authorized
+    # redirect URIs to the console for every deployed version.
+    if _get_default_oauth_redirect_base_url() and version != environment.gae_version():
+        logging.info('Redirect to version %s', version)
+        return shortcuts.redirect(
+            'https://{}-dot-{}{}'.format(
+                version,
+                environment.default_app_host(),
+                request.get_full_path()
+            )
+        )
 
     if STATE_SESSION_KEY not in request.session:
+        logging.exception("Missing oauth state from session")
         return HttpResponseBadRequest()
 
     client_id = getattr(settings, _CLIENT_ID_SETTING)
@@ -117,11 +183,7 @@ def oauth2callback(request):
 
     assert client_id and client_secret
 
-    google = OAuth2Session(
-        client_id,
-        state=request.session[STATE_SESSION_KEY],
-        redirect_uri=original_url
-    )
+    google = _google_oauth2_session(request, with_scope=False, state=request.session[STATE_SESSION_KEY])
 
     # If we have a next_url, then on error we can redirect there
     # as that will likely restart the flow, if not, we'll raise

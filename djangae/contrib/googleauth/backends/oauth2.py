@@ -1,17 +1,27 @@
 
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured
 from ..models import (
+    AbstractGoogleUser,
     Group,
-    User,
     UserManager,
     UserPermission,
 )
-from . import _find_atomic_decorator
+from . import _find_atomic_decorator, _generate_unused_username
 from .base import BaseBackend
+
+User = get_user_model()
 
 
 class OAuthBackend(BaseBackend):
     def authenticate(self, request, **kwargs):
         atomic = _find_atomic_decorator(User)
+
+        if not issubclass(User, AbstractGoogleUser):
+            raise ImproperlyConfigured(
+                "OAuthBackend requires AUTH_USER_MODEL to be a "
+                " subclass of djangae.contrib.auth.models.AbstractGoogleUser."
+            )
 
         oauth_session = kwargs.get("oauth_session")
 
@@ -24,6 +34,7 @@ class OAuthBackend(BaseBackend):
 
         email = UserManager.normalize_email(profile["email"])
         assert email
+        username = email.split("@", 1)[0]
 
         with atomic():
             # Look for a user, either by oauth session ID, or email
@@ -51,7 +62,8 @@ class OAuthBackend(BaseBackend):
                 # First time we've seen this user
                 user = User.objects.create(
                     google_oauth_id=oauth_session.pk,
-                    email=email
+                    email=email,
+                    username=_generate_unused_username(username)
                 )
 
         return user

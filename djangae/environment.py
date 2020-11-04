@@ -92,6 +92,22 @@ def default_gcs_bucket_name() -> str:
     return "%s.appspot.com" % application_id()
 
 
+def default_app_host() -> str:
+    """Returns the default HOST for the application.
+    Fallbacks to example.appspost.com on local
+    """
+
+    return "%s.appspot.com" % application_id()
+
+
+def app_host() -> str:
+    """Returns the default HOST for the application.
+    Fallbacks to example-dot-example.appspost.com on local
+    """
+    version = gae_version() or 'example'
+    return "{}-dot-{}".format(version, default_app_host)
+
+
 def project_id() -> str:
     # Environment variable will exist on production servers
     # fallback to "example" locally if it doesn't exist
