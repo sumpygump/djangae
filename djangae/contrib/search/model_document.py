@@ -49,19 +49,36 @@ def document_from_model_document(model, model_document):
 
     mapping = {
         models.AutoField: search_fields.NumberField,
+        models.BigAutoField: search_fields.NumberField,
         models.CharField: search_fields.TextField,
         models.TextField: search_fields.TextField,
         models.DateTimeField: search_fields.DateField,
         models.DateField: search_fields.DateField,
+        models.DecimalField: search_fields.TextField,
+        models.EmailField: search_fields.TextField,
+        models.SlugField: search_fields.TextField,
         models.IntegerField: search_fields.NumberField,
+        models.BigIntegerField: search_fields.NumberField,
+        models.SmallIntegerField: search_fields.NumberField,
+        models.PositiveSmallIntegerField: search_fields.NumberField,
+        models.BooleanField: search_fields.NumberField,
+        models.PositiveIntegerField: search_fields.NumberField,
         models.FloatField: search_fields.NumberField,
-        models.PositiveIntegerField: search_fields.NumberField
+        models.PositiveIntegerField: search_fields.NumberField,
+        models.URLField: search_fields.TextField,
+        models.UUIDField: search_fields.TextField,
     }
 
     pk_type = type(model._meta.pk)
 
+    def get_search_field(model_field):
+        try:
+            return mapping[model_field]
+        except KeyError:
+            raise NotImplementedError("Unhandled model field type: %s", model_field)
+
     attrs = {
-        "instance_id": mapping[pk_type]()
+        "instance_id": get_search_field(pk_type)()
     }
 
     fields = list(fields) + ["instance_id"]
@@ -83,7 +100,7 @@ def document_from_model_document(model, model_document):
             # We copy, so we don't mess with the class version of this
             attrs[field] = copy.deepcopy(getattr(model_document, field))
         else:
-            attrs[field] = mapping[field_type]()
+            attrs[field] = get_search_field(field_type)()
 
     Document = type(
         '%sDocument' % model.__name__,
