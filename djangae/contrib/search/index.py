@@ -163,7 +163,7 @@ class Index(object):
         return removed_count
 
     def get(self, document_id):
-        pass
+        raise NotImplementedError()
 
     def search(
         self,
