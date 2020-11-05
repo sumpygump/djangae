@@ -1,7 +1,4 @@
 from django.db import models
-from gcloudc.db.models.fields.iterable import (
-    ListField,
-)
 
 from gcloudc.db.models.fields.related import RelatedSetField
 from gcloudc.db.models.fields.json import JSONField
@@ -49,10 +46,6 @@ class TokenFieldIndex(models.Model):
     record = models.ForeignKey("DocumentRecord", on_delete=models.CASCADE)
     token = models.CharField(max_length=500)
     field_name = models.CharField(max_length=500)
-
-    # List of indexes into field content where this token occurs
-    # This is used when searching for phrases
-    occurrences = ListField(models.IntegerField(), blank=False)
 
     @classmethod
     def document_id_from_pk(cls, pk):
