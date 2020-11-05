@@ -219,6 +219,7 @@ def _schedule_task(
                 'http_method': 'POST',
                 'relative_uri': deferred_handler_url,
                 'body': pickled,
+                'headers': task_headers,
                 'app_engine_routing': task_args["routing"],
             }
         }
