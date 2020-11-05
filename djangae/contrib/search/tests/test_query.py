@@ -83,21 +83,24 @@ class QueryTests(TestCase):
 
         index = Index(name="test")
 
-        index.add(Doc(number=1))
-        index.add(Doc(number=2341920))
+        doc1 = index.add(Doc(number=1))
+        doc2 = index.add(Doc(number=2341920))
 
         results = [x for x in index.search("number:1", document_class=Doc)]
 
         # Should only return the exact match
         self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc1)
 
         results = [x for x in index.search("1", document_class=Doc)]
 
         # Should only return the exact match
         self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc1)
 
         results = [x for x in index.search("2341920", document_class=Doc)]
         self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc2)
 
     def test_datefield_querying(self):
         class Doc(Document):
