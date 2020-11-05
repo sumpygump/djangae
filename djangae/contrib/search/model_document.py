@@ -118,7 +118,7 @@ def register(model, model_document):
         """
 
         index = model_document.index()
-        documents = index.search(query, subclass=document_class, **options)
+        documents = index.search(query, document_class=document_class, **options)
         return [x.instance_id for x in documents]
 
     class SearchQueryset(models.QuerySet):

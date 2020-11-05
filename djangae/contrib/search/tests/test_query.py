@@ -46,13 +46,13 @@ class QueryTests(TestCase):
         index.add(doc3)
         index.add(doc4)
 
-        results = [x.company_name for x in index.search("goo", subclass=FuzzyDocument)]
+        results = [x.company_name for x in index.search("goo", document_class=FuzzyDocument)]
         self.assertCountEqual(results, ["Google"])
 
-        results = [x.company_name for x in index.search("pot", subclass=FuzzyDocument)]
+        results = [x.company_name for x in index.search("pot", document_class=FuzzyDocument)]
         self.assertCountEqual(results, ["Potato", "Potential Company"])
 
-        results = [x.company_name for x in index.search("pota", subclass=FuzzyDocument)]
+        results = [x.company_name for x in index.search("pota", document_class=FuzzyDocument)]
         self.assertCountEqual(results, ["Potato"])
 
     def test_startswith_matching(self):
@@ -68,13 +68,13 @@ class QueryTests(TestCase):
         index.add(doc3)
         index.add(doc4)
 
-        results = [x.company_name for x in index.search("goo", subclass=CompanyDocument, use_startswith=True)]
+        results = [x.company_name for x in index.search("goo", document_class=CompanyDocument, use_startswith=True)]
         self.assertCountEqual(results, ["Google"])
 
-        results = [x.company_name for x in index.search("pot", subclass=CompanyDocument, use_startswith=True)]
+        results = [x.company_name for x in index.search("pot", document_class=CompanyDocument, use_startswith=True)]
         self.assertCountEqual(results, ["Potato", "Potential Company"])
 
-        results = [x.company_name for x in index.search("pota", subclass=CompanyDocument, use_startswith=True)]
+        results = [x.company_name for x in index.search("pota", document_class=CompanyDocument, use_startswith=True)]
         self.assertCountEqual(results, ["Potato"])
 
     def test_number_field_querying(self):
@@ -86,17 +86,17 @@ class QueryTests(TestCase):
         index.add(Doc(number=1))
         index.add(Doc(number=2341920))
 
-        results = [x for x in index.search("number:1", subclass=Doc)]
+        results = [x for x in index.search("number:1", document_class=Doc)]
 
         # Should only return the exact match
         self.assertEqual(len(results), 1)
 
-        results = [x for x in index.search("1", subclass=Doc)]
+        results = [x for x in index.search("1", document_class=Doc)]
 
         # Should only return the exact match
         self.assertEqual(len(results), 1)
 
-        results = [x for x in index.search("2341920", subclass=Doc)]
+        results = [x for x in index.search("2341920", document_class=Doc)]
         self.assertEqual(len(results), 1)
 
     def test_datefield_querying(self):
@@ -110,6 +110,6 @@ class QueryTests(TestCase):
         index.add(Doc(datefield=date))
         index.add(Doc(datefield=tomorrow))
 
-        results = [x for x in index.search("2020-01-01", subclass=Doc)]
+        results = [x for x in index.search("2020-01-01", document_class=Doc)]
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].datefield, date)

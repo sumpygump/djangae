@@ -168,7 +168,7 @@ class Index(object):
     def search(
         self,
         query_string,
-        subclass,
+        document_class,
         limit=1000,
         use_stemming=False,
         use_startswith=False
@@ -176,14 +176,12 @@ class Index(object):
         """
             Perform a search of the index.
             query_string: The query we're making using query syntax
-            subclass: The `Document` subclass to return the results as
+            document_class: The `Document` document_class to return the results as
             limit: The max number of results to return
             use_stemming: If true, this will query for variations of the token
             use_startswith: If true, will return results where the beginning of searched tokens match
             startswith_min_length: When use_startswith == True, Will not match tokens with fewer characters than this
         """
-
-        subclass = subclass or Document
 
         from .query import build_document_queryset
         qs = build_document_queryset(
@@ -196,10 +194,10 @@ class Index(object):
             data = {}
 
             for k, v in record.data.items():
-                field = subclass().get_field(k)
+                field = document_class().get_field(k)
                 data[k] = field.convert_from_index(v)
 
-            yield subclass(_record=record, **data)
+            yield document_class(_record=record, **data)
 
     def document_count(self):
         from .models import DocumentRecord  # Prevent import too early

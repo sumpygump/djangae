@@ -68,7 +68,7 @@ class IndexingTests(TestCase):
         self.assertTrue(doc.id)
         self.assertTrue(doc2.id)
 
-        results = [x for x in index.search("test", subclass=Doc)]
+        results = [x for x in index.search("test", document_class=Doc)]
 
         # Both documents should have come back
         self.assertCountEqual(
@@ -76,7 +76,7 @@ class IndexingTests(TestCase):
             [x.id for x in results]
         )
 
-        results = [x for x in index.search("TEST", subclass=Doc)]
+        results = [x for x in index.search("TEST", document_class=Doc)]
 
         # Both documents should have come back
         self.assertCountEqual(
@@ -84,7 +84,7 @@ class IndexingTests(TestCase):
             [x.id for x in results]
         )
 
-        results = [x for x in index.search("cheese OR pickle", subclass=Doc)]
+        results = [x for x in index.search("cheese OR pickle", document_class=Doc)]
 
         # Both documents should have come back
         self.assertCountEqual(
@@ -92,7 +92,7 @@ class IndexingTests(TestCase):
             [x.id for x in results]
         )
 
-        results = [x for x in index.search('cheese OR text:pickle', subclass=Doc)]
+        results = [x for x in index.search('cheese OR text:pickle', document_class=Doc)]
 
         # Both documents should have come back
         self.assertCountEqual(
@@ -101,7 +101,7 @@ class IndexingTests(TestCase):
         )
 
         # FIXME: Uncomment when exact matching is implemented
-        # results = [x for x in index.search('"cheese" OR pickle', subclass=Doc)]
+        # results = [x for x in index.search('"cheese" OR pickle', document_class=Doc)]
 
         # # Both documents should have come back
         # self.assertCountEqual(
