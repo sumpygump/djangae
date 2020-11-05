@@ -1,10 +1,14 @@
 import os
 
-from djangae.contrib import sleuth
 from django.db import models
-from djangae.tasks.deferred import defer
-from djangae.test import TestCase, TaskFailedError
 from gcloudc.db import transaction
+
+from djangae.contrib import sleuth
+from djangae.tasks.deferred import defer
+from djangae.test import (
+    TaskFailedError,
+    TestCase,
+)
 
 
 def test_task(*args, **kwargs):
@@ -28,11 +32,39 @@ class DeferModelB(models.Model):
         app_label = "djangae"
 
 
+class DeferModelC(models.Model):
+    text = models.TextField()
+
+    class Meta:
+        app_label = "djangae"
+
+
 def create_defer_model_b(key_value):
     DeferModelB.objects.create(pk=key_value)
 
 
+def process_argument(arg):
+    DeferModelC.objects.create(text=arg)
+
+
 class DeferTests(TestCase):
+    def test_large_task(self):
+        random_file = os.path.join(os.path.dirname(__file__), "random_data")
+        with open(random_file, "r") as f:
+            big_string = f.read()
+
+        try:
+            defer(process_argument, big_string)
+        except Exception:  # noqa
+            self.fail("A large task couldn't be deferred")
+
+        self.process_task_queues()
+
+        self.assertTrue(DeferModelC.objects.exists())
+
+        instance = DeferModelC.objects.get()
+        self.assertEqual(instance.text, big_string)
+
     def test_wipe_related_caches(self):
         b = DeferModelB.objects.create()
         a = DeferModelA.objects.create(b=b)
