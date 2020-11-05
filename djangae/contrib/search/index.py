@@ -180,7 +180,6 @@ class Index(object):
             limit: The max number of results to return
             use_stemming: If true, this will query for variations of the token
             use_startswith: If true, will return results where the beginning of searched tokens match
-            startswith_min_length: When use_startswith == True, Will not match tokens with fewer characters than this
         """
 
         from .query import build_document_queryset
