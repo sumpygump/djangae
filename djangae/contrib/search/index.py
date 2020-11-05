@@ -137,7 +137,7 @@ class Index(object):
             return 0
 
         document_or_documents = (
-            document_or_documents[:]
+            document_or_documents
             if isinstance(document_or_documents, Iterable)
             else [document_or_documents]
         )
