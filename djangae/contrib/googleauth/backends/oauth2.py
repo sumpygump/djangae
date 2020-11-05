@@ -65,6 +65,8 @@ class OAuthBackend(BaseBackend):
                     email=email,
                     username=_generate_unused_username(username)
                 )
+                user.set_unusable_password()
+                user.save()
 
         return user
 
