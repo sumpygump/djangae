@@ -1,23 +1,49 @@
 import os
 
-from djangae.tasks.deferred import defer
-from djangae.environment import task_only, is_development_environment, is_production_environment
-from djangae.test import TestCase
-from djangae.contrib import sleuth
 from django.http import HttpResponse
+from django.test import (
+    Client,
+    RequestFactory,
+    override_settings,
+)
+from django.urls import (
+    path,
+    reverse,
+)
+
+from djangae.contrib import sleuth
+from djangae.decorators import (
+    _CRON_TASK_HEADER,
+    _TASK_NAME_HEADER,
+    csrf_exempt_if_task,
+    task_only,
+    task_or_superuser_only,
+)
+from djangae.environment import (
+    is_development_environment,
+    is_production_environment,
+    task_queue_name,
+)
+from djangae.tasks.deferred import defer
+from djangae.test import TestCase
 
 
 class TaskOnlyTestCase(TestCase):
     """ Tests for the @task_only decorator. """
 
-    def test_403_if_not_task_or_admin(self):
+    def setUp(self):
+        self.factory = RequestFactory()
+        super().setUp()
+
+    def test_403_if_not_task(self):
         # If we are neither in a task or logged in as an admin, we expect a 403 response
 
         @task_only
         def view(request):
             return HttpResponse("Hello")
 
-        response = view(None)
+        request = self.factory.get("/")
+        response = view(request)
         self.assertEqual(response.status_code, 403)
 
     def test_allowed_if_in_task(self):
@@ -27,8 +53,11 @@ class TaskOnlyTestCase(TestCase):
         def view(request):
             return HttpResponse("Hello")
 
+        request = self.factory.get("/")
+        request.META[_TASK_NAME_HEADER] = "test"
         with sleuth.fake("djangae.environment.is_in_task", True):
-            response = view(None)
+            response = view(request)
+
         self.assertEqual(response.status_code, 200)
 
     def test_allowed_if_in_cron(self):
@@ -38,12 +67,91 @@ class TaskOnlyTestCase(TestCase):
         def view(request):
             return HttpResponse("Hello")
 
+        request = self.factory.get("/")
+        request.META[_CRON_TASK_HEADER] = "test"
+
         with sleuth.fake("djangae.environment.is_in_cron", True):
-            response = view(None)
+            response = view(request)
+        self.assertEqual(response.status_code, 200)
+
+
+class TaskOrSuperuserOnlyTestCase(TestCase):
+    """ Tests for the @task_only decorator. """
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        super().setUp()
+
+    def test_403_if_not_task_or_superuser(self):
+        # If we are neither in a task or logged in as an admin, we expect a 403 response
+
+        @task_or_superuser_only
+        def view(request):
+            return HttpResponse("Hello")
+
+        request = self.factory.get("/")
+        response = view(request)
+        self.assertEqual(response.status_code, 403)
+
+    def test_allowed_if_in_task(self):
+        """ If we're in an App Engine task then it should allow the request through. """
+
+        @task_or_superuser_only
+        def view(request):
+            return HttpResponse("Hello")
+
+        request = self.factory.get("/")
+        request.META[_TASK_NAME_HEADER] = "test"
+
+        response = view(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_allowed_if_superuser(self):
+        """ If we're in an App Engine task then it should allow the request through. """
+
+        @task_or_superuser_only
+        def view(request):
+            return HttpResponse("Hello")
+
+        class User(object):
+            is_superuser = True
+            is_authenticated = True
+
+        request = self.factory.get("/")
+        request.user = None
+        response = view(request)
+        self.assertEqual(response.status_code, 403)
+
+        request.user = User()
+        response = view(request)
+        self.assertEqual(response.status_code, 200)
+
+
+@csrf_exempt_if_task
+def view(request):
+    return HttpResponse("Hello")
+
+
+urlpatterns = [
+    path("view", view, name="test_view")
+]
+
+
+@override_settings(ROOT_URLCONF='djangae.tests.test_environment')
+class CsrfExemptIfTaskTest(TestCase):
+    def test_csrf_required_if_normal_view(self):
+        """ If we're in an App Engine task then it should allow the request through. """
+
+        client = Client(enforce_csrf_checks=True)
+        response = client.post(reverse("test_view"))
+        self.assertEqual(response.status_code, 403)
+
+        response = client.post(reverse("test_view"), HTTP_X_APPENGINE_TASKNAME="test")
         self.assertEqual(response.status_code, 200)
 
 
 class EnvironmentUtilsTest(TestCase):
+
     def test_is_production_environment(self):
         self.assertFalse(is_production_environment())
         os.environ["GAE_ENV"] = 'standard'
@@ -55,6 +163,25 @@ class EnvironmentUtilsTest(TestCase):
         os.environ["GAE_ENV"] = 'standard'
         self.assertFalse(is_development_environment())
         del os.environ["GAE_ENV"]
+
+    def test_task_queue_name(self):
+        # when not in task
+        self.assertIsNone(task_queue_name())
+        os.environ["HTTP_X_APPENGINE_QUEUENAME"] = "demo123"
+        self.assertIsNone(task_queue_name())
+        del os.environ["HTTP_X_APPENGINE_QUEUENAME"]
+        self.assertIsNone(task_queue_name())
+
+        # when in task, w/o queue set
+        with sleuth.switch('djangae.environment.is_in_task', lambda: True):
+            self.assertEqual(task_queue_name(), "default")
+
+        # when in task, with queue set
+        with sleuth.switch('djangae.environment.is_in_task', lambda: True):
+            os.environ["HTTP_X_APPENGINE_QUEUENAME"] = "demo123"
+            self.assertEqual(task_queue_name(), "demo123")
+            del os.environ["HTTP_X_APPENGINE_QUEUENAME"]
+            self.assertEqual(task_queue_name(), "default")
 
 
 def deferred_func():
