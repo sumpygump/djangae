@@ -26,10 +26,6 @@ class Index(object):
             Returns the IDs of *new* documents that have been
             added. If document_or_documents was a list, the result
             will also be a list.
-
-            FIXME: Handle errors gracefully. If an exception is thrown
-            it should be possible for the caller to work out which
-            documents were indexed, and which weren't.
         """
 
         from .models import (  # Prevent import too early
@@ -46,8 +42,8 @@ class Index(object):
             was_list = True
             documents = document_or_documents[:]
 
-        for document in documents:
-            with transaction.atomic(independent=True):
+        with transaction.atomic(independent=True):
+            for document in documents:
                 # We go through the document fields, pull out the values that have been set
                 # then we index them.
                 field_data = {
