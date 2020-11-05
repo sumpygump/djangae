@@ -29,7 +29,7 @@ class QueryTests(TestCase):
         kinds = set(x[0] for x in tokens)
         tokens = [x[-1] for x in tokens]
 
-        self.assertEqual(kinds, {"word"})  # All tokens should be recognised as tokens
+        self.assertEqual(kinds, {"word"})  # All tokens should be recognised as "word" tokens
         self.assertEqual(tokens, ["hi", ",", "100", "%", "chance", "works", "[", "honest", "]"])
 
     @skip("Implement stemming and fix this test")
