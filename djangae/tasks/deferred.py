@@ -311,8 +311,7 @@ def defer(obj, *args, **kwargs):
     location = getattr(settings, CLOUD_TASKS_LOCATION_SETTING, None)
     assert(location)  # Should be checked in apps.py
 
-    args = (project_id, location, queue, pickled, task_args,
-            small_task, deferred_handler_url, task_headers)
+    args = (project_id, location, queue, pickled, task_args, small_task, deferred_handler_url, task_headers)
 
     if transactional:
         # Django connections have an on_commit message that run things on
