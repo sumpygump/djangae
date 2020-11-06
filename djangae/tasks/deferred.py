@@ -27,10 +27,6 @@ import types
 from datetime import timedelta
 from urllib.parse import unquote
 
-from djangae.environment import gae_version, task_queue_name
-from djangae.models import DeferIterationMarker
-from djangae.processing import find_key_ranges_for_queryset
-from djangae.utils import retry
 from django.conf import settings
 from django.db import (
     connections,
@@ -40,7 +36,16 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.encoding import force_str
 from gcloudc.db import transaction
+from google.api_core import exceptions
 from google.protobuf.timestamp_pb2 import Timestamp
+
+from djangae.environment import (
+    gae_version,
+    task_queue_name,
+)
+from djangae.models import DeferIterationMarker
+from djangae.processing import find_key_ranges_for_queryset
+from djangae.utils import retry
 
 from . import (
     CLOUD_TASKS_LOCATION_SETTING,
@@ -206,8 +211,9 @@ def _schedule_task(
         # Delete the key as it wasn't needed
         if deferred_task:
             deferred_task.delete()
-    except Exception:  # taskqueue.TaskTooLargeError:
-        raise  # FIXME: Catch whatever is thrown when a task is > 100kb
+    except exceptions.InvalidArgument as e:
+        if "Task size too large" not in str(e):
+            raise
 
         if small_task:
             raise
