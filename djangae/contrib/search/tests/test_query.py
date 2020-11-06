@@ -26,11 +26,11 @@ class QueryTests(TestCase):
         q = "hi, there is a 100% chance this works [honest]"
 
         tokens = _tokenize_query_string(q)
-        kinds = set(x[0] for x in tokens)
-        tokens = [x[-1] for x in tokens]
+        kinds = set(x[0] for x in tokens[0])
+        tokens = [x[-1] for x in tokens[0]]
 
         self.assertEqual(kinds, {"word"})  # All tokens should be recognised as "word" tokens
-        self.assertEqual(tokens, ["hi", ",", "100", "%", "chance", "works", "[", "honest", "]"])
+        self.assertCountEqual(tokens, ["hi", ",", "100", "%", "chance", "works", "[", "honest", "]"])
 
     @skip("Implement stemming and fix this test")
     def test_fuzzy_matching(self):

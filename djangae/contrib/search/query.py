@@ -99,7 +99,7 @@ def _tokenize_query_string(query_string):
                 continue
             else:
                 # Replace this entry with the first token
-                branch_result[i][-1] = content[0]
+                branch_result[i] = (kind, field, content[0])
 
                 # Append the rest to branch_result
                 for token in content[1:]:
@@ -164,28 +164,49 @@ def build_document_queryset(
     if not tokenization:
         return DocumentRecord.objects.none()
 
-    # All queries need to prefix the index
-    prefix = "%s%s" % (str(index.id), WORD_DOCUMENT_JOIN_STRING)
-    filters = Q()
+    if not match_all:
+        # If match_all is false, we split the branches into a branch per token
+        split_branches = []
+        for branch in tokenization:
+            for token in branch:
+                split_branches.append([token])
+        tokenization = split_branches
 
-    for kind, field, string in tokenization:
-        if kind == "word":
-            filters = _append_exact_word_filters(filters, prefix, field, string)
-            if use_startswith:
-                filters = _append_startswith_word_filters(
-                    filters, prefix, field, string
-                )
+    # We now need to gather document IDs, for each branch we need to
+    # look for matching tokens in a single query, then post-process them
+    # to only fetch documents that match all of them.
 
-            if use_stemming:
-                filters = _append_stemming_word_filters(
-                    filters, prefix, field, string,
-                )
-        else:
-            raise NotImplementedError("Need to implement exact matching")
+    document_ids = set()
+    for branch in tokenization:
+        token_count = len(branch)
 
-    document_ids = set([
-        TokenFieldIndex.document_id_from_pk(x)
-        for x in TokenFieldIndex.objects.filter(filters).values_list("pk", flat=True)
-    ])
+        # All queries need to prefix the index
+        prefix = "%s%s" % (str(index.id), WORD_DOCUMENT_JOIN_STRING)
+        filters = Q()
+
+        for kind, field, string in branch:
+            if kind == "word":
+                filters = _append_exact_word_filters(filters, prefix, field, string)
+                if use_startswith:
+                    filters = _append_startswith_word_filters(
+                        filters, prefix, field, string
+                    )
+
+                if use_stemming:
+                    filters = _append_stemming_word_filters(
+                        filters, prefix, field, string,
+                    )
+            else:
+                raise NotImplementedError("Need to implement exact matching")
+
+        keys = TokenFieldIndex.objects.filter(filters).values_list("pk", flat=True)
+
+        doc_results = {}
+
+        for pk in keys:
+            doc_id = TokenFieldIndex.document_id_from_pk(pk)
+            doc_results.setdefault(doc_id, set()).add(pk.split("|")[1])
+
+        document_ids |= set([k for k, v in doc_results.items() if len(v) == token_count])
 
     return DocumentRecord.objects.filter(pk__in=document_ids)
