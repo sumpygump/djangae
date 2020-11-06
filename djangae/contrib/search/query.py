@@ -91,7 +91,8 @@ def _tokenize_query_string(query_string):
                 continue
 
             # Split on punctuation, remove double-spaces
-            content = tokenize_content(content)
+            content, _ = tokenize_content(content)
+
             content = [x.replace(" ", "") for x in content]
 
             if len(content) == 1:

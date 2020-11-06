@@ -210,8 +210,8 @@ class IndexingTests(TestCase):
             (e.g. 2020-01-01)
         """
         text = "This-is some text with - hyphens. I-B-M"
-        tokens = tokenize_content(text)
+        tokens, new_tokens = tokenize_content(text)
         self.assertCountEqual(
-            tokens,
+            tokens + new_tokens,
             ["This", "-", "is", "some", "text", "with", "-", "hyphens.", "I-B-M", "IBM", "I.B.M"]
         )

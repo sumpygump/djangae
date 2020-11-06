@@ -36,6 +36,7 @@ def tokenize_content(content):
             tokens.append(current)
 
     new_tokens = []
+    tokens_to_append = []
     indexes_to_remove = []
 
     # Detect acronyms
@@ -46,6 +47,8 @@ def tokenize_content(content):
         else:
             if acronym_run > 1 and token != "-":
                 start = i - (2 * acronym_run)
+
+                original = "".join(tokens[start:start + (acronym_run * 2) + 1])
                 parts = [tokens[start + (x * 2)] for x in range(acronym_run + 1)]
                 acronym = "".join(parts)
 
@@ -54,12 +57,21 @@ def tokenize_content(content):
                 new_tokens.append(".".join(parts))
                 new_tokens.append("-".join(parts))
 
+                # Remove the original characters
                 indexes_to_remove.extend(range(start, start + (acronym_run * 2) + 1))
+
+                if original in new_tokens:
+                    new_tokens.remove(original)
+
+                # Extend a single token made up of the whole original acronym
+                # rather than seperate chars
+                tokens_to_append.append(original)
+
                 acronym_run = 0
             elif i > 0 and tokens[i - 1] != "-":
                 acronym_run = 0
 
     tokens = [x for i, x in enumerate(tokens) if i not in indexes_to_remove]
-    tokens.extend(new_tokens)
+    tokens.extend(tokens_to_append)
 
-    return tokens
+    return tokens, new_tokens
