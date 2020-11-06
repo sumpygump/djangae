@@ -116,3 +116,27 @@ class QueryTests(TestCase):
         results = [x for x in index.search("2020-01-01", document_class=Doc)]
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].datefield, date)
+
+    def test_match_all_flag(self):
+
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index(name="test")
+        doc1 = index.add(Doc(text="test string one"))
+        doc2 = index.add(Doc(text="test string two"))
+
+        results = list(index.search("test string", Doc, match_all=True))
+        self.assertEqual(len(results), 2)
+
+        results = list(index.search("string one", Doc, match_all=True))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc1)
+
+        results = list(index.search("test two", Doc, match_all=True))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc2)
+
+        # Should return both as we're defaulting to OR behaviour
+        results = list(index.search("string one", Doc, match_all=False))
+        self.assertEqual(len(results), 2)

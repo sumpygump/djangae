@@ -24,66 +24,99 @@ def _tokenize_query_string(query_string):
 
     branches = query_string.split(" or ")
 
-    # Split into [(fieldname, query)] tuples for each branch
-    field_queries = [
-        tuple(x.split(":", 1)) if ":" in x else (None, x)
-        for x in branches
-    ]
+    # [(None, 'test'), (None, ''"exact thing"'), (None, 'name')]
 
-    # Remove empty queries
-    field_queries = [x for x in field_queries if x[1].strip()]
+    field_queries = []
+
+    for branch_text in branches:
+        branch_queries = []
+
+        token = []
+        in_quotes = False
+
+        def finalize_token(token):
+            final_token = "".join(token)
+
+            if not final_token:
+                token.clear()
+                return
+
+            if ":" in token:
+                field, final_token = final_token.split(":", 1)
+            else:
+                field = None
+            branch_queries.append((field, final_token))
+            token.clear()
+
+        for i, c in enumerate(branch_text):
+            if c == " " and not in_quotes:
+                finalize_token(token)
+            else:
+                token.append(c)
+
+            if c == '"':
+                in_quotes = not in_quotes
+        else:
+            finalize_token(token)
+
+        field_queries.append(branch_queries)
 
     # By this point, given the following query:
     # pikachu OR name:charmander OR name:"Mew Two" OR "Mr Mime"
     # we should have:
-    # [(None, "pikachu"), ("name", "charmander"), ("name", '"mew two"'), (None, '"mr mime"')]
+    # [[(None, "pikachu")], [("name", "charmander")], [("name", '"mew two"')], [(None, '"mr mime"')]]
     # Note that exact matches will have quotes around them
 
-    result = [
-        [
-            "exact" if x[1][0] == '"' and x[1][-1] == '"' else "word",
-            x[0],
-            x[1].strip('"')
-        ]
-        for x in field_queries
-    ]
+    result = []
+
+    for branch in field_queries:
+        branch_result = []
+
+        for field, token in branch:
+            if token[0] == '"' and token[-1] == '"':
+                branch_result.append(("exact", field, token.strip('"')))
+            else:
+                branch_result.append(("word", field, token))
+
+        result.append(branch_result)
 
     # Expand
     # For non exact matches, we may have multiple tokens separated by spaces that need
     # to be expanded into seperate entries
+    for branch_result in result:
+        start_length = len(branch_result)
+        for i in range(start_length):
+            kind, field, content = branch_result[i]
+            if kind == "exact":
+                continue
 
-    start_length = len(result)
-    for i in range(start_length):
-        kind, field, content = result[i]
-        if kind == "exact":
-            continue
+            # Split on punctuation, remove double-spaces
+            content = tokenize_content(content)
+            content = [x.replace(" ", "") for x in content]
 
-        # Split on punctuation, remove double-spaces
-        content = tokenize_content(content)
-        content = [x.replace(" ", "") for x in content]
+            if len(content) == 1:
+                # Do nothing, this was a single token
+                continue
+            else:
+                # Replace this entry with the first token
+                branch_result[i][-1] = content[0]
 
-        if len(content) == 1:
-            # Do nothing, this was a single token
-            continue
-        else:
-            # Replace this entry with the first token
-            result[i][-1] = content[0]
+                # Append the rest to branch_result
+                for token in content[1:]:
+                    branch_result.append(("word", field, token))
 
-            # Append the rest to result
-            for token in content[1:]:
-                result.append(("word", field, token))
-
-    # Remove empty entries, and stop-words and then tuple-ify
-    result = [
-        (kind, field, content)
-        for (kind, field, content) in result
-        if content and content not in STOP_WORDS
-    ]
+    for i, branch_result in enumerate(result):
+        # Remove empty entries, and stop-words and then tuple-ify
+        result[i] = [
+            (kind, field, content)
+            for (kind, field, content) in branch_result
+            if content and content not in STOP_WORDS
+        ]
 
     # Now we should have
     # [
-    #     ("word", None, "pikachu"), ("word", "name", "charmander"),
-    #     ("exact", "name", 'mew two'), ("exact", None, 'mr mime')
+    #     [("word", None, "pikachu")], [("word", "name", "charmander")],
+    #     [("exact", "name", 'mew two')], [("exact", None, 'mr mime')]
     # ]
 
     return result
@@ -122,6 +155,7 @@ def build_document_queryset(
     query_string, index,
     use_stemming=False,
     use_startswith=False,
+    match_all=True,
 ):
 
     assert(index.id)
@@ -130,10 +164,9 @@ def build_document_queryset(
     if not tokenization:
         return DocumentRecord.objects.none()
 
-    filters = Q()
-
     # All queries need to prefix the index
     prefix = "%s%s" % (str(index.id), WORD_DOCUMENT_JOIN_STRING)
+    filters = Q()
 
     for kind, field, string in tokenization:
         if kind == "word":
