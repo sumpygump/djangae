@@ -140,3 +140,14 @@ class QueryTests(TestCase):
         # Should return both as we're defaulting to OR behaviour
         results = list(index.search("string one", Doc, match_all=False))
         self.assertEqual(len(results), 2)
+
+    def test_or_queries(self):
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index(name="test")
+        index.add(Doc(text="test string one"))
+        index.add(Doc(text="test string two"))
+
+        results = list(index.search("one OR two", Doc, match_all=True))
+        self.assertEqual(len(results), 2)
