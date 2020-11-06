@@ -46,6 +46,7 @@ INSTALLED_APPS = (
     'djangae.contrib.googleauth',
     'gcloudc',
     'djangae.tasks',
+    'djangae.contrib.search',
 )
 
 AUTHENTICATION_BACKENDS = [
