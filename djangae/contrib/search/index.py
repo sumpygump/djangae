@@ -5,10 +5,15 @@ from gcloudc.db import transaction
 from .document import Document
 
 
+_DEFAULT_INDEX_NAME = "default"
+
+
 class Index(object):
 
     def __init__(self, name):
         from .models import IndexStats  # Prevent import too early
+
+        name = name or "default"
 
         self.name = name
         self.index, created = IndexStats.objects.get_or_create(
