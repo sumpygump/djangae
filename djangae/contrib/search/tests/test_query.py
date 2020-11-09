@@ -151,3 +151,17 @@ class QueryTests(TestCase):
 
         results = list(index.search("one OR two", Doc, match_all=True))
         self.assertEqual(len(results), 2)
+
+    def test_trailing_period(self):
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index(name="test")
+        index.add(Doc(text="My company ltd."))
+        index.add(Doc(text="Company co."))
+
+        results = list(index.search("co", Doc))
+        self.assertEqual(len(results), 1)
+
+        results = list(index.search("ltd", Doc))
+        self.assertEqual(len(results), 1)
