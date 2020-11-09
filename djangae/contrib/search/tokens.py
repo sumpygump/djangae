@@ -76,10 +76,9 @@ def tokenize_content(content):
                 tokens_to_append.append(original)
 
                 acronym_run = 0
-            elif i > 0 and tokens[i - 1] != "-":
+            elif i > 0 and tokens[i - 1] != current_at:
                 acronym_run = 0
 
     tokens = [x for i, x in enumerate(tokens) if i not in indexes_to_remove]
     tokens.extend(tokens_to_append)
-
     return tokens, new_tokens

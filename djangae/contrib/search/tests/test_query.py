@@ -171,3 +171,28 @@ class QueryTests(TestCase):
 
         results = list(index.search("ltd.", Doc))
         self.assertEqual(len(results), 1)
+
+    def test_acronyms(self):
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index(name="test")
+        doc1 = index.add(Doc(text="a.b.c"))
+        doc2 = index.add(Doc(text="1-2-3"))
+        index.add(Doc(text="do-re-mi"))
+
+        results = list(index.search("a.b.c", Doc))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc1)
+
+        results = list(index.search("abc", Doc))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc1)
+
+        results = list(index.search("a-b-c", Doc))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc1)
+
+        results = list(index.search("1-2-3", Doc))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc2)
