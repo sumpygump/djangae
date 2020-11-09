@@ -171,7 +171,8 @@ class Index(object):
         document_class,
         limit=1000,
         use_stemming=False,
-        use_startswith=False
+        use_startswith=False,
+        match_all=True,
     ):
         """
             Perform a search of the index.
@@ -180,6 +181,8 @@ class Index(object):
             limit: The max number of results to return
             use_stemming: If true, this will query for variations of the token
             use_startswith: If true, will return results where the beginning of searched tokens match
+            match_all: If true, only return results where all tokens are found, otherwise act as though all terms
+                are separated by OR operators.
         """
 
         from .query import build_document_queryset
@@ -187,6 +190,7 @@ class Index(object):
             query_string, self,
             use_stemming=use_stemming,
             use_startswith=use_startswith,
+            match_all=match_all,
         )[:limit]
 
         for record in qs:

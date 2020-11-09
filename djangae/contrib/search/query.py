@@ -24,66 +24,100 @@ def _tokenize_query_string(query_string):
 
     branches = query_string.split(" or ")
 
-    # Split into [(fieldname, query)] tuples for each branch
-    field_queries = [
-        tuple(x.split(":", 1)) if ":" in x else (None, x)
-        for x in branches
-    ]
+    # [(None, 'test'), (None, ''"exact thing"'), (None, 'name')]
 
-    # Remove empty queries
-    field_queries = [x for x in field_queries if x[1].strip()]
+    field_queries = []
+
+    for branch_text in branches:
+        branch_queries = []
+
+        token = []
+        in_quotes = False
+
+        def finalize_token(token):
+            final_token = "".join(token)
+
+            if not final_token:
+                token.clear()
+                return
+
+            if ":" in token:
+                field, final_token = final_token.split(":", 1)
+            else:
+                field = None
+            branch_queries.append((field, final_token))
+            token.clear()
+
+        for i, c in enumerate(branch_text):
+            if c == " " and not in_quotes:
+                finalize_token(token)
+            else:
+                token.append(c)
+
+            if c == '"':
+                in_quotes = not in_quotes
+        else:
+            finalize_token(token)
+
+        field_queries.append(branch_queries)
 
     # By this point, given the following query:
     # pikachu OR name:charmander OR name:"Mew Two" OR "Mr Mime"
     # we should have:
-    # [(None, "pikachu"), ("name", "charmander"), ("name", '"mew two"'), (None, '"mr mime"')]
+    # [[(None, "pikachu")], [("name", "charmander")], [("name", '"mew two"')], [(None, '"mr mime"')]]
     # Note that exact matches will have quotes around them
 
-    result = [
-        [
-            "exact" if x[1][0] == '"' and x[1][-1] == '"' else "word",
-            x[0],
-            x[1].strip('"')
-        ]
-        for x in field_queries
-    ]
+    result = []
+
+    for branch in field_queries:
+        branch_result = []
+
+        for field, token in branch:
+            if token[0] == '"' and token[-1] == '"':
+                branch_result.append(("exact", field, token.strip('"')))
+            else:
+                branch_result.append(("word", field, token))
+
+        result.append(branch_result)
 
     # Expand
     # For non exact matches, we may have multiple tokens separated by spaces that need
     # to be expanded into seperate entries
+    for branch_result in result:
+        start_length = len(branch_result)
+        for i in range(start_length):
+            kind, field, content = branch_result[i]
+            if kind == "exact":
+                continue
 
-    start_length = len(result)
-    for i in range(start_length):
-        kind, field, content = result[i]
-        if kind == "exact":
-            continue
+            # Split on punctuation, remove double-spaces
+            content, _ = tokenize_content(content)
 
-        # Split on punctuation, remove double-spaces
-        content = tokenize_content(content)
-        content = [x.replace(" ", "") for x in content]
+            content = [x.replace(" ", "") for x in content]
 
-        if len(content) == 1:
-            # Do nothing, this was a single token
-            continue
-        else:
-            # Replace this entry with the first token
-            result[i][-1] = content[0]
+            if len(content) == 1:
+                # Do nothing, this was a single token
+                continue
+            else:
+                # Replace this entry with the first token
+                branch_result[i] = (kind, field, content[0])
 
-            # Append the rest to result
-            for token in content[1:]:
-                result.append(("word", field, token))
+                # Append the rest to branch_result
+                for token in content[1:]:
+                    branch_result.append(("word", field, token))
 
-    # Remove empty entries, and stop-words and then tuple-ify
-    result = [
-        (kind, field, content)
-        for (kind, field, content) in result
-        if content and content not in STOP_WORDS
-    ]
+    for i, branch_result in enumerate(result):
+        # Remove empty entries, and stop-words and then tuple-ify
+        result[i] = [
+            (kind, field, content)
+            for (kind, field, content) in branch_result
+            if content and content not in STOP_WORDS
+        ]
 
     # Now we should have
     # [
-    #     ("word", None, "pikachu"), ("word", "name", "charmander"),
-    #     ("exact", "name", 'mew two'), ("exact", None, 'mr mime')
+    #     [("word", None, "pikachu")], [("word", "name", "charmander")],
+    #     [("exact", "name", 'mew two')], [("exact", None, 'mr mime')]
     # ]
 
     return result
@@ -122,6 +156,7 @@ def build_document_queryset(
     query_string, index,
     use_stemming=False,
     use_startswith=False,
+    match_all=True,
 ):
 
     assert(index.id)
@@ -130,29 +165,49 @@ def build_document_queryset(
     if not tokenization:
         return DocumentRecord.objects.none()
 
-    filters = Q()
+    if not match_all:
+        # If match_all is false, we split the branches into a branch per token
+        split_branches = []
+        for branch in tokenization:
+            for token in branch:
+                split_branches.append([token])
+        tokenization = split_branches
 
-    # All queries need to prefix the index
-    prefix = "%s%s" % (str(index.id), WORD_DOCUMENT_JOIN_STRING)
+    # We now need to gather document IDs, for each branch we need to
+    # look for matching tokens in a single query, then post-process them
+    # to only fetch documents that match all of them.
 
-    for kind, field, string in tokenization:
-        if kind == "word":
-            filters = _append_exact_word_filters(filters, prefix, field, string)
-            if use_startswith:
-                filters = _append_startswith_word_filters(
-                    filters, prefix, field, string
-                )
+    document_ids = set()
+    for branch in tokenization:
+        token_count = len(branch)
 
-            if use_stemming:
-                filters = _append_stemming_word_filters(
-                    filters, prefix, field, string,
-                )
-        else:
-            raise NotImplementedError("Need to implement exact matching")
+        # All queries need to prefix the index
+        prefix = "%s%s" % (str(index.id), WORD_DOCUMENT_JOIN_STRING)
+        filters = Q()
 
-    document_ids = set([
-        TokenFieldIndex.document_id_from_pk(x)
-        for x in TokenFieldIndex.objects.filter(filters).values_list("pk", flat=True)
-    ])
+        for kind, field, string in branch:
+            if kind == "word":
+                filters = _append_exact_word_filters(filters, prefix, field, string)
+                if use_startswith:
+                    filters = _append_startswith_word_filters(
+                        filters, prefix, field, string
+                    )
+
+                if use_stemming:
+                    filters = _append_stemming_word_filters(
+                        filters, prefix, field, string,
+                    )
+            else:
+                raise NotImplementedError("Need to implement exact matching")
+
+        keys = TokenFieldIndex.objects.filter(filters).values_list("pk", flat=True)
+
+        doc_results = {}
+
+        for pk in keys:
+            doc_id = TokenFieldIndex.document_id_from_pk(pk)
+            doc_results.setdefault(doc_id, set()).add(pk.split("|")[1])
+
+        document_ids |= set([k for k, v in doc_results.items() if len(v) == token_count])
 
     return DocumentRecord.objects.filter(pk__in=document_ids)

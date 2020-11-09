@@ -26,11 +26,11 @@ class QueryTests(TestCase):
         q = "hi, there is a 100% chance this works [honest]"
 
         tokens = _tokenize_query_string(q)
-        kinds = set(x[0] for x in tokens)
-        tokens = [x[-1] for x in tokens]
+        kinds = set(x[0] for x in tokens[0])
+        tokens = [x[-1] for x in tokens[0]]
 
         self.assertEqual(kinds, {"word"})  # All tokens should be recognised as "word" tokens
-        self.assertEqual(tokens, ["hi", ",", "100", "%", "chance", "works", "[", "honest", "]"])
+        self.assertCountEqual(tokens, ["hi", ",", "100", "%", "chance", "works", "[", "honest", "]"])
 
     @skip("Implement stemming and fix this test")
     def test_fuzzy_matching(self):
@@ -116,3 +116,38 @@ class QueryTests(TestCase):
         results = [x for x in index.search("2020-01-01", document_class=Doc)]
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].datefield, date)
+
+    def test_match_all_flag(self):
+
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index(name="test")
+        doc1 = index.add(Doc(text="test string one"))
+        doc2 = index.add(Doc(text="test string two"))
+
+        results = list(index.search("test string", Doc, match_all=True))
+        self.assertEqual(len(results), 2)
+
+        results = list(index.search("string one", Doc, match_all=True))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc1)
+
+        results = list(index.search("test two", Doc, match_all=True))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc2)
+
+        # Should return both as we're defaulting to OR behaviour
+        results = list(index.search("string one", Doc, match_all=False))
+        self.assertEqual(len(results), 2)
+
+    def test_or_queries(self):
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index(name="test")
+        index.add(Doc(text="test string one"))
+        index.add(Doc(text="test string two"))
+
+        results = list(index.search("one OR two", Doc, match_all=True))
+        self.assertEqual(len(results), 2)
