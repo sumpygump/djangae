@@ -213,5 +213,5 @@ class IndexingTests(TestCase):
         tokens, new_tokens = tokenize_content(text)
         self.assertCountEqual(
             tokens + new_tokens,
-            ["This", "-", "is", "some", "text", "with", "-", "hyphens.", "I-B-M", "IBM", "I.B.M"]
+            ["This", "-", "is", "some", "text", "with", "-", "hyphens", ".", "I-B-M", "IBM", "I.B.M"]
         )

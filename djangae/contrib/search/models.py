@@ -89,5 +89,5 @@ class IndexStats(models.Model):
         statistics about the indexed data.
     """
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.SlugField(max_length=100, primary_key=True)
     document_count = models.PositiveIntegerField(default=0)

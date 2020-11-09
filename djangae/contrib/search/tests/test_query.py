@@ -151,3 +151,48 @@ class QueryTests(TestCase):
 
         results = list(index.search("one OR two", Doc, match_all=True))
         self.assertEqual(len(results), 2)
+
+    def test_trailing_period(self):
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index(name="test")
+        index.add(Doc(text="My company ltd."))
+        index.add(Doc(text="Company co."))
+
+        results = list(index.search("co", Doc))
+        self.assertEqual(len(results), 1)
+
+        results = list(index.search("co.", Doc))
+        self.assertEqual(len(results), 1)
+
+        results = list(index.search("ltd", Doc))
+        self.assertEqual(len(results), 1)
+
+        results = list(index.search("ltd.", Doc))
+        self.assertEqual(len(results), 1)
+
+    def test_acronyms(self):
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index(name="test")
+        doc1 = index.add(Doc(text="a.b.c"))
+        doc2 = index.add(Doc(text="1-2-3"))
+        index.add(Doc(text="do-re-mi"))
+
+        results = list(index.search("a.b.c", Doc))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc1)
+
+        results = list(index.search("abc", Doc))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc1)
+
+        results = list(index.search("a-b-c", Doc))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc1)
+
+        results = list(index.search("1-2-3", Doc))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].id, doc2)
