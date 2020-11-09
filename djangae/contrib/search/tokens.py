@@ -39,13 +39,21 @@ def tokenize_content(content):
     tokens_to_append = []
     indexes_to_remove = []
 
+    ACRONYM_TOKENS = (".", "-")
+    current_at = None
+
     # Detect acronyms
     acronym_run = 0
     for i, token in enumerate(tokens):
-        if token == "-" and i > 0 and tokens[i - 1] != "-":
+        if (
+            ((acronym_run and token == current_at) or (not acronym_run and token in ACRONYM_TOKENS)) and
+                i > 0 and tokens[i - 1] != token
+        ):
             acronym_run += 1
+            if acronym_run == 1:
+                current_at = token
         else:
-            if acronym_run > 1 and token != "-":
+            if acronym_run > 1 and token != current_at:
                 start = i - (2 * acronym_run)
 
                 original = "".join(tokens[start:start + (acronym_run * 2) + 1])

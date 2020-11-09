@@ -104,6 +104,8 @@ class Index(object):
                         if token is None:
                             continue
 
+                        assert(token.strip())
+
                         # FIXME: Update occurrances
                         try:
                             obj = TokenFieldIndex.objects.get(

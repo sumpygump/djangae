@@ -163,5 +163,11 @@ class QueryTests(TestCase):
         results = list(index.search("co", Doc))
         self.assertEqual(len(results), 1)
 
+        results = list(index.search("co.", Doc))
+        self.assertEqual(len(results), 1)
+
         results = list(index.search("ltd", Doc))
+        self.assertEqual(len(results), 1)
+
+        results = list(index.search("ltd.", Doc))
         self.assertEqual(len(results), 1)

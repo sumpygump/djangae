@@ -62,9 +62,6 @@ class Field(object):
             if len(token) > 2 or token[-1] != "#" or token[0] not in "abcdefgjx":
                 token = token.replace("#", "")
 
-        # Remove leading or trailing periods. In acronyms it's fine FIXME: handle "abs.dasd"
-        token = token.strip(".")
-
         return token
 
     def convert_from_index(self, value):
