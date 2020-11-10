@@ -14,11 +14,15 @@ from urllib.request import urlopen
 from django.utils.autoreload import DJANGO_AUTORELOAD_ENV
 
 from djangae.environment import get_application_root
+from djangae.utils import get_next_available_port, port_is_open
 
 _ACTIVE_EMULATORS = {}
 _ALL_EMULATORS = ("datastore", "tasks", "storage")
 
 _DJANGO_DEFAULT_PORT = 8000
+
+SERVICE_HOST = "127.0.0.1"
+SERVICE_PROTOCOL_HOST = f"http://{SERVICE_HOST}"
 
 DATASTORE_PORT = 10901
 TASKS_PORT = 10908
@@ -58,7 +62,7 @@ def _wait(port, service):
     failures = 0
     while True:
         try:
-            response = urlopen("http://127.0.0.1:%s/" % port)
+            response = urlopen(f"{SERVICE_PROTOCOL_HOST}:{port}/")
         except (HTTPError, URLError):
             failures += 1
             time.sleep(1)
@@ -99,12 +103,20 @@ def start_emulators(
     enable_test_environment_variables()
 
     if "datastore" in emulators:
-        os.environ["DATASTORE_EMULATOR_HOST"] = "127.0.0.1:%s" % datastore_port
+        if not port_is_open(SERVICE_HOST, datastore_port):
+            # If start_emulators is call explicitly passing the Datastore Emulator port
+            # and the port is not available raise and Runtime exception.
+            if datastore_port != DATASTORE_PORT:
+                raise RuntimeError(f"Unable to start Cloud Datastore Emulator at port {datastore_port}.")
+            else:
+                datastore_port = get_next_available_port(SERVICE_HOST, datastore_port)
+
+        os.environ["DATASTORE_EMULATOR_HOST"] = f"{SERVICE_HOST}:{datastore_port}"
         os.environ["DATASTORE_PROJECT_ID"] = project_id
 
         # Start the cloud datastore emulator
         command = f"gcloud beta emulators datastore start --consistency=1.0 --quiet --project={project_id}"
-        command += " --host-port=127.0.0.1:%s" % datastore_port
+        command += f" --host-port={SERVICE_HOST}:{datastore_port}"
 
         if datastore_dir:
             command += " --data-dir=%s" % datastore_dir
@@ -115,7 +127,15 @@ def start_emulators(
         _wait_for_datastore(datastore_port)
 
     if "tasks" in emulators:
-        from djangae.tasks import cloud_tasks_parent_path, cloud_tasks_project, cloud_tasks_location
+        # If start_emulators is call explicitly passing the Cloud Task emulator port
+        # and the port is not available raise and Runtime exception.
+        if not port_is_open(SERVICE_HOST, tasks_port):
+            if tasks_port != TASKS_PORT:
+                raise RuntimeError(f"Unable to start Cloud Tasks Emulator at port {tasks_port}.")
+            else:
+                tasks_port = get_next_available_port(SERVICE_HOST, tasks_port)
+
+        from djangae.tasks import cloud_tasks_location, cloud_tasks_parent_path, cloud_tasks_project
         default_queue = "%s/queues/default" % cloud_tasks_parent_path()
 
         if task_target_port is None:
@@ -142,12 +162,20 @@ def start_emulators(
                 queue_yaml, cloud_tasks_project(), cloud_tasks_location()
             )
 
-        os.environ["TASKS_EMULATOR_HOST"] = "127.0.0.1:%s" % tasks_port
+        os.environ["TASKS_EMULATOR_HOST"] = f"{SERVICE_HOST}:{tasks_port}"
         _ACTIVE_EMULATORS["tasks"] = _launch_process(command)
         _wait_for_tasks(tasks_port)
 
     if "storage" in emulators:
-        os.environ["STORAGE_EMULATOR_HOST"] = "http://127.0.0.1:%s" % storage_port
+        # If start_emulators is call explicitly passing the Cloud Storage emulator port
+        # and the port is not available raise and Runtime exception.
+        if not port_is_open(SERVICE_HOST, storage_port):
+            if storage_port != STORAGE_PORT:
+                raise RuntimeError(f"Unable to start Cloud Storage Emulator at port {storage_port}.")
+            else:
+                storage_port = get_next_available_port(SERVICE_HOST, storage_port)
+
+        os.environ["STORAGE_EMULATOR_HOST"] = f"http://{SERVICE_HOST}:{storage_port}"
         command = "gcloud-storage-emulator start -q --port=%s --default-bucket=%s" % (
             storage_port, DEFAULT_BUCKET)
 
