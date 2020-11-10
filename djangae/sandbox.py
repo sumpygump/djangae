@@ -47,6 +47,19 @@ def _wait_for_storage(port):
     _wait(port, "Cloud Storage Emulator")
 
 
+def _is_service_running(port):
+    is_running = False
+    try:
+        response = urlopen("http://127.0.0.1:%s/" % port)
+        if response.status == 200:
+            is_running = True
+
+    except (HTTPError, URLError):
+        is_running = False
+
+    return is_running
+
+
 def _wait(port, service):
     logger.info("Waiting for %s..." % service)
 
@@ -56,26 +69,21 @@ def _wait(port, service):
     time.sleep(1)
 
     failures = 0
+
     while True:
-        try:
-            response = urlopen("http://127.0.0.1:%s/" % port)
-        except (HTTPError, URLError):
-            failures += 1
-            time.sleep(1)
-            if failures > 5:
-                # Only start logging if this becomes persistent
-                logger.exception("Error connecting to the %s. Retrying..." % service)
-            continue
-
-        if response.status == 200:
-            # Give things a second to really boot
-            time.sleep(1)
-            break
-
         if (datetime.now() - start).total_seconds() > TIMEOUT:
             raise RuntimeError("Unable to start %s. Please check the logs." % service)
 
-        time.sleep(1)
+        if _is_service_running(port):
+            time.sleep(1)
+            break
+        else:
+            failures += 1
+            if failures > 5:
+                # Only start logging if this becomes persistent
+                logger.exception("Error connecting to the %s. Retrying..." % service)
+            time.sleep(1)
+            continue
 
 
 def start_emulators(
@@ -111,8 +119,11 @@ def start_emulators(
         if not persist_data:
             command += " --no-store-on-disk"
 
-        _ACTIVE_EMULATORS["datastore"] = _launch_process(command)
-        _wait_for_datastore(datastore_port)
+        if _is_service_running(datastore_port):
+            _ACTIVE_EMULATORS["datastore"] = _launch_process(command)
+            _wait_for_datastore(datastore_port)
+        else:
+            logger.info('Cloud Datastore Emulator is already running. Re-using existing instance')
 
     if "tasks" in emulators:
         from djangae.tasks import cloud_tasks_parent_path, cloud_tasks_project, cloud_tasks_location
@@ -154,8 +165,11 @@ def start_emulators(
         if not persist_data:
             command += " --no-store-on-disk"
 
-        _ACTIVE_EMULATORS["storage"] = _launch_process(command)
-        _wait_for_storage(storage_port)
+        if _is_service_running(datastore_port):
+            _ACTIVE_EMULATORS["storage"] = _launch_process(command)
+            _wait_for_storage(storage_port)
+        else:
+            logger.info('Cloud Storage Emulator is already running. Re-using existing instance')
 
 
 def stop_emulators(emulators=None):
