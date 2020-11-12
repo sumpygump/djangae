@@ -1,4 +1,5 @@
 import logging
+import psutil
 import os
 import subprocess
 import sys
@@ -76,6 +77,14 @@ def _wait(port, service):
             raise RuntimeError("Unable to start %s. Please check the logs." % service)
 
         time.sleep(1)
+
+
+def _kill_process(process):
+    try:
+        process.terminate()
+        process.kill()
+    except psutil.NoSuchProcess:
+        pass
 
 
 def start_emulators(
@@ -164,11 +173,17 @@ def stop_emulators(emulators=None):
         return
 
     emulators = emulators or _ALL_EMULATORS
-    for name, proc in _ACTIVE_EMULATORS.items():
+    for name, process in _ACTIVE_EMULATORS.items():
+
         if name in emulators:
-            logger.info('Stopping %s emulator', name)
-            proc.terminate()
-            proc.wait()
+            proc = psutil.Process(process.pid)
+            logger.info('Stopping %s emulator process with pid=%s', name, proc.pid)
+
+            for child_proc in proc.children(recursive=True):
+                logger.info('Stopping %s emulator child process with pid=%s', name, child_proc.pid)
+                _kill_process(child_proc)
+
+            _kill_process(proc)
 
 
 def enable_test_environment_variables():
