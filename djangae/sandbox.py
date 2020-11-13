@@ -1,6 +1,7 @@
 import logging
-import psutil
 import os
+import psutil
+import signal
 import subprocess
 import sys
 import time
@@ -79,12 +80,24 @@ def _wait(port, service):
         time.sleep(1)
 
 
-def _kill_process(process):
-    try:
-        process.terminate()
-        process.kill()
-    except psutil.NoSuchProcess:
-        pass
+def _kill_proc_tree(pid, sig=signal.SIGTERM, timeout=None, on_terminate=None):
+    """Kill a process tree (including grandchildren) with signal
+    "sig" and return a (gone, still_alive) tuple.
+    "on_terminate", if specified, is a callabck function which is
+    called as soon as a child terminates.
+    """
+    assert pid != os.getpid(), "won't kill myself"
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    children.append(parent)
+
+    for p in children:
+        try:
+            p.send_signal(sig)
+        except psutil.NoSuchProcess:
+            pass
+    gone, alive = psutil.wait_procs(children, timeout=timeout, callback=on_terminate)
+    return (gone, alive)
 
 
 def start_emulators(
@@ -177,13 +190,8 @@ def stop_emulators(emulators=None):
 
         if name in emulators:
             proc = psutil.Process(process.pid)
-            logger.info('Stopping %s emulator process with pid=%s', name, proc.pid)
-
-            for child_proc in proc.children(recursive=True):
-                logger.info('Stopping %s emulator child process with pid=%s', name, child_proc.pid)
-                _kill_process(child_proc)
-
-            _kill_process(proc)
+            logger.info('Stopping %s emulator', name, proc.pid)
+            _kill_proc_tree(process.pid)
 
 
 def enable_test_environment_variables():
