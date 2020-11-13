@@ -45,6 +45,7 @@ setup(
         'django-gcloud-connectors>=0.2.8',
         'google-api-python-client>=1.7.11',
         'google-cloud-tasks>=1.5.0,<2.0.0',
+        'psutil>=5.7.3',
         # requests required by cloud storage file backend
         'requests>=2.22.0'
     ],

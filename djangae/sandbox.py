@@ -1,5 +1,7 @@
 import logging
 import os
+import psutil
+import signal
 import subprocess
 import sys
 import time
@@ -80,6 +82,26 @@ def _wait(port, service):
             raise RuntimeError("Unable to start %s. Please check the logs." % service)
 
         time.sleep(1)
+
+
+def _kill_proc_tree(pid, sig=signal.SIGTERM, timeout=None, on_terminate=None):
+    """Kill a process tree (including grandchildren) with signal
+    "sig" and return a (gone, still_alive) tuple.
+    "on_terminate", if specified, is a callabck function which is
+    called as soon as a child terminates.
+    """
+    assert pid != os.getpid(), "won't kill myself"
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    children.append(parent)
+
+    for p in children:
+        try:
+            p.send_signal(sig)
+        except psutil.NoSuchProcess:
+            pass
+    gone, alive = psutil.wait_procs(children, timeout=timeout, callback=on_terminate)
+    return (gone, alive)
 
 
 def start_emulators(
@@ -192,11 +214,11 @@ def stop_emulators(emulators=None):
         return
 
     emulators = emulators or _ALL_EMULATORS
-    for name, proc in _ACTIVE_EMULATORS.items():
+    for name, process in _ACTIVE_EMULATORS.items():
+
         if name in emulators:
-            logger.info('Stopping %s emulator', name)
-            proc.terminate()
-            proc.wait()
+            logger.info('Stopping %s emulator', name, process.pid)
+            _kill_proc_tree(process.pid)
 
 
 def enable_test_environment_variables():
