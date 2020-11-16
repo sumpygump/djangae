@@ -179,6 +179,9 @@ class OAuth2CallbackTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(session[REDIRECT_FIELD_NAME] in response.url)
 
+        user = User.objects.get(email="test@example.com")
+        self.assertFalse(user.has_usable_password())
+
     @patch('django.contrib.auth.login', autospec=True)
     @patch('django.contrib.auth.authenticate', autospec=True)
     @patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True)

@@ -21,6 +21,7 @@ class IAPAuthenticationTests(TestCase):
         self.assertEqual(user.google_iap_id, '99999')
         self.assertEqual(user.email, 'test@example.com')
         self.assertEqual(user.username, 'test')
+        self.assertFalse(user.has_usable_password())
 
     def test_email_change(self):
         headers = {
