@@ -15,6 +15,7 @@ from djangae.test import TestCase
 
 class CompanyDocument(Document):
     company_name = fields.TextField()
+    company_type = fields.TextField()
 
 
 class FuzzyDocument(Document):
@@ -76,6 +77,35 @@ class QueryTests(TestCase):
 
         results = [x.company_name for x in index.search("pota", document_class=CompanyDocument, use_startswith=True)]
         self.assertCountEqual(results, ["Potato"])
+
+    def test_startswith_multiple_tokens(self):
+        index = Index(name="test")
+
+        doc1 = CompanyDocument(company_name="Google", company_type="LLC")
+        doc2 = CompanyDocument(company_name="Potato", company_type="Ltd.")
+        doc3 = CompanyDocument(company_name="Facebook", company_type="Inc.")
+        doc4 = CompanyDocument(company_name="Awesome", company_type="LLC")
+        doc5 = CompanyDocument(company_name="Google", company_type="Ltd.")
+
+        index.add(doc1)
+        index.add(doc2)
+        index.add(doc3)
+        index.add(doc4)
+        index.add(doc5)
+
+        results = [
+            (x.company_name, x.company_type)
+            for x in index.search("goo llc", document_class=CompanyDocument, use_startswith=True)
+        ]
+
+        self.assertCountEqual(results, [("Google", "LLC")])
+
+        results = [
+            (x.company_name, x.company_type)
+            for x in index.search("pot ltd", document_class=CompanyDocument, use_startswith=True)
+        ]
+
+        self.assertCountEqual(results, [("Potato", "Ltd.")])
 
     def test_number_field_querying(self):
         class Doc(Document):
