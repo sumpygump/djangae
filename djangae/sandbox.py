@@ -137,7 +137,7 @@ def start_emulators(
         os.environ["DATASTORE_PROJECT_ID"] = project_id
 
         # Start the cloud datastore emulator
-        command = f"gcloud beta emulators datastore start --consistency=1.0 --quiet --project={project_id}"
+        command = f"gcloud beta emulators datastore start --user-output-enabled=false --consistency=1.0 --quiet --project={project_id}"  # noqa
         command += f" --host-port={SERVICE_HOST}:{datastore_port}"
 
         if datastore_dir:
