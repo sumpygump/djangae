@@ -179,7 +179,7 @@ def build_document_queryset(
 
     document_ids = set()
     for branch in tokenization:
-        token_count = len(branch)
+        tokens = set([x[-1] for x in branch])
 
         # All queries need to prefix the index
         prefix = "%s%s" % (str(index.id), WORD_DOCUMENT_JOIN_STRING)
@@ -208,6 +208,22 @@ def build_document_queryset(
             doc_id = TokenFieldIndex.document_id_from_pk(pk)
             doc_results.setdefault(doc_id, set()).add(pk.split("|")[1])
 
-        document_ids |= set([k for k, v in doc_results.items() if len(v) == token_count])
+        def compare_tokens(searched, found):
+            if use_startswith:
+                # We need to make sure that each searched token matched at least
+                # one found token
+                for stoken in searched:
+                    for ftoken in found:
+                        if ftoken.startswith(stoken):
+                            break
+                    else:
+                        # Went through all found tokens and couldn't
+                        # find one that matched the searched token
+                        return False
+                return True
+            else:
+                return len(searched) == len(found)
+
+        document_ids |= set([k for k, v in doc_results.items() if compare_tokens(tokens, v)])
 
     return DocumentRecord.objects.filter(pk__in=document_ids)
