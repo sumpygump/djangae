@@ -3,7 +3,7 @@ from collections.abc import Iterable
 from gcloudc.db import transaction
 
 from .document import Document
-
+from .fields import IntegrityError
 
 _DEFAULT_INDEX_NAME = "default"
 
@@ -23,6 +23,14 @@ class Index(object):
     @property
     def id(self):
         return self.index.pk if self.index else None
+
+    def _validate_documents(self, documents):
+        for document in documents:
+            for field in document.get_fields().values():
+                if not field.null:
+                    value = getattr(document, field.attname, None)
+                    if value is None:
+                        raise IntegrityError()
 
     def add(self, document_or_documents):
         """
@@ -46,6 +54,9 @@ class Index(object):
         else:
             was_list = True
             documents = document_or_documents[:]
+
+        # First-pass validation
+        self._validate_documents(documents)
 
         with transaction.atomic(independent=True):
             for document in documents:
@@ -81,6 +92,10 @@ class Index(object):
 
                 for field_name, field in document.get_fields().items():
                     if field_name == "id":
+                        continue
+
+                    if not field.index:
+                        # Some fields are just stored, not indexed
                         continue
 
                     # Get the field value, use the default if it's not set

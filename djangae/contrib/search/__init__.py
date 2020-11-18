@@ -8,6 +8,14 @@ from .model_document import (  # noqa
     register,
 )
 
+from .fields import (  # noqa
+    IntegrityError,
+    TextField,
+    NumberField,
+    DateField,
+    FuzzyTextField
+)
+
 default_app_config = 'djangae.contrib.search.apps.SearchConfig'
 
 

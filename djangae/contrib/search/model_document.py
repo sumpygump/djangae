@@ -78,7 +78,7 @@ def document_from_model_document(model, model_document):
             raise NotImplementedError("Unhandled model field type: %s", model_field)
 
     attrs = {
-        "instance_id": get_search_field(pk_type)()
+        "instance_id": get_search_field(pk_type)(index=False)
     }
 
     fields = list(fields) + ["instance_id"]
@@ -163,18 +163,17 @@ def register(model, model_document):
     model.objects.__class__ = SearchManager
 
     def delete_decorator(func):
+        from djangae.contrib.search.models import DocumentRecord
+
         @wraps(func)
         def wrapped(self, *args, **kwargs):
             instance_id = self.pk
 
             func(self, *args, **kwargs)
 
-            results = [
-                x for x in
-                model_document.index().search(
-                    "instance_id:%s" % instance_id, document_class
-                )
-            ]
+            results = DocumentRecord.objects.filter(
+                data__instance_id=instance_id
+            ).values_list("pk", flat=True)
 
             assert(len(results) <= 1)
 

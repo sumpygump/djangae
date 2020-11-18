@@ -1,6 +1,6 @@
 from unittest import skip
 
-from djangae.contrib.search import fields
+from djangae.contrib.search import fields, IntegrityError
 from djangae.contrib.search.document import Document
 from djangae.contrib.search.index import Index
 from djangae.contrib.search.models import TokenFieldIndex
@@ -215,3 +215,41 @@ class IndexingTests(TestCase):
             tokens + new_tokens,
             ["This", "-", "is", "some", "text", "with", "-", "hyphens", ".", "I-B-M", "IBM", "I.B.M"]
         )
+
+    def test_null_validation(self):
+        """
+            If a field is marked as null=False, and someone tries to index
+            None, then an IntegrityError should throw. None of the documents
+            should be indexed if one of them is invalid.
+        """
+
+        class Doc(Document):
+            text = fields.TextField(null=False)
+
+        index = Index("test")
+        doc1 = Doc(text="test")
+        doc2 = Doc(text=None)
+
+        self.assertRaises(IntegrityError, index.add, [doc1, doc2])
+        self.assertEqual(index.document_count(), 0)  # Nothing should've been indexed
+
+    def test_field_index_flag_respected(self):
+        class Doc(Document):
+            text = fields.TextField()
+            other_text = fields.TextField(index=False)
+
+        index = Index("test")
+        doc1 = Doc(text="foo", other_text="bar")
+        doc2 = Doc(text="bar", other_text="foo")
+
+        index.add([doc1, doc2])
+
+        results = list(index.search("foo", Doc))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].text, "foo")
+        self.assertEqual(results[0].other_text, "bar")
+
+        results = list(index.search("bar", Doc))
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].text, "bar")
+        self.assertEqual(results[0].other_text, "foo")

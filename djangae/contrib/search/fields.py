@@ -8,10 +8,25 @@ from .constants import STOP_WORDS
 from .tokens import tokenize_content
 
 
+class IntegrityError(ValueError):
+    pass
+
+
 class Field(object):
-    def __init__(self, default=None, null=True):
+    def __init__(self, default=None, null=True, index=True):
+        """
+            default: The default value for this field. A value of None or a string of
+            non-indexable tokens will not be indexed, but the value will be stored on the document
+
+            null: If False, will throw an IntegrityError if the value of the field is None. It will
+                  *not* throw if the field contains a value that results in no indexable tokens, or
+                  if the field is an empty string, only if the value is explicitly None.
+
+            index: If False, the field will not be searchable, but will be stored on the document
+        """
         self.default = default
         self.null = null
+        self.index = index
 
     def normalize_value(self, value):
         # Default behaviour is to lower-case, remove punctuation

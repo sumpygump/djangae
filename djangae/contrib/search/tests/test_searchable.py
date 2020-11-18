@@ -42,6 +42,19 @@ class SearchableTest(TestCase):
         self.i5 = SearchableModel1.objects.create(name="Alton Powers")
         self.instances = [self.i1, self.i2, self.i3, self.i4, self.i5]
 
+    def test_pk_not_implicitly_searchable(self):
+        """
+            All ModelDocuments have an implicit instance_id. We need
+            to make sure that isn't implicitly searchable
+        """
+
+        SearchableModel1.objects.create(id=999, name="test")
+        results = list(SearchableModel1.objects.search("999"))
+        self.assertFalse(results)
+
+        results = list(SearchableModel1.objects.search("test"))
+        self.assertTrue(results)
+
     def test_searching_models(self):
         results = SearchableModel1.objects.search("luke")
         self.assertCountEqual(results, [self.i1])
