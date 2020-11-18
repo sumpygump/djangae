@@ -94,6 +94,10 @@ class Index(object):
                     if field_name == "id":
                         continue
 
+                    if not field.index:
+                        # Some fields are just stored, not indexed
+                        continue
+
                     # Get the field value, use the default if it's not set
                     value = getattr(document, field.attname, None)
                     value = field.default if value is None else value
