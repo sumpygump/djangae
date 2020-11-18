@@ -78,6 +78,32 @@ class QueryTests(TestCase):
         results = [x.company_name for x in index.search("pota", document_class=CompanyDocument, use_startswith=True)]
         self.assertCountEqual(results, ["Potato"])
 
+    def test_startswith_with_multiple_results_per_token(self):
+        """
+            The problem here is that doing startswith matches can return multiple
+            matching tokens from the database, for a single input token. e.g.
+            in this example searching for "test" will return matches for "testing" and "test.
+
+            This caused a bug when document matching would use token counts to determine
+            if a document matched a search string.
+        """
+
+        index = Index(name="test")
+
+        doc1 = CompanyDocument(company_name="Internal testing test", company_type="LLC")
+        doc2 = CompanyDocument(company_name="My test", company_type="Ltd")
+
+        index.add(doc1)
+        index.add(doc2)
+
+        results = [
+            x.company_name
+            for x in index.search("test ltd", CompanyDocument, use_startswith=True)
+        ]
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0], "My test")
+
     def test_startswith_multiple_tokens(self):
         index = Index(name="test")
 
