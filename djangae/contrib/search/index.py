@@ -201,8 +201,10 @@ class Index(object):
             match_all=match_all,
         )[:limit]
 
+        doc_instance = document_class()
+
         def get_field_value(field_name, record):
-            field = document_class().get_field(field_name)
+            field = doc_instance.get_field(field_name)
             return field.convert_from_index(record.data[field_name])
 
         if order_by:
