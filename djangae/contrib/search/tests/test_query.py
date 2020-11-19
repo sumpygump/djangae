@@ -252,3 +252,22 @@ class QueryTests(TestCase):
         results = list(index.search("1-2-3", Doc))
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].id, doc2)
+
+
+class SearchRankingTests(TestCase):
+
+    def test_ordered_by_rank(self):
+        class Doc(Document):
+            text = fields.TextField()
+            rank = fields.NumberField()
+
+        index = Index(name="test")
+        doc1 = index.add(Doc(text="test", rank=100))
+        doc2 = index.add(Doc(text="test", rank=50))
+        doc3 = index.add(Doc(text="test", rank=150))
+
+        results = list(index.search("test", Doc, order_by="rank"))
+
+        self.assertEqual(results[0].id, doc2)
+        self.assertEqual(results[1].id, doc1)
+        self.assertEqual(results[2].id, doc3)

@@ -195,6 +195,7 @@ class Index(object):
         use_stemming=False,
         use_startswith=False,
         match_all=True,
+        order_by=None
     ):
         """
             Perform a search of the index.
@@ -215,12 +216,20 @@ class Index(object):
             match_all=match_all,
         )[:limit]
 
+        doc_instance = document_class()
+
+        def get_field_value(field_name, record):
+            field = doc_instance.get_field(field_name)
+            return field.convert_from_index(record.data[field_name])
+
+        if order_by:
+            qs = sorted(list(qs), key=lambda x: get_field_value(order_by, x))
+
         for record in qs:
             data = {}
 
-            for k, v in record.data.items():
-                field = document_class().get_field(k)
-                data[k] = field.convert_from_index(v)
+            for field_name in record.data:
+                data[field_name] = get_field_value(field_name, record)
 
             yield document_class(_record=record, **data)
 
