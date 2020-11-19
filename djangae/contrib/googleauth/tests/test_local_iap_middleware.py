@@ -2,12 +2,20 @@ import os
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.http.response import HttpResponse
+from django.test.utils import override_settings
+from django.urls.conf import path
 
 from djangae.test import TestCase
 
 User = get_user_model()
 
+urlpatterns = [
+    path('', lambda request: HttpResponse('Ok'), name='index')
+]
 
+
+@override_settings(ROOT_URLCONF=__name__)
 class LocalIAPMiddlewareTests(TestCase):
 
     def setUp(self):
@@ -33,7 +41,7 @@ class LocalIAPMiddlewareTests(TestCase):
         }
 
         response = self.client.post("/_dj/login/?next=/", form_data, follow=True)
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
 
         self.assertIn('_auth_user_id', self.client.session)
 
@@ -70,4 +78,4 @@ class LocalIAPMiddlewareTests(TestCase):
             follow=True
         )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)

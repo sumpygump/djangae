@@ -6,12 +6,18 @@ from unittest.mock import (
 )
 
 from django.contrib import auth
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.test.client import RequestFactory
 from django.test.utils import override_settings
 from django.urls import reverse
 from requests_oauthlib import OAuth2Session
 
 from djangae.contrib.googleauth import _SCOPE_SESSION_KEY
-from djangae.contrib.googleauth.views import STATE_SESSION_KEY
+from djangae.contrib.googleauth.models import (
+    User,
+    AnonymousUser,
+)
+from djangae.contrib.googleauth.views import STATE_SESSION_KEY, oauth_login
 from djangae.test import TestCase
 
 host = "test.appspot.com"
@@ -48,6 +54,62 @@ class LoginViewTestCase(TestCase):
 
         self.client.get(self.login_url)
         self.assertEqual(self.client.session[auth.REDIRECT_FIELD_NAME], self.next_url)
+
+    @patch(
+        'djangae.contrib.googleauth.views.OAuth2Session.return_value.authorization_url',
+        return_value=('url', 'state')
+    )
+    def test_shows_no_prompt_if_user(self, auth_url_mock):
+        """Tests it does not prompt consent screen if user is authenticated"""
+        user = User.objects.create_user(
+            google_oauth_id="123",
+            username='test',
+            email='test@domain.com'
+        )
+        request = RequestFactory().get('', HTTP_HOST=host)
+
+        # adding session
+        middleware = SessionMiddleware()
+        middleware.process_request(request)
+        request.session.save()
+
+        request.user = user
+        oauth_login(request)
+
+        auth_url_mock.assert_called_once()
+        self.assertEqual(auth_url_mock.call_args[1]['prompt'], 'none')
+
+    @patch(
+        'djangae.contrib.googleauth.views.OAuth2Session.return_value.authorization_url',
+        return_value=('url', 'state')
+    )
+    def test_shows_prompt_if_anon_user(self, auth_url_mock):
+        """Tests it does prompt consent screen if user is AnonymousUser"""
+        user = AnonymousUser()
+        request = RequestFactory().get('', HTTP_HOST=host)
+
+        # adding session
+        middleware = SessionMiddleware()
+        middleware.process_request(request)
+        request.session.save()
+
+        request.user = user
+        oauth_login(request)
+
+        auth_url_mock.assert_called_once()
+        self.assertEqual(auth_url_mock.call_args[1]['prompt'], 'select_account')
+
+    @patch(
+        'djangae.contrib.googleauth.views.OAuth2Session.return_value.authorization_url',
+        return_value=('url', 'state')
+    )
+    def test_shows_prompt_if_not_user(self, auth_url_mock):
+        """Tests it does not prompt consent screen if user is authenticated"""
+
+        self.client.get(self.login_url)
+
+        auth_url_mock.assert_called_once()
+        self.assertEqual(auth_url_mock.call_args[1]['prompt'], 'select_account')
 
     @override_settings(GOOGLEAUTH_CLIENT_ID="clientid", )
     def test_create_a_oauth_session(self, ):
