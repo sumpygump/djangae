@@ -43,7 +43,7 @@ class ModelDocument(object):
         if not index_name:
             index_name = cls.__name__
 
-        return Index(name=cls.__name__)
+        return Index(name=index_name)
 
 
 def document_from_model_document(model, model_document):
