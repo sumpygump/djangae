@@ -92,7 +92,7 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
                     pk=request.user.google_oauth_id
                 ).first()
 
-                # Their oauth session expired, so let's log them out
+                # Their oauth session does not exist, so let's log them out
                 if not oauth_session:
                     logout(request)
                     return None
