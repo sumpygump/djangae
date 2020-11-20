@@ -38,10 +38,12 @@ class ModelDocument(object):
     @classmethod
     def index(cls):
         meta = cls._meta()
-        if meta:
-            return Index(name=getattr(meta, "index", ""))
-        else:
-            return Index(name="")
+        index_name = getattr(meta, "index", "") if meta else None
+
+        if not index_name:
+            index_name = cls.__name__
+
+        return Index(name=index_name)
 
 
 def document_from_model_document(model, model_document):

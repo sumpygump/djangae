@@ -13,7 +13,7 @@ class Index(object):
     def __init__(self, name):
         from .models import IndexStats  # Prevent import too early
 
-        name = name or "default"
+        name = name or _DEFAULT_INDEX_NAME
 
         self.name = name
         self.index, created = IndexStats.objects.get_or_create(
