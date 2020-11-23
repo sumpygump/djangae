@@ -1,10 +1,17 @@
+from django.http.response import HttpResponse
+from django.test.utils import override_settings
 from djangae.test import TestCase
 from django.contrib.auth import get_user_model
-
+from django.urls import path
 
 User = get_user_model()
 
+urlpatterns = [
+    path('', lambda request: HttpResponse('Ok'), name='index')
+]
 
+
+@override_settings(ROOT_URLCONF=__name__)
 class IAPAuthenticationTests(TestCase):
     def test_user_created_if_authenticated(self):
         headers = {

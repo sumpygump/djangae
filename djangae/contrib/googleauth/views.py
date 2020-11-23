@@ -27,6 +27,7 @@ from . import (
     _pop_scopes,
 )
 from .backends.oauth2 import OAuthBackend
+from .decorators import auth_middleware_exempt
 from .models import OAuthUserSession
 
 STATE_SESSION_KEY = 'oauth-state'
@@ -78,6 +79,7 @@ def _google_oauth2_session(request, additional_scopes=None, with_scope=True, **k
     return OAuth2Session(client_id, **kwargs)
 
 
+@auth_middleware_exempt
 def oauth_login(request):
     """
         This view should be set as your login_url for using OAuth
@@ -102,6 +104,9 @@ def oauth_login(request):
         "prompt": "select_account",
         "include_granted_scopes": 'true'
     }
+
+    if request.user.is_authenticated:
+        kwargs["prompt"] = "none"
 
     if offline:
         kwargs["access_type"] = "offline"
@@ -137,6 +142,7 @@ def _calc_expires_at(expires_in):
     return timezone.now() + datetime.timedelta(seconds=expires_in)
 
 
+@auth_middleware_exempt
 def oauth2callback(request):
     if environment.is_development_environment():
         # hack required for login to work when running the app locally;

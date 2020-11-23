@@ -63,3 +63,11 @@ def oauth_scopes_required(scopes, offline=False):
 
         return wrapper
     return func_wrapper
+
+
+def auth_middleware_exempt(view_func):
+    """Decorator to mark a view function that is to be skipped by
+    the AuthenticationMiddleware.process_view method.
+    """
+    view_func._auth_middleware_exempt = True
+    return view_func
