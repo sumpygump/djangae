@@ -66,7 +66,7 @@ class Field(object):
         # Remove + signs, unless they are trailing
         if "+" in token:
             plus_count = 0
-            while token[-1] == "+":
+            while len(token) > 0 and token[-1] == "+":
                 token = token[:-1]
                 plus_count += 1
 
