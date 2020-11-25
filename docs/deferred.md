@@ -39,13 +39,11 @@ This function provides similar functionality to a Mapreduce pipeline, but it's e
 defer to process the tasks.
 
 The function iterates the passed Queryset in shards, calling `callback` on each instance. Once all shards complete then
-the `finalize` callback is called. If a shard gets close to the 10-minute deadline, or it hits an unhandled exception it re-defers another shard to continue processing.
+the `finalize` callback is called. If a shard runs for 9.5 minutes, or it hits an unhandled exception it re-defers another shard to continue processing. This
+avoids hitting the 10 minute deadline for background tasks.
 
-`DeadlineExceededError` is explicitly not handled. This is because there is rarely enough time between the exception being caught, and the request being terminated, to correctly defer a new shard.
-
-Each processing task keeps track of its execution time and re-defers itself to avoid hitting App Engine's `DeadlineExceededError`. However, this check is only performed in between the processing of each object and the re-deferring only happens when the task is within `_buffer_time` seconds of hitting the deadline. So if the processing of an individual model instance takes more than `_buffer_time` seconds then the `DeadlineExceededError` may still be hit, which will cause that task to be retried from the beginning, thus re-processing some of the model instances.
-
-If `_buffer_time` is None (default) then the buffer time will be dynamically calculated from the longest iteration time.
+This means that callbacks should complete **within a maximum of 30 seconds**. Callbacks that take longer than this could cause the iteration to fail,
+or, more likely, repeatedly retry running the callback on the same instances.
 
 If `args` is specified, these arguments are passed as positional arguments to both `callback` (after the instance) and `finalize`.
 
@@ -56,9 +54,11 @@ tracks complete shards is deleted. If you want to keep these (as a log of sorts)
 
 ### Identifying a task shard
 
-From a shard callback, you can identify the current shard by accessing `os.environ["DEFERRED_ITERATION_SHARD_INDEX"]` there is a constant defined for this key:
+From a shard callback, you can identify the current shard by using the `get_deferred_shard_index()` method:
 
 ```
-from djangae.deferred import DEFERRED_ITERATION_SHARD_INDEX_KEY
-shard_index = int(os.environ[DEFERRED_ITERATION_SHARD_INDEX_KEY])
+from djangae.deferred import get_deferred_shard_index
+shard_index = get_deferred_shard_index()
 ```
+
+This can be useful when doing things like updating sharded counters.
