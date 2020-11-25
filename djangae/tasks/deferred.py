@@ -17,14 +17,16 @@ This defer is an adapted version of that one, with the following changes:
   runs)
 """
 
-from datetime import datetime
 import copy
 import functools
 import logging
-import os
 import pickle
+import threading
 import types
-from datetime import timedelta
+from datetime import (
+    datetime,
+    timedelta,
+)
 from urllib.parse import unquote
 
 from django.conf import settings
@@ -57,8 +59,6 @@ from .models import DeferredTask
 logger = logging.getLogger(__name__)
 
 
-DEFERRED_ITERATION_SHARD_INDEX_KEY = "DEFERRED_ITERATION_SHARD_INDEX"
-
 _DEFAULT_QUEUE = "default"
 _DEFAULT_URL = reverse_lazy("tasks_deferred_handler")
 _TASKQUEUE_HEADERS = {
@@ -73,6 +73,17 @@ _TASKQUEUE_HEADERS = {
 
 _CALLBACK_TIME_LIMIT_IN_SECONDS = 30
 _DEFERRED_SHARD_TIME_LIMIT_IN_SECONDS = (60 * 10) - _CALLBACK_TIME_LIMIT_IN_SECONDS
+
+
+_local = threading.local()
+
+
+def get_deferred_shard_index():
+    return getattr(_local, "shard_index", None)
+
+
+def _set_deferred_shard_index(index):
+    _local.shard_index = index
 
 
 class Error(Exception):
@@ -346,7 +357,7 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
 
     # Set an index of the shard in the environment, which is useful for callbacks
     # to have access too so they can identify a task
-    os.environ[DEFERRED_ITERATION_SHARD_INDEX_KEY] = str(shard_number)
+    _set_deferred_shard_index(shard_number)
 
     start_time = datetime.now()
 
@@ -448,6 +459,8 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
             _queue=queue,
             _countdown=1
         )
+    finally:
+        _set_deferred_shard_index(None)
 
 
 def _generate_shards(
