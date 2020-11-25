@@ -93,7 +93,7 @@ class OAuthTests(LiveServerTestCase):
                 "include_granted_scopes": 'true',
             }.items()).issubset(set(auth_url.calls[0].kwargs.items())))
 
-            self.assertEqual(set(json.loads(auth_url.calls[0].kwargs['state']).keys()), {'version', 'token'})
+            self.assertEqual(set(json.loads(auth_url.calls[0].kwargs['state']).keys()), {'hostname', 'token'})
 
             # check session contains correct keys and values
             self.assertEqual(self.client.session.get('oauth-state'), 'oauthstate')
@@ -164,7 +164,7 @@ class OAuth2CallbackTests(TestCase):
                 sleuth.fake('google.oauth2.id_token.verify_token', idinfo):
 
             state = json.dumps({
-                "version": "someversion",
+                "hostname": "app.com",
             })
             response = self.client.get(
                 reverse("googleauth_oauth2callback"),
@@ -197,7 +197,7 @@ class OAuth2CallbackTests(TestCase):
         session.save()
 
         state = json.dumps({
-            "version": "someversion",
+            "hostname": "app.com",
         })
         response = self.client.get(
             reverse("googleauth_oauth2callback"),
