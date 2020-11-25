@@ -174,7 +174,8 @@ def oauth2callback(request):
     if _get_oauth_redirect_host_from_settings() and original_hostname != request.META['HTTP_HOST']:
         logging.info('Redirect to version %s', original_hostname)
         return shortcuts.redirect(
-            'https://{}{}'.format(
+            '{}://{}{}'.format(
+                request.scheme,
                 original_hostname,
                 request.get_full_path()
             )

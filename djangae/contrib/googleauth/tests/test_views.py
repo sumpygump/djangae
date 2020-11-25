@@ -238,7 +238,7 @@ class OAuthCallbackTestCase(TestCase):
              'state': self.valid_state,
         })
         self.assertEqual(response.status_code, 302)
-        self.assertIn("https://app.com/oauth2/callback/", response.url)
+        self.assertIn("http://app.com/oauth2/callback/", response.url)
 
     def test_bad_request_no_session_state_key(self, mock_id_token):
         "Test bad request if session doesn't have state key"
