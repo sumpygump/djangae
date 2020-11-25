@@ -352,7 +352,7 @@ class TimeoutException(Exception):
     pass
 
 
-def _process_shard(marker_id, shard_number, model, query, callback, finalize, buffer_time, args, kwargs):
+def _process_shard(marker_id, shard_number, model, query, callback, finalize, args, kwargs):
     args = args or tuple()
 
     # Set an index of the shard in the environment, which is useful for callbacks
@@ -375,7 +375,6 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
     if not marker.is_ready:
         defer(
             _process_shard, marker_id, shard_number, model, query, callback, finalize,
-            buffer_time=buffer_time,
             args=args,
             kwargs=kwargs,
             _queue=queue,
@@ -453,7 +452,6 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
 
         defer(
             _process_shard, marker_id, shard_number, qs.model, qs.query, callback, finalize,
-            buffer_time=buffer_time,
             args=args,
             kwargs=kwargs,
             _queue=queue,
@@ -464,7 +462,7 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, bu
 
 
 def _generate_shards(
-    model, query, callback, finalize, args, kwargs, shards, delete_marker, buffer_time
+    model, query, callback, finalize, args, kwargs, shards, delete_marker
 ):
 
     queryset = model.objects.all()
@@ -514,7 +512,6 @@ def _generate_shards(
                 qs.model, qs.query, callback, finalize,
                 args=args,
                 kwargs=kwargs,
-                buffer_time=buffer_time,
                 _queue=queue,
                 _transactional=True
             )
@@ -528,7 +525,7 @@ def _generate_shards(
 
 def defer_iteration_with_finalize(
         queryset, callback, finalize, _queue='default', _shards=5,
-        _delete_marker=True, _transactional=False, _buffer_time=None, *args, **kwargs):
+        _delete_marker=True, _transactional=False, *args, **kwargs):
 
     defer(
         _generate_shards,
@@ -540,7 +537,6 @@ def defer_iteration_with_finalize(
         kwargs=kwargs,
         delete_marker=_delete_marker,
         shards=_shards,
-        buffer_time=_buffer_time,
         _queue=_queue,
         _transactional=_transactional
     )
