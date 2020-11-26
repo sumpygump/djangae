@@ -162,6 +162,11 @@ def build_document_queryset(
     match_all=True,
 ):
 
+    """
+        Returns a tuple of (queryset, doc_ids) where doc_ids is the ordered
+        set of document ids based on simple ranking rules.
+    """
+
     assert(index.id)
 
     tokenization = _tokenize_query_string(query_string, match_stopwords=match_stopwords)
@@ -180,7 +185,7 @@ def build_document_queryset(
     # look for matching tokens in a single query, then post-process them
     # to only fetch documents that match all of them.
 
-    document_ids = set()
+    doc_scores = {}
     for branch in tokenization:
         tokens = set([x[-1] for x in branch])
 
@@ -209,9 +214,36 @@ def build_document_queryset(
 
         for pk in keys:
             doc_id = TokenFieldIndex.document_id_from_pk(pk)
-            doc_results.setdefault(doc_id, set()).add(pk.split("|")[1])
+            token = pk.split("|")[1]
+            doc_results.setdefault(doc_id, set()).add(token)
+
+        def calculate_score(searched, tokens):
+            score = 0
+            for token in tokens:
+                if token in STOP_WORDS:
+                    score += 0.25  # 1/4 pt for stop words
+                else:
+                    if token in searched:
+                        score += 1.0  # 1 point for exact match
+                    else:
+                        potentials = []
+                        for searched_token in searched:
+                            if token.startswith(searched_token):
+                                potentials.append(searched_token)
+
+                        # Find the closest match (which would be the shortest)
+                        best = sorted(potentials, key=lambda x: len(x))[0]
+
+                        # Just use a percentage of matched length
+                        score += len(token) / len(best)
+
+            return score
 
         def compare_tokens(searched, found):
+            if not match_all:
+                # Match all, means match all
+                return True
+
             if use_startswith:
                 # We need to make sure that each searched token matched at least
                 # one found token
@@ -227,6 +259,14 @@ def build_document_queryset(
             else:
                 return len(searched) == len(found)
 
-        document_ids |= set([k for k, v in doc_results.items() if compare_tokens(tokens, v)])
+        for doc_id, found_tokens in doc_results.items():
+            if compare_tokens(tokens, found_tokens):
+                doc_scores[doc_id] = doc_scores.get(doc_id, 0) + calculate_score(
+                    tokens, found_tokens
+                )
 
-    return DocumentRecord.objects.filter(pk__in=document_ids)
+    document_ids = [
+        x[0] for x in sorted(doc_scores.items(), key=lambda x: -x[1])
+    ]
+    results = DocumentRecord.objects.filter(pk__in=document_ids)
+    return results, document_ids

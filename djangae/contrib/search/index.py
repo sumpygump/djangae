@@ -205,6 +205,8 @@ class Index(object):
             limit: The max number of results to return
             use_stemming: If true, this will query for variations of the token
             use_startswith: If true, will return results where the beginning of searched tokens match
+            match_stopwords: If true, stopwords included in the query will be matched.
+                This will be implicitly True if use_startswith is True
             match_all: If true, only return results where all tokens are found, otherwise act as though all terms
                 are separated by OR operators.
         """
@@ -215,7 +217,7 @@ class Index(object):
         if use_startswith:
             match_stopwords = True
 
-        qs = build_document_queryset(
+        qs, ordered_ids = build_document_queryset(
             query_string, self,
             use_stemming=use_stemming,
             use_startswith=use_startswith,
@@ -230,7 +232,11 @@ class Index(object):
             return field.convert_from_index(record.data[field_name])
 
         if order_by:
+            # Explicit field ordering
             qs = sorted(list(qs), key=lambda x: get_field_value(order_by, x))
+        else:
+            # Use ranking
+            qs = sorted(list(qs), key=lambda x: ordered_ids.index(x.id))
 
         for record in qs:
             data = {}
