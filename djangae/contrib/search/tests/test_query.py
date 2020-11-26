@@ -287,9 +287,6 @@ class SearchRankingTests(TestCase):
             def __repr__(self):
                 return "<Document %s>" % self.text
 
-            def __eq__(self, other):
-                return self.id == other.id
-
         index = Index(name="test")
 
         doc1 = Doc(text="all about you")  # All stopwords
