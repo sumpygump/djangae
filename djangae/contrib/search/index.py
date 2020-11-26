@@ -194,6 +194,7 @@ class Index(object):
         limit=1000,
         use_stemming=False,
         use_startswith=False,
+        match_stopwords=True,
         match_all=True,
         order_by=None
     ):
@@ -207,12 +208,18 @@ class Index(object):
             match_all: If true, only return results where all tokens are found, otherwise act as though all terms
                 are separated by OR operators.
         """
-
         from .query import build_document_queryset
+
+        # If we using startswith matching, we need to include stopwords
+        # regardless of what the user asked for
+        if use_startswith:
+            match_stopwords = True
+
         qs = build_document_queryset(
             query_string, self,
             use_stemming=use_stemming,
             use_startswith=use_startswith,
+            match_stopwords=match_stopwords,
             match_all=match_all,
         )[:limit]
 

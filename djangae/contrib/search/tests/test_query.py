@@ -26,7 +26,7 @@ class QueryTests(TestCase):
     def test_tokenization_breaks_at_punctuation(self):
         q = "hi, there is a 100% chance this works [honest]"
 
-        tokens = _tokenize_query_string(q)
+        tokens = _tokenize_query_string(q, match_stopwords=False)
         kinds = set(x[0] for x in tokens[0])
         tokens = [x[-1] for x in tokens[0]]
 

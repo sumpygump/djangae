@@ -13,7 +13,7 @@ from .models import (
 from .tokens import tokenize_content
 
 
-def _tokenize_query_string(query_string):
+def _tokenize_query_string(query_string, match_stopwords):
     """
         Returns a list of WordDocumentField keys to fetch
         based on the query_string
@@ -106,13 +106,15 @@ def _tokenize_query_string(query_string):
                 for token in content[1:]:
                     branch_result.append(("word", field, token))
 
-    for i, branch_result in enumerate(result):
-        # Remove empty entries, and stop-words and then tuple-ify
-        result[i] = [
-            (kind, field, content)
-            for (kind, field, content) in branch_result
-            if content and content not in STOP_WORDS
-        ]
+    # If we're not matching stopwords, remove them from the query
+    if not match_stopwords:
+        for i, branch_result in enumerate(result):
+            # Remove stop-words and then tuple-ify
+            result[i] = [
+                (kind, field, content)
+                for (kind, field, content) in branch_result
+                if content and content not in STOP_WORDS
+            ]
 
     # Now we should have
     # [
@@ -156,12 +158,13 @@ def build_document_queryset(
     query_string, index,
     use_stemming=False,
     use_startswith=False,
+    match_stopwords=True,
     match_all=True,
 ):
 
     assert(index.id)
 
-    tokenization = _tokenize_query_string(query_string)
+    tokenization = _tokenize_query_string(query_string, match_stopwords=match_stopwords)
     if not tokenization:
         return DocumentRecord.objects.none()
 
