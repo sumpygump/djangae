@@ -137,3 +137,10 @@ instances = MyModel.objects.filter(age=10).search("cat")
 ```
 
 There's no need to specify the Document subclass when searching for models.
+
+# Stopwords and Ranking
+
+By default stop words (i.e common tokens) are both indexed, and searched. The default ranking
+algorithm treats stop-word matching as weaker than other words.
+
+If you don't want to match stop words, pass `match_stopwords=False` to the search() method.

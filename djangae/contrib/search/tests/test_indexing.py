@@ -253,3 +253,23 @@ class IndexingTests(TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].text, "bar")
         self.assertEqual(results[0].other_text, "foo")
+
+    def test_stopwords_indexed(self):
+        """
+            Stop words should be indexed. They should be ranked lower
+            and not included in searches if match_stopwords is False
+        """
+
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index("test")
+        doc1 = Doc(text="about")
+        index.add(doc1)
+
+        self.assertTrue(list(index.search("about", Doc)))
+        self.assertTrue(list(index.search("abo", Doc, use_startswith=True)))
+        self.assertFalse(list(index.search("about", Doc, match_stopwords=False)))
+
+        # Startswith matching overrides matching of stopwords (as other tokens may start with the stop word)
+        self.assertTrue(list(index.search("about", Doc, use_startswith=True, match_stopwords=False)))
