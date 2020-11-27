@@ -212,7 +212,7 @@ class Index(object):
         """
         from .query import build_document_queryset
 
-        # If we using startswith matching, we need to include stopwords
+        # If we're using startswith matching, we need to include stopwords
         # regardless of what the user asked for
         if use_startswith:
             match_stopwords = True
