@@ -1,10 +1,8 @@
-import os
-
 from django.db import models
 
 from djangae.tasks.deferred import (
-    DEFERRED_ITERATION_SHARD_INDEX_KEY,
     defer_iteration_with_finalize,
+    get_deferred_shard_index,
 )
 from djangae.test import TestCase
 
@@ -18,7 +16,7 @@ class DeferIterationTestModel(models.Model):
 
 
 def callback(instance, touch=True):
-    shard_index = int(os.environ[DEFERRED_ITERATION_SHARD_INDEX_KEY])
+    shard_index = get_deferred_shard_index()
 
     assert(shard_index >= 0)
     assert(shard_index < 5)

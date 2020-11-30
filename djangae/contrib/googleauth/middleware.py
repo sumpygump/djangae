@@ -30,6 +30,9 @@ from .backends.oauth2 import OAuthBackend
 from .models import OAuthUserSession
 
 
+_OAUTH_LINK_EXPIRY_SETTING = "GOOGLEAUTH_LINK_OAUTH_SESSION_EXPIRY"
+
+
 def get_user_object(request):
     """
     Return the user model instance associated with the given request session.
@@ -86,22 +89,28 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
 
         if request.user.is_authenticated:
             if backend_str and isinstance(load_backend(backend_str), OAuthBackend):
-                # The user is authenticated with Django, and they use the OAuth backend, so they
-                # should have a valid oauth session
-                oauth_session = OAuthUserSession.objects.filter(
-                    pk=request.user.google_oauth_id
-                ).first()
 
-                # Their oauth session does not exist, so let's log them out
-                if not oauth_session:
-                    logout(request)
-                    return None
+                # Should we link the Django session to the OAuth session? In most cases we shouldn't
+                # as oauth would've been used for identification at login only.
+                expire_session = getattr(settings, _OAUTH_LINK_EXPIRY_SETTING, False)
 
-                # Their oauth session expired but we still have an active user session
-                if not oauth_session.is_valid:
-                    return redirect(
-                        reverse("googleauth_oauth2login") + '?' + urlencode(dict(next=request.path))
-                    )
+                if expire_session:
+                    # The user is authenticated with Django, and they use the OAuth backend, so they
+                    # should have a valid oauth session
+                    oauth_session = OAuthUserSession.objects.filter(
+                        pk=request.user.google_oauth_id
+                    ).first()
+
+                    # Their oauth session does not exist, so let's log them out
+                    if not oauth_session:
+                        logout(request)
+                        return None
+
+                    # Their oauth session expired but we still have an active user session
+                    if not oauth_session.is_valid:
+                        return redirect(
+                            reverse("googleauth_oauth2login") + '?' + urlencode(dict(next=request.path))
+                        )
 
             elif backend_str and isinstance(load_backend(backend_str), IAPBackend):
                 if not IAPBackend.can_authenticate(request):

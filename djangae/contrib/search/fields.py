@@ -4,7 +4,6 @@ from datetime import datetime
 from django.utils import dateparse
 
 from . import indexers as search_indexers
-from .constants import STOP_WORDS
 from .tokens import tokenize_content
 
 
@@ -60,8 +59,6 @@ class Field(object):
         """
 
         token = token.strip()  # Just in case
-        if token in STOP_WORDS:
-            return None  # Ignore stop words
 
         # Remove + signs, unless they are trailing
         if "+" in token:

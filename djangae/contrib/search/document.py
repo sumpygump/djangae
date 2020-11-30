@@ -55,3 +55,9 @@ class Document(object):
 
     def get_field(self, name):
         return self._fields[name]
+
+    def __eq__(self, other):
+        return self.pk == other.pk
+
+    def __repr__(self):
+        return "<Document %s>" % self.pk

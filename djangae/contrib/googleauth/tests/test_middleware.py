@@ -55,6 +55,7 @@ class AuthBackendTests(TestCase):
         can_auth.assert_not_called()
         login_mock.assert_not_called()
 
+    @override_settings(GOOGLEAUTH_LINK_OAUTH_SESSION_EXPIRY=True)
     @patch('djangae.contrib.googleauth.middleware.get_user')
     @patch('djangae.contrib.googleauth.middleware.logout')
     @patch('djangae.contrib.googleauth.middleware.load_backend')
@@ -82,6 +83,7 @@ class AuthBackendTests(TestCase):
         # Session does not exist, logging out.
         logout_mock.assert_called_once_with(self.request)
 
+    @override_settings(GOOGLEAUTH_LINK_OAUTH_SESSION_EXPIRY=True)
     @patch('djangae.contrib.googleauth.middleware.OAuthUserSession', spec=OAuthUserSession)
     @patch('djangae.contrib.googleauth.middleware.get_user')
     @patch('djangae.contrib.googleauth.middleware.logout')
@@ -126,6 +128,7 @@ class AuthBackendTests(TestCase):
         # Test redirects to login
         redirect_mock.assert_called_once_with("/login/?next=%2F")
 
+    @override_settings(GOOGLEAUTH_LINK_OAUTH_SESSION_EXPIRY=True)
     @patch('djangae.contrib.googleauth.middleware.OAuthUserSession', spec=OAuthUserSession)
     @patch('djangae.contrib.googleauth.middleware.get_user')
     @patch('djangae.contrib.googleauth.middleware.logout')

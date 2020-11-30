@@ -107,11 +107,18 @@ GOOGLEAUTH_CLIENT_SECRET = "..."
 
 You must generate these values in the Google Cloud Console.
 
-When you configure OAuth Consent Screen and Credentials on Google Cloud Platform you are 
+When you configure OAuth Consent Screen and Credentials on Google Cloud Platform you are
 required to configure a list of Authorised domains and OAuth redirects.
 
+## Linking OAuth & Django Session Expiry
+
+By default, an oauth session expiring doesn't force log-out the user from their Django session. If however you want to *require* that a Django session
+expires when the oauth session expires, you can do so by setting the `GOOGLEAUTH_LINK_OAUTH_SESSION_EXPIRY` setting to `True`. This will redirect the user back through the oauth flow (although normally transparently).
+
+## Handling App Engine Versioning
+
 While working on multiple AppEngine versions it's quite inconvenient to have to update those lists for every new version you deploy.
-In order to workaround the problem we've added the `GOOGLEAUTH_OAUTH_REDIRECT_HOST` setting. 
+In order to workaround the problem we've added the `GOOGLEAUTH_OAUTH_REDIRECT_HOST` setting.
 If provided, the user will automatically be redirected to the configured base url during the OAuth2 flow (independently from which application version the flow is triggered from).
 The `oauth2callback` will automatically redirect the user back to the right application version that triggered the flow.
 
@@ -119,8 +126,6 @@ ie.
 ```python
 GOOGLEAUTH_OAUTH_REDIRECT_HOST = "app.appspot.com"
 ```
-
-
 
 Finally, you'll probably want to set your `LOGIN_URL` setting to the oauth_login view which will trigger the oauth
 authentication if necessary:
