@@ -151,7 +151,7 @@ class LoginViewTestCase(TestCase):
         scope = self.OAuthSessionMock.call_args[1]["scope"]
         self.assertEqual(set(scope), {"openid", "profile", "email", "additional"})
 
-    @override_settings(OAUTH2_REDIRECT_HOST="redirect.appspot.com", )
+    @override_settings(GOOGLEAUTH_OAUTH_REDIRECT_HOST="redirect.appspot.com", )
     def test_create_a_oauth_session_with_oauth_redirect_provided(self, ):
         """Tests it creates a oauth session with the redirect provided in settings"""
         self.client.get(self.login_url)
@@ -230,9 +230,9 @@ class OAuthCallbackTestCase(TestCase):
         response = self.client.get("{}?state=invalidstate".format(self.callback_url))
         self.assertEqual(response.status_code, 400)
 
-    @override_settings(OAUTH2_REDIRECT_HOST="redirect.com")
+    @override_settings(GOOGLEAUTH_OAUTH_REDIRECT_HOST="redirect.com")
     @patch('djangae.contrib.googleauth.views.environment.default_app_host', return_value='default_host.com')
-    def test_it_redirects_to_hostname_if_OAUTH2_REDIRECT_HOST(self, mock_app_host, mock_id_token):
+    def test_it_redirects_to_hostname_if_GOOGLEAUTH_OAUTH_REDIRECT_HOST(self, mock_app_host, mock_id_token):
         "Test bad request if state is invalid"
         response = self.client.get(self.callback_url, {
              'state': self.valid_state,

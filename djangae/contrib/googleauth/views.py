@@ -24,6 +24,7 @@ from . import (
     _CLIENT_ID_SETTING,
     _CLIENT_SECRET_SETTING,
     _DEFAULT_SCOPES_SETTING,
+    _OAUTH_REDIRECT_HOST,
     _pop_scopes,
 )
 from .backends.oauth2 import OAuthBackend
@@ -53,7 +54,7 @@ def _get_default_scopes():
 
 
 def _get_oauth_redirect_host_from_settings():
-    return getattr(settings, 'OAUTH2_REDIRECT_HOST', None)
+    return getattr(settings, _OAUTH_REDIRECT_HOST, None)
 
 
 def _google_oauth2_session(request, additional_scopes=None, with_scope=True, **kwargs):
