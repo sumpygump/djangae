@@ -13,6 +13,22 @@ from .models import (
 from .tokens import tokenize_content
 
 
+# Searching for common tokens can result
+# in huge result sets - so this is a hard limit
+# on that result set.
+#
+# Unfortunately, it's not possible to rank the token
+# queries to know which are more relevant so this limit
+# may result in some missing results in the final resultset.
+
+# FIXME: Come up with a solution to this. This may involve searching
+# the resulting documents for tokens that had been artificially limited at the
+# query phase (e.g. if a token query returns 1000 results, we then
+# do some additional work on documents returned by other tokens, but
+# not returned by the limited token query)
+_PER_TOKEN_HARD_QUERY_LIMIT = 1000
+
+
 def _tokenize_query_string(query_string, match_stopwords):
     """
         Returns a list of WordDocumentField keys to fetch
@@ -208,7 +224,9 @@ def build_document_queryset(
             else:
                 raise NotImplementedError("Need to implement exact matching")
 
-        keys = TokenFieldIndex.objects.filter(filters).values_list("pk", flat=True)
+        keys = TokenFieldIndex.objects.filter(
+            filters
+        ).values_list("pk", flat=True)[:_PER_TOKEN_HARD_QUERY_LIMIT]
 
         doc_results = {}
 
