@@ -24,6 +24,7 @@ from . import (
     _CLIENT_ID_SETTING,
     _CLIENT_SECRET_SETTING,
     _DEFAULT_SCOPES_SETTING,
+    _OAUTH_REDIRECT_HOST,
     _pop_scopes,
 )
 from .backends.oauth2 import OAuthBackend
@@ -52,8 +53,8 @@ def _get_default_scopes():
     return getattr(settings, _DEFAULT_SCOPES_SETTING, _DEFAULT_OAUTH_SCOPES)
 
 
-def _get_default_oauth_redirect_base_url():
-    return getattr(settings, 'OAUTH2_REDIRECT_BASE_URL', None)
+def _get_oauth_redirect_host_from_settings():
+    return getattr(settings, _OAUTH_REDIRECT_HOST, None)
 
 
 def _google_oauth2_session(request, additional_scopes=None, with_scope=True, **kwargs):
@@ -64,13 +65,14 @@ def _google_oauth2_session(request, additional_scopes=None, with_scope=True, **k
     if with_scope:
         kwargs['scope'] = sorted(scopes)
 
-    original_url = f"{request.scheme}://{request.META['HTTP_HOST']}"
+    hardcoded_redirect_host = _get_oauth_redirect_host_from_settings()
 
     # Use hardcoded uri for oauth flow to avoid having to set redirect_urls
     # for every single new app version.
-    redirect_url = _get_default_oauth_redirect_base_url()
-    url = redirect_url if redirect_url is not None else original_url
-    kwargs['redirect_uri'] = f"{url}{reverse('googleauth_oauth2callback')}"
+    redirect_host = hardcoded_redirect_host if hardcoded_redirect_host is not None else request.META['HTTP_HOST']
+    redirect_url = f"{request.scheme}://{redirect_host}"
+
+    kwargs['redirect_uri'] = f"{redirect_url}{reverse('googleauth_oauth2callback')}"
     logging.info('Create google oauth2 session with redirect uri: %s', kwargs['redirect_uri'])
 
     client_id = getattr(settings, _CLIENT_ID_SETTING)
@@ -96,7 +98,7 @@ def oauth_login(request):
 
     oauth2_state = json.dumps({
         'token': google.new_state(),
-        'version': environment.gae_version(),
+        'hostname': request.META['HTTP_HOST'],
     })
 
     kwargs = {
@@ -161,7 +163,7 @@ def oauth2callback(request):
 
     try:
         state = json.loads(encoded_state)
-        version = state['version']
+        original_hostname = state['hostname']
     except (ValueError, KeyError):
         msg = 'Invalid state'
         logging.exception(msg)
@@ -170,12 +172,12 @@ def oauth2callback(request):
     # If we began the auth flow on a non-default version then (optionaly) redirect
     # back to the version we started on. This avoids having to add authorized
     # redirect URIs to the console for every deployed version.
-    if _get_default_oauth_redirect_base_url() and version != environment.gae_version():
-        logging.info('Redirect to version %s', version)
+    if _get_oauth_redirect_host_from_settings() and original_hostname != request.META['HTTP_HOST']:
+        logging.info('Redirect to version %s', original_hostname)
         return shortcuts.redirect(
-            'https://{}-dot-{}{}'.format(
-                version,
-                environment.default_app_host(),
+            '{}://{}{}'.format(
+                request.scheme,
+                original_hostname,
                 request.get_full_path()
             )
         )

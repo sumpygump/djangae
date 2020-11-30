@@ -118,13 +118,13 @@ expires when the oauth session expires, you can do so by setting the `GOOGLEAUTH
 ## Handling App Engine Versioning
 
 While working on multiple AppEngine versions it's quite inconvenient to have to update those lists for every new version you deploy.
-In order to workaround the problem we've added the `OAUTH2_REDIRECT_BASE_URL` setting.
+In order to workaround the problem we've added the `GOOGLEAUTH_OAUTH_REDIRECT_HOST` setting.
 If provided, the user will automatically be redirected to the configured base url during the OAuth2 flow (independently from which application version the flow is triggered from).
 The `oauth2callback` will automatically redirect the user back to the right application version that triggered the flow.
 
 ie.
 ```python
-OAUTH2_REDIRECT_BASE_URL = "https://app.appspot.com"
+GOOGLEAUTH_OAUTH_REDIRECT_HOST = "app.appspot.com"
 ```
 
 Finally, you'll probably want to set your `LOGIN_URL` setting to the oauth_login view which will trigger the oauth
