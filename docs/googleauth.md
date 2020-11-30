@@ -113,7 +113,7 @@ required to configure a list of Authorised domains and OAuth redirects.
 ## Linking OAuth & Django Session Expiry
 
 By default, an oauth session expiring doesn't force log-out the user from their Django session. If however you want to *require* that a Django session
-expires when the oauth session expires, you can do so by setting the `GOOGLEAUTH_LINK_OAUTH_SESSION_EXPIRY` setting to `True`.
+expires when the oauth session expires, you can do so by setting the `GOOGLEAUTH_LINK_OAUTH_SESSION_EXPIRY` setting to `True`. This will redirect the user back through the oauth flow (although normally transparently).
 
 ## Handling App Engine Versioning
 
