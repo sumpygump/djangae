@@ -144,3 +144,19 @@ By default stop words (i.e common tokens) are both indexed, and searched. The de
 algorithm treats stop-word matching as weaker than other words.
 
 If you don't want to match stop words, pass `match_stopwords=False` to the search() method.
+
+# Caveats / Issues
+
+## Handling common tokens
+
+Searching for a very common token (e.g. punctuation like a '.') will likely return
+a *lot* of results. Currently this token query will be artificially limited to 1000
+results. This may cause the resulting document set to be missing relevant documents.
+Further work is needed to improve the querying to resolve this issue, potential solutions are:
+
+1. Stripping punctuation from queries if there are other non-punctuation tokens
+1. Performing a second in-memory pass to include/exclude documents returned by other token matches
+
+## Pagination
+
+There is currently no way to paginate results. Patches welcome :)
