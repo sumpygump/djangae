@@ -1,7 +1,7 @@
-# Environment
+# djangae.environment
 
 You can detect things about your running environment by using the utility functions
-located in djangae.environment.
+located in djangae.environment, and djangae.tasks.environment
 
 ## djangae.environment.is_production_environment()
 
@@ -18,6 +18,11 @@ Returns the application id from app.yaml (or wherever the code is deployed)
 ## djangae.environment.get_application_root()
 
 Returns the root folder of your application (this is the folder containing app.yaml)
+
+
+# djangae.tasks.environment
+
+For the task-specific environment functions and decorators to work, you must add `djangae.tasks.middleware.TaskEnvironmentMiddleware` to your `MIDDLEWARE` setting.
 
 ## djangae.environment.task_name()
 
