@@ -22,10 +22,7 @@ from djangae.tasks.environment import (
     task_queue_name,
     task_execution_count,
 )
-from djangae.tasks.middleware import (
-    _APPENGINE_CRON_HEADER,
-    _TASK_NAME_HEADER,
-)
+from djangae.tasks.middleware import _TASK_NAME_HEADER
 from djangae.test import TestCase
 
 
