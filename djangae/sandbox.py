@@ -217,7 +217,7 @@ def stop_emulators(emulators=None):
     for name, process in _ACTIVE_EMULATORS.items():
 
         if name in emulators:
-            logger.info('Stopping %s emulator', name, process.pid)
+            logger.info('Stopping %s emulator with PID %s', name, process.pid)
             _kill_proc_tree(process.pid)
 
 
