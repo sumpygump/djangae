@@ -1,4 +1,3 @@
-import os
 import logging
 from importlib import import_module
 
@@ -6,7 +5,8 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from djangae import environment, decorators
+from djangae import environment
+from djangae.tasks import decorators
 from djangae.core.signals import module_started, module_stopped
 
 
@@ -57,7 +57,7 @@ def deferred(request):
 
     in_prod = environment.is_production_environment()
 
-    if in_prod and os.environ.get("REMOTE_ADDR") != "0.1.0.2":
+    if in_prod and request.META.get("REMOTE_ADDR") != "0.1.0.2":
         logger.critical('Detected an attempted XSRF attack. This request did not originate from Task Queue.')
         response.status_code = 403
         return response

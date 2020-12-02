@@ -13,7 +13,7 @@ from django.core.files.storage import (
 )
 from google.cloud.exceptions import NotFound
 
-from djangae.environment import project_id
+from djangae.environment import project_id, is_production_environment
 
 BUCKET_KEY = "CLOUD_STORAGE_BUCKET"
 
@@ -27,10 +27,9 @@ def _get_storage_client():
         module import time, so that should be set before import if overwrite needed
     """
 
-    is_app_engine = os.environ.get("GAE_ENV") == "standard"
     http = None
 
-    if not is_app_engine:
+    if not is_production_environment():
         http = requests.Session()
 
     from google.cloud import storage
@@ -182,8 +181,8 @@ class CloudStorage(Storage):
         Returns:
             str -- Public url
         """
-        is_app_engine = os.environ.get("GAE_ENV") == "standard"
-        if is_app_engine:
+
+        if is_production_environment():
             blob = self.bucket.blob(name)
             return blob.public_url
         else:

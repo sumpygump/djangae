@@ -22,36 +22,6 @@ def is_development_environment() -> bool:
     return 'GAE_ENV' not in os.environ or os.environ['GAE_ENV'] != 'standard'
 
 
-def is_in_task() -> bool:
-    "Returns True if the request is a task, False otherwise"
-    return bool(task_name())
-
-
-def is_in_cron() -> bool:
-    "Returns True if the request is in a cron, False otherwise"
-    return bool(os.environ.get("HTTP_X_APPENGINE_CRON"))
-
-
-def task_name() -> Optional[str]:
-    "Returns the name of the current task if any, else None"
-    return os.environ.get("HTTP_X_APPENGINE_TASKNAME")
-
-
-def task_retry_count() -> Optional[int]:
-    "Returns the task retry count, or None if this isn't a task"
-    try:
-        return int(os.environ.get("HTTP_X_APPENGINE_TASKRETRYCOUNT"))
-    except (TypeError, ValueError):
-        return None
-
-
-def task_queue_name() -> Optional[str]:
-    "Returns the name of the current task queue (if this is a task) else 'default'"
-    if is_in_task():
-        return os.environ.get("HTTP_X_APPENGINE_QUEUENAME", "default")
-    return None
-
-
 def gae_version() -> Optional[str]:
     """Returns the current GAE version."""
     return os.environ.get('GAE_VERSION')

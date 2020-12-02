@@ -41,10 +41,7 @@ from gcloudc.db import transaction
 from google.api_core import exceptions
 from google.protobuf.timestamp_pb2 import Timestamp
 
-from djangae.environment import (
-    gae_version,
-    task_queue_name,
-)
+from djangae.environment import gae_version
 from djangae.models import DeferIterationMarker
 from djangae.processing import find_key_ranges_for_queryset
 from djangae.utils import retry
@@ -54,6 +51,7 @@ from . import (
     cloud_tasks_project,
     get_cloud_tasks_client,
 )
+from .environment import task_queue_name
 from .models import DeferredTask
 
 logger = logging.getLogger(__name__)

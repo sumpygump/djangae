@@ -1,5 +1,5 @@
 from django.conf import settings
-from djangae import environment
+from djangae.environment import project_id as gae_project_id
 
 import logging
 import os
@@ -74,7 +74,7 @@ def ensure_required_queues_exist():
 def cloud_tasks_project():
     project_id = getattr(settings, CLOUD_TASKS_PROJECT_SETTING, None)
     if not project_id:
-        project_id = environment.project_id()
+        project_id = gae_project_id()
 
     return project_id
 

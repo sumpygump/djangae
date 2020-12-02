@@ -1,13 +1,9 @@
 
 from functools import wraps
 
-from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponseForbidden
 
-from djangae.contrib.common import get_request
-
-_TASK_NAME_HEADER = "HTTP_X_APPENGINE_TASKNAME"
-_CRON_TASK_HEADER = "HTTP_X_APPENGINE_CRON"
+from .environment import is_in_task, is_in_cron
 
 
 def task_only(view_function):
@@ -17,11 +13,7 @@ def task_only(view_function):
 
     @wraps(view_function)
     def replacement(request, *args, **kwargs):
-
-        is_in_task = bool(request.META.get(_TASK_NAME_HEADER, False))
-        is_in_cron = bool(request.META.get(_CRON_TASK_HEADER, False))
-
-        if not any((is_in_task, is_in_cron)):
+        if not any((is_in_task(), is_in_cron())):
             return HttpResponseForbidden("Access denied.")
 
         return view_function(request, *args, **kwargs)
@@ -38,10 +30,7 @@ def task_or_superuser_only(view_function):
             request.user.is_superuser
         )
 
-        is_in_task = bool(request.META.get(_TASK_NAME_HEADER, False))
-        is_in_cron = bool(request.META.get(_CRON_TASK_HEADER, False))
-
-        if not any((is_superuser, is_in_task, is_in_cron)):
+        if not any((is_superuser, is_in_task(), is_in_cron())):
             return HttpResponseForbidden("Access denied.")
 
         return view_function(request, *args, **kwargs)
@@ -56,17 +45,6 @@ def csrf_exempt_if_task(view_function):
 
         @property
         def csrf_exempt(self):
-            request = get_request()
-
-            if not request:
-                raise ImproperlyConfigured(
-                    "djangae.contrib.common.middleware.RequestStorageMiddleware "
-                    "must be in your MIDDLEWARE setting ahead of CsrfMiddleware"
-                )
-
-            is_in_task = bool(request.META.get(_TASK_NAME_HEADER, False))
-            is_in_cron = bool(request.META.get(_CRON_TASK_HEADER, False))
-
-            return any((is_in_task, is_in_cron))
+            return any((is_in_task(), is_in_cron()))
 
     return Replacement()
