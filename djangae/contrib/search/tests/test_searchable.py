@@ -115,3 +115,12 @@ class SearchableTest(TestCase):
 
         results = SearchableModel1.objects.search("bob")
         self.assertTrue([x for x in results])
+
+    def test_searching_stopwords(self):
+        SearchableModel1.objects.create(name="About you")
+
+        results = list(SearchableModel1.objects.search("about"))
+        self.assertEqual(len(results), 1)
+
+        results = list(SearchableModel1.objects.search("you"))
+        self.assertEqual(len(results), 1)
