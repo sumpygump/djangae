@@ -155,9 +155,19 @@ def register(model, model_document):
 
             return qs
 
-        def search(self, query, **options):
+        def search(self, query, ordered_ids=None, **options):
             keys = _do_search(query, **options)
+            if ordered_ids is not None:
+                ordered_ids.extend(keys)
             return model.objects.filter(pk__in=keys)
+
+        def search_and_rank(self, query, **options):
+            keys = _do_search(query, **options)
+
+            return sorted(
+                model.objects.filter(pk__in=keys),
+                key=lambda x: keys.index(x.pk)
+            )
 
     # FIXME: Is this safe? I feel like it should be but 'objects' is
     # a ManagerDescriptor so this might not be doing what I think it

@@ -253,7 +253,7 @@ def build_document_queryset(
                         best = sorted(potentials, key=lambda x: len(x))[0]
 
                         # Just use a percentage of matched length
-                        score += len(token) / len(best)
+                        score += len(best) / len(token)
 
             return score
 

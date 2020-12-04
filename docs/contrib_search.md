@@ -145,6 +145,17 @@ algorithm treats stop-word matching as weaker than other words.
 
 If you don't want to match stop words, pass `match_stopwords=False` to the search() method.
 
+## Queryset Search Ranking
+
+If you're using `ModelDocument` the Django queryset `.search()` method, then ranking order **will not apply** by default. Instead results
+will be ordered by whatever the Django queryset is ordered by. You have two options if you want ranking to apply to your
+queryset.
+
+ 1. Pass an empty list to search using the `ordered_ids` kwarg. This will be populated with the primary keys of the result set
+    ordered by the default search ranking. You can then use this to reorder you final results.
+ 2. Use `.search_and_rank()` instead. This however will not return a queryset, and will instead evaluate the queryset and return
+    an ordered list.
+
 # Caveats / Issues
 
 ## Handling common tokens
