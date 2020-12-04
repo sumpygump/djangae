@@ -124,3 +124,27 @@ class SearchableTest(TestCase):
 
         results = list(SearchableModel1.objects.search("you"))
         self.assertEqual(len(results), 1)
+
+    def test_search_ranking_applied(self):
+        i1 = SearchableModel1.objects.create(name="testing")
+        i2 = SearchableModel1.objects.create(name="test")
+        i3 = SearchableModel1.objects.create(name="testy")
+
+        ordered_ids = []
+
+        results = list(
+            SearchableModel1.objects.search(
+                "test", use_startswith=True, ordered_ids=ordered_ids
+            )
+        )
+
+        results = sorted(results, key=lambda x: ordered_ids.index(x.pk))
+
+        self.assertEqual([i2, i3, i1], results)
+
+        # Same as above
+        results = SearchableModel1.objects.search_and_rank(
+            "test", use_startswith=True
+        )
+
+        self.assertEqual([i2, i3, i1], results)
