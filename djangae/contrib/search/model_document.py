@@ -141,9 +141,19 @@ def register(model, model_document):
         return [x.instance_id for x in documents]
 
     class SearchQueryset(models.QuerySet):
-        def search(self, query, **options):
+        def search(self, query, ordered_ids=None, **options):
             keys = _do_search(query, **options)
+            if ordered_ids is not None:
+                ordered_ids.extend(keys)
             return self.filter(pk__in=keys)
+
+        def search_and_rank(self, query, **options):
+            keys = _do_search(query, **options)
+
+            return sorted(
+                self.filter(pk__in=keys),
+                key=lambda x: keys.index(x.pk)
+            )
 
     class SearchManager(default_manager, SearchManagerBase):
         def get_queryset(self):
@@ -156,17 +166,13 @@ def register(model, model_document):
             return qs
 
         def search(self, query, ordered_ids=None, **options):
-            keys = _do_search(query, **options)
-            if ordered_ids is not None:
-                ordered_ids.extend(keys)
-            return model.objects.filter(pk__in=keys)
+            return self.get_queryset().search(
+                query=query, ordered_ids=ordered_ids, **options
+            )
 
         def search_and_rank(self, query, **options):
-            keys = _do_search(query, **options)
-
-            return sorted(
-                model.objects.filter(pk__in=keys),
-                key=lambda x: keys.index(x.pk)
+            return self.get_queryset().search_and_rank(
+                query=query, **options
             )
 
     # FIXME: Is this safe? I feel like it should be but 'objects' is
