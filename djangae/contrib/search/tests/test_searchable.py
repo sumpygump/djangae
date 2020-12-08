@@ -148,3 +148,10 @@ class SearchableTest(TestCase):
         )
 
         self.assertEqual([i2, i3, i1], results)
+
+        # Same, but with the queryset instead of the manager
+        results = SearchableModel1.objects.all().search_and_rank(
+            "test", use_startswith=True
+        )
+
+        self.assertEqual([i2, i3, i1], results)

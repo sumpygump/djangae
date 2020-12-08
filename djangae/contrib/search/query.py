@@ -23,10 +23,10 @@ from .tokens import tokenize_content
 
 # FIXME: Come up with a solution to this. This may involve searching
 # the resulting documents for tokens that had been artificially limited at the
-# query phase (e.g. if a token query returns 1000 results, we then
+# query phase (e.g. if a token query returns 5000 results, we then
 # do some additional work on documents returned by other tokens, but
 # not returned by the limited token query)
-_PER_TOKEN_HARD_QUERY_LIMIT = 1000
+_PER_TOKEN_HARD_QUERY_LIMIT = 5000
 
 
 def _tokenize_query_string(query_string, match_stopwords):
