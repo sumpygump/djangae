@@ -119,7 +119,9 @@ class Index(object):
                         if token is None:
                             continue
 
-                        assert(token.strip())
+                        if not token.strip():
+                            # Ignore whitespace tokens
+                            continue
 
                         # FIXME: Update occurrances
                         try:
