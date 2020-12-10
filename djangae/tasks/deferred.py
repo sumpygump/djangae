@@ -385,10 +385,9 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, ar
     try:
         qs = model.objects.all()
         qs.query = query
-        qs.order_by("pk")
 
         last_pk = None
-        for instance in qs.all():
+        for instance in qs.order_by("pk"):
             last_pk = instance.pk
 
             shard_time = (datetime.now() - start_time).total_seconds()

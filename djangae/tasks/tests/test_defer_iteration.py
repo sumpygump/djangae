@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.utils import timezone
 from djangae.tasks.deferred import (
     defer_iteration_with_finalize,
     get_deferred_shard_index,
@@ -9,6 +9,9 @@ from djangae.test import (
     TestCase,
 )
 
+import time
+
+
 _SHARD_COUNT = 5
 
 
@@ -16,6 +19,11 @@ class DeferIterationTestModel(models.Model):
     touched = models.BooleanField(default=False)
     finalized = models.BooleanField(default=False)
     ignored = models.BooleanField(default=False)
+
+
+class DeferStringKeyModel(models.Model):
+    name = models.CharField(primary_key=True, max_length=32)
+    time_hit = models.DateTimeField(null=True)
 
 
 def callback(instance, touch=True):
@@ -48,6 +56,16 @@ def finalize(touch=True):
     for instance in DeferIterationTestModel.objects.all():
         instance.finalized = True
         instance.save()
+
+
+def update_timestamp(instance):
+    instance.time_hit = timezone.now()
+    instance.save()
+    time.sleep(0.1)
+
+
+def noop(*args, **kwargs):
+    pass
 
 
 class DeferIterationTestCase(TestCase):
@@ -114,3 +132,27 @@ class DeferIterationTestCase(TestCase):
 
         self.assertEqual(25, DeferIterationTestModel.objects.filter(touched=True).count())
         self.assertEqual(25, DeferIterationTestModel.objects.filter(finalized=True).count())
+
+    def test_shard_iterated_in_order(self):
+        DeferStringKeyModel.objects.create(name="D")
+        DeferStringKeyModel.objects.create(name="B")
+        DeferStringKeyModel.objects.create(name="A")
+        DeferStringKeyModel.objects.create(name="C")
+        DeferStringKeyModel.objects.create(name="E")
+
+        defer_iteration_with_finalize(
+            DeferStringKeyModel.objects.all(),
+            update_timestamp,
+            noop,
+            _shards=1
+        )
+
+        self.process_task_queues()
+
+        instances = DeferStringKeyModel.objects.order_by("time_hit")
+
+        last_id = "\0"
+
+        for instance in instances:
+            self.assertTrue(instance.pk > last_id)
+            last_id = instance.pk
