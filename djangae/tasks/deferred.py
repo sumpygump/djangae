@@ -385,10 +385,9 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, ar
     try:
         qs = model.objects.all()
         qs.query = query
-        qs.order_by("pk")
 
         last_pk = None
-        for instance in qs.all():
+        for instance in qs.order_by("pk"):
             last_pk = instance.pk
 
             shard_time = (datetime.now() - start_time).total_seconds()
@@ -502,8 +501,7 @@ def _generate_shards(
         if end:
             filter_kwargs["pk__lt"] = end
 
-        # calling order_by with no args to clear any pre-existing ordering (e.g. from Meta.ordering)
-        qs = qs.filter(**filter_kwargs).order_by()
+        qs = qs.filter(**filter_kwargs)
 
         @transaction.atomic(xg=True)
         def make_shard():
