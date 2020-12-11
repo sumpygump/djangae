@@ -23,7 +23,13 @@ class DeferIterationTestModel(models.Model):
 
 class DeferStringKeyModel(models.Model):
     name = models.CharField(primary_key=True, max_length=32)
+    other = models.CharField(max_length=32)
     time_hit = models.DateTimeField(null=True)
+
+    class Meta:
+        ordering = (
+            "-other",
+        )
 
 
 def callback(instance, touch=True):
@@ -134,17 +140,17 @@ class DeferIterationTestCase(TestCase):
         self.assertEqual(25, DeferIterationTestModel.objects.filter(finalized=True).count())
 
     def test_shard_iterated_in_order(self):
-        DeferStringKeyModel.objects.create(name="D")
-        DeferStringKeyModel.objects.create(name="B")
-        DeferStringKeyModel.objects.create(name="A")
-        DeferStringKeyModel.objects.create(name="C")
-        DeferStringKeyModel.objects.create(name="E")
+        DeferStringKeyModel.objects.create(name="D", other="A")
+        DeferStringKeyModel.objects.create(name="B", other="B")
+        DeferStringKeyModel.objects.create(name="A", other="C")
+        DeferStringKeyModel.objects.create(name="C", other="D")
+        DeferStringKeyModel.objects.create(name="E", other="E")
 
         defer_iteration_with_finalize(
             DeferStringKeyModel.objects.all(),
             update_timestamp,
             noop,
-            _shards=1
+            _shards=2
         )
 
         self.process_task_queues()
