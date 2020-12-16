@@ -57,6 +57,8 @@ class OAuthBackend(BaseBackend):
                     # We got the user by google_oauth_id, but their email
                     # might have changed (maybe), so update that just in case
                     user.email = email
+                if not user.username:
+                    user.username = _generate_unused_username(username)
                 user.save()
             else:
                 # First time we've seen this user
