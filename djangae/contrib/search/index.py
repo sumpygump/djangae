@@ -123,21 +123,15 @@ class Index(object):
                             # Ignore whitespace tokens
                             continue
 
-                        # FIXME: Update occurrances
-                        try:
-                            obj = TokenFieldIndex.objects.get(
+                        with transaction.atomic(independent=True):
+                            # FIXME: Update occurrances
+                            obj, _ = TokenFieldIndex.objects.get_or_create(
                                 record_id=document.id,
                                 token=token,
                                 index_stats=self.index,
                                 field_name=field.attname
                             )
-                        except TokenFieldIndex.DoesNotExist:
-                            obj = TokenFieldIndex.objects.create(
-                                record_id=document.id,
-                                index_stats=self.index,
-                                token=token,
-                                field_name=field.attname
-                            )
+
                         record.token_field_indexes.add(obj)
                 record.save()
 
