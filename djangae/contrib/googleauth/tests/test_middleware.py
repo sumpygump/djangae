@@ -21,6 +21,11 @@ class AuthBackendTests(TestCase):
         self.request.session = {}
         self.mock_view = Mock(_auth_middleware_exempt=False)
 
+        class ResolverMatch:
+            func = self.mock_view
+
+        self.request.resolver_match = ResolverMatch()
+
     @patch('djangae.contrib.googleauth.middleware.load_backend', return_value=OAuthBackend())
     def test_anonymous_user_if_not_authenticated(self, load_backend_mock):
         self.middleware.process_request(self.request)
@@ -36,7 +41,6 @@ class AuthBackendTests(TestCase):
         get_backends_mock.return_value = [iap_backend_mock]
 
         self.middleware.process_request(self.request)
-        self.middleware.process_view(self.request, self.mock_view, [], {})
 
         can_auth.assert_called_once()
         iap_backend_mock.authenticate.assert_called_once()
@@ -50,7 +54,6 @@ class AuthBackendTests(TestCase):
         get_backends_mock.return_value = [oauth_backend_mock]
 
         self.middleware.process_request(self.request)
-        self.middleware.process_view(self.request, self.mock_view, [], {})
 
         can_auth.assert_not_called()
         login_mock.assert_not_called()
@@ -75,7 +78,6 @@ class AuthBackendTests(TestCase):
         load_backend_mock.return_value = oauth_backend_mock
 
         self.middleware.process_request(self.request)
-        self.middleware.process_view(self.request, self.mock_view, [], {})
 
         # Check is loading the right backend
         load_backend_mock.assert_called_once_with(OAUTH_SESSION_KEY)
@@ -111,7 +113,6 @@ class AuthBackendTests(TestCase):
         OAuthUserSession_mock.objects.filter.return_value.first.return_value = invalid_OAuth_session
 
         self.middleware.process_request(self.request)
-        self.middleware.process_view(self.request, self.mock_view, [], {})
 
         # Check is getting user
         get_user_mock.assert_called_once_with(self.request)
@@ -154,7 +155,6 @@ class AuthBackendTests(TestCase):
         OAuthUserSession_mock.objects.filter.return_value.first.return_value = valid_OAuth_session
 
         self.middleware.process_request(self.request)
-        self.middleware.process_view(self.request, self.mock_view, [], {})
 
         # Check is getting user
         get_user_mock.assert_called_once_with(self.request)
@@ -193,7 +193,6 @@ class AuthBackendTests(TestCase):
         load_backend_mock.return_value = iap_backend_mock
 
         self.middleware.process_request(self.request)
-        self.middleware.process_view(self.request, self.mock_view, [], {})
 
         # Logging out.
         logout_mock.assert_called_once_with(self.request)
@@ -223,7 +222,6 @@ class AuthBackendTests(TestCase):
         load_backend_mock.return_value = iap_backend_mock
 
         self.middleware.process_request(self.request)
-        self.middleware.process_view(self.request, self.mock_view, [], {})
 
         # Logging out.
         logout_mock.not_called()

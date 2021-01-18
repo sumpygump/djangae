@@ -2,6 +2,7 @@
 import hashlib
 import logging
 import os
+
 from django import forms
 from django.conf import settings
 from django.contrib.auth import (
@@ -72,9 +73,6 @@ def get_user(request):
 
 class AuthenticationMiddleware(AuthenticationMiddleware):
     def process_request(self, request):
-        request.user = SimpleLazyObject(lambda: get_user(request))
-
-    def process_view(self, request, callback, callback_args, callback_kwargs):
         assert hasattr(request, 'session'), (
             "The djangae.contrib.googleauth middleware requires session middleware "
             "to be installed. Edit your MIDDLEWARE%s setting to insert "
@@ -82,8 +80,15 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
             "'djangae.contrib.googleauth.middleware.AuthenticationMiddleware'."
         ) % ("_CLASSES" if settings.MIDDLEWARE is None else "")
 
-        if getattr(callback, '_auth_middleware_exempt', False):
-            return None
+        request.user = SimpleLazyObject(lambda: get_user(request))
+
+        # See if the handling view is marked with the auth_middleware_exempt
+        # decorator, and return if so.
+        if request.resolver_match:
+            func = request.resolver_match.func
+            exempt = getattr(func, "_auth_middleware_exempt", False)
+            if exempt:
+                return None
 
         backend_str = request.session.get(BACKEND_SESSION_KEY)
 
