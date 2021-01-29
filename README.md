@@ -8,7 +8,7 @@ Djangae (djan-gee) is a Django app that allows you to run Django applications on
 want to) using Django's models with Google Cloud Datastore as the underlying database.
 
 :earth_africa:&nbsp;&nbsp;[Website](https://djangae.org)&nbsp;&nbsp;|&nbsp;&nbsp;
-:octocat:&nbsp;&nbsp;[GitHub](https://github.com/potatolondon/djangae)&nbsp;&nbsp;|&nbsp;&nbsp;
+:gitlab:&nbsp;&nbsp;[GitLab](https://gitlab.com/potato-oss/djangae/djangae)&nbsp;&nbsp;|&nbsp;&nbsp;
 :closed_book:&nbsp;&nbsp; [Docs](https://djangae.readthedocs.io/)&nbsp;&nbsp;|&nbsp;&nbsp;
 :busts_in_silhouette:&nbsp;&nbsp;[Google Group](https://groups.google.com/forum/#!forum/djangae-users)
 
