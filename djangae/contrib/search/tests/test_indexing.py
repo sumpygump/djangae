@@ -216,6 +216,31 @@ class IndexingTests(TestCase):
             ["This", "-", "is", "some", "text", "with", "-", "hyphens", ".", "I-B-M", "IBM", "I.B.M"]
         )
 
+    def test_tokenization_of_not_acronyms(self):
+        """
+            Words than have more than 1 letter and separated by an
+            hyphen are not a acronym.
+        """
+        text = "This-is-not-an-acronym"
+        tokens, new_tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens + new_tokens,
+            ["This", "-", "is", "-", "not", "-", "an", "-", "acronym", ]
+        )
+
+    def test_tokenization_of_dates(self):
+        """
+            Hyphens are stop characters except when they are part
+            of a date
+            (e.g. 2020-01-01)
+        """
+        text = "This is a date 2020-01-01"
+        tokens, new_tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens + new_tokens,
+            ["This", "is", "a", "date", "2020-01-01", "20200101", "2020.01.01", ]
+        )
+
     def test_null_validation(self):
         """
             If a field is marked as null=False, and someone tries to index

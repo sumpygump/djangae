@@ -4,6 +4,14 @@ from .constants import (
 )
 
 
+def is_digit_or_single_char(token):
+    """
+    Acronyms or dates are formed either by tokens that have a sigle letter (acronyms ie. I-B-M)
+    or numerical strings that can have more than 1 digit. (ie 2020-10-10).
+    """
+    return token.isdigit() or len(token) < 2
+
+
 def tokenize_content(content):
     """
         We inherit the rules from the App Engine Search API
@@ -41,13 +49,12 @@ def tokenize_content(content):
 
     ACRONYM_TOKENS = (".", "-")
     current_at = None
-
     # Detect acronyms
     acronym_run = 0
     for i, token in enumerate(tokens):
         if (
             ((acronym_run and token == current_at) or (not acronym_run and token in ACRONYM_TOKENS)) and
-                i > 0 and tokens[i - 1] != token
+                i > 0 and tokens[i - 1] != token and is_digit_or_single_char(tokens[i - 1])
         ):
             acronym_run += 1
             if acronym_run == 1:
@@ -76,7 +83,7 @@ def tokenize_content(content):
                 tokens_to_append.append(original)
 
                 acronym_run = 0
-            elif i > 0 and tokens[i - 1] != current_at:
+            elif i > 0 and (tokens[i - 1] != current_at or not is_digit_or_single_char(token)):
                 acronym_run = 0
 
     tokens = [x for i, x in enumerate(tokens) if i not in indexes_to_remove]
