@@ -219,7 +219,7 @@ class IndexingTests(TestCase):
     def test_tokenization_of_not_acronyms(self):
         """
             Words than have more than 1 letter and separated by an
-            hyphen are not a acronym.
+            hyphen are not an acronym.
         """
         text = "This-is-not-an-acronym"
         tokens, new_tokens = tokenize_content(text)
