@@ -1,9 +1,19 @@
 import logging
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured, SuspiciousOperation
 
+from djangae.contrib.googleauth import (
+    _GOOG_JWT_ASSERTION_HEADER,
+    _GOOG_AUTHENTICATED_USER_EMAIL_HEADER,
+    _GOOG_AUTHENTICATED_USER_ID_HEADER,
+    _IAP_AUDIENCE
+)
 from djangae.contrib.googleauth.models import UserManager
 
+from google.auth.transport import requests
+from google.oauth2 import id_token
 from . import _find_atomic_decorator, _generate_unused_username
 from .base import BaseBackend
 
@@ -14,14 +24,15 @@ class IAPBackend(BaseBackend):
 
     @classmethod
     def can_authenticate(cls, request):
-        return "HTTP_X_GOOG_AUTHENTICATED_USER_ID" in request.META and \
-            "HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL" in request.META
+        return _GOOG_AUTHENTICATED_USER_EMAIL_HEADER in request.META and \
+            _GOOG_AUTHENTICATED_USER_EMAIL_HEADER in request.META and \
+            _GOOG_JWT_ASSERTION_HEADER in request.META
 
     def authenticate(self, request, **kwargs):
+        error_partial = 'An attacker might have tried to bypass IAP.'
         atomic = _find_atomic_decorator(User)
-
-        user_id = request.META.get("HTTP_X_GOOG_AUTHENTICATED_USER_ID")
-        email = request.META.get("HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL")
+        user_id = request.META.get(_GOOG_AUTHENTICATED_USER_ID_HEADER)
+        email = request.META.get(_GOOG_AUTHENTICATED_USER_EMAIL_HEADER)
 
         # User not logged in to IAP
         if not user_id or not email:
@@ -34,6 +45,30 @@ class IAPBackend(BaseBackend):
         # Google tokens are namespaced with "auth.google.com:"
         namespace, user_id = user_id.split(":", 1)
         _, email = email.split(":", 1)
+
+        if not getattr(request, "_through_local_iap_middleware", False):
+            try:
+                audience = _get_IAP_audience_from_settings()
+            except AttributeError:
+                raise ImproperlyConfigured(
+                    "You must specify a %s in settings when using IAPBackend" % (
+                        _IAP_AUDIENCE,
+                    ))
+            iap_jwt = request.META.get(_GOOG_JWT_ASSERTION_HEADER)
+
+            try:
+                signed_user_id, signed_user_email = _validate_iap_jwt(iap_jwt, audience)
+            except ValueError as e:
+                raise SuspiciousOperation("**ERROR: JWT validation error {}**\n{}".format(e, error_partial))
+
+            assert (signed_user_id == user_id), (
+                    f"IAP signed user id does not match {_GOOG_AUTHENTICATED_USER_ID_HEADER}. ",
+                    error_partial,
+                )
+            assert (signed_user_email == email), (
+                    f"IAP signed user email does not match {_GOOG_AUTHENTICATED_USER_EMAIL_HEADER}. ",
+                    error_partial,
+                )
 
         email = UserManager.normalize_email(email)
         assert email
@@ -91,3 +126,26 @@ class IAPBackend(BaseBackend):
                     user.save()
 
         return user
+
+
+def _validate_iap_jwt(iap_jwt, expected_audience):
+    """Validate an IAP JWT.
+
+    Args:
+      iap_jwt: The contents of the X-Goog-IAP-JWT-Assertion header.
+      expected_audience: The Signed Header JWT audience. See
+          https://cloud.google.com/iap/docs/signed-headers-howto
+          for details on how to get this value.
+
+    Returns:
+      (user_id, user_email).
+    """
+
+    decoded_jwt = id_token.verify_token(
+        iap_jwt, requests.Request(), audience=expected_audience,
+        certs_url='https://www.gstatic.com/iap/verify/public_key')
+    return (decoded_jwt['sub'], decoded_jwt['email'])
+
+
+def _get_IAP_audience_from_settings():
+    return getattr(settings, _IAP_AUDIENCE)
