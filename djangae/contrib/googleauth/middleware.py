@@ -1,4 +1,9 @@
 
+from djangae.contrib.googleauth import (
+    _GOOG_AUTHENTICATED_USER_EMAIL_HEADER,
+    _GOOG_AUTHENTICATED_USER_ID_HEADER,
+    _GOOG_JWT_ASSERTION_HEADER
+)
 import hashlib
 import logging
 import os
@@ -185,6 +190,8 @@ def id_from_email(email):
 
 def local_iap_login_middleware(get_response):
     def middleware(request):
+        request._through_local_iap_middleware = True
+
         if is_production_environment():
             logging.warning(
                 "local_iap_login_middleware is for local development only, "
@@ -209,8 +216,9 @@ def local_iap_login_middleware(get_response):
                     data = f.read()
                     email = data.strip()
 
-                    request.META["HTTP_X_GOOG_AUTHENTICATED_USER_ID"] = "auth.example.com:%s" % id_from_email(email)
-                    request.META["HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL"] = "auth.example.com:%s" % email
+                    request.META[_GOOG_JWT_ASSERTION_HEADER] = "JWT TOKEN"
+                    request.META[_GOOG_AUTHENTICATED_USER_ID_HEADER] = "auth.example.com:%s" % id_from_email(email)
+                    request.META[_GOOG_AUTHENTICATED_USER_EMAIL_HEADER] = "auth.example.com:%s" % email
 
             response = get_response(request)
 
