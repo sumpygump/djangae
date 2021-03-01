@@ -1,6 +1,5 @@
 from django.db import models
 
-from gcloudc.db.models.fields.related import RelatedSetField
 from gcloudc.db.models.fields.json import JSONField
 
 from .document import Document
@@ -21,10 +20,8 @@ class DocumentRecord(models.Model):
     """
     index_stats = models.ForeignKey("IndexStats", on_delete=models.CASCADE)
 
-    # This allows for up-to 10000 unique terms in a single
-    # document. We need this data when deleting a document
-    # from the index
-    token_field_indexes = RelatedSetField("TokenFieldIndex")
+    # The revision of the document. This gets bumped on each reindex
+    revision = models.IntegerField(default=0)
 
     # This is the data at the time the field was indexed so the doc
     # can be reconstructed on fetch
@@ -43,7 +40,10 @@ class TokenFieldIndex(models.Model):
     id = models.CharField(primary_key=True, max_length=1500, default=None)
 
     index_stats = models.ForeignKey("IndexStats", on_delete=models.CASCADE)
+
     record = models.ForeignKey("DocumentRecord", on_delete=models.CASCADE)
+    revision = models.IntegerField(default=0)
+
     token = models.CharField(max_length=500)
     field_name = models.CharField(max_length=500)
 

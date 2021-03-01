@@ -1,11 +1,124 @@
 from collections.abc import Iterable
-
 from gcloudc.db import transaction
 
 from .document import Document
 from .fields import IntegrityError
 
 _DEFAULT_INDEX_NAME = "default"
+
+
+def _destroy_record(instance):
+    instance.delete()
+
+
+def _finalize(*args, **kwargs):
+    pass
+
+
+def reindex_document(document):
+    """
+        Deletes old tokens, bumps the revision
+        then indexes the document
+    """
+
+    from djangae.tasks.deferred import defer_iteration_with_finalize
+    from .models import DocumentRecord
+    from .models import TokenFieldIndex
+
+    try:
+        record = document._record or DocumentRecord.objects.get(pk=document.id)
+    except DocumentRecord.DoesNotExist:
+        return
+
+    qs = TokenFieldIndex.objects.filter(
+        record_id=document.id,
+        revision=document.revision
+    )
+
+    defer_iteration_with_finalize(
+        qs, _destroy_record, _finalize
+    )
+
+    record.revision += 1
+    record.save()
+
+    index_document(document.index, record)
+
+
+def unindex_document(document):
+    """
+        Deletes a document. Removes all associated entries
+        in the index, even stale ones
+    """
+
+    from djangae.tasks.deferred import defer_iteration_with_finalize
+    from .models import DocumentRecord
+    from .models import TokenFieldIndex
+
+    try:
+        record = document._record or DocumentRecord.objects.get(pk=document.id)
+    except DocumentRecord.DoesNotExist:
+        return
+
+    # Find all the things to delete
+    qs = TokenFieldIndex.objects.filter(
+        record_id=document.id,
+    ).all()
+
+    defer_iteration_with_finalize(
+        qs, _destroy_record, _finalize
+    )
+
+    record.delete()
+
+
+def index_document(index, document):
+    from .models import TokenFieldIndex
+
+    assert(document.id)  # This should be a thing by now
+
+    for field_name, field in document.get_fields().items():
+        if field_name == "id":
+            continue
+
+        if not field.index:
+            # Some fields are just stored, not indexed
+            continue
+
+        # Get the field value, use the default if it's not set
+        value = getattr(document, field.attname, None)
+        value = field.default if value is None else value
+        value = field.normalize_value(value)
+
+        # Tokenize the value, this will effectively mean lower-casing
+        # removing punctuation etc. and returning a list of things
+        # to index
+        tokens = field.tokenize_value(value)
+
+        if tokens is None:
+            # Nothing to index
+            continue
+
+        tokens = set(tokens)  # Remove duplicates
+
+        for token in tokens:
+            token = field.clean_token(token)
+            if token is None:
+                continue
+
+            if not token.strip():
+                # Ignore whitespace tokens
+                continue
+
+            with transaction.atomic(independent=True):
+                # FIXME: Update occurrances
+                obj, _ = TokenFieldIndex.objects.get_or_create(
+                    record_id=document.id,
+                    revision=document.revision,
+                    token=token,
+                    index_stats=index.index,
+                    field_name=field.attname
+                )
 
 
 class Index(object):
@@ -43,7 +156,6 @@ class Index(object):
 
         from .models import (  # Prevent import too early
             DocumentRecord,
-            TokenFieldIndex,
         )
 
         added_document_ids = []
@@ -60,6 +172,8 @@ class Index(object):
 
         with transaction.atomic(independent=True):
             for document in documents:
+                record = document._record
+
                 # We go through the document fields, pull out the values that have been set
                 # then we index them.
                 field_data = {
@@ -67,73 +181,25 @@ class Index(object):
                     for f in document.get_fields() if f != "id"
                 }
 
-                record = document._record
-
-                created = False
-                if record is None:
-                    # Generate a database representation of this Document use
-                    # the passed ID if there is one
-                    record, created = DocumentRecord.objects.get_or_create(
-                        pk=document.id,
-                        defaults={
-                            "index_stats": self.index,
-                            "data": field_data
-                        }
-                    )
-                    document.id = record.id
-                    document._record = record
+                # Generate a database representation of this Document use
+                # the passed ID if there is one
+                record, created = DocumentRecord.objects.update_or_create(
+                    pk=document.id,
+                    defaults={
+                        "index_stats": self.index,
+                        "data": field_data
+                    }
+                )
+                document.id = record.id
+                document._record = record
 
                 if created:
+                    index_document(self, document)
                     added_document_ids.append(record.id)
                 else:
-                    record.data = field_data
-
-                assert(document.id)  # This should be a thing by now
-
-                for field_name, field in document.get_fields().items():
-                    if field_name == "id":
-                        continue
-
-                    if not field.index:
-                        # Some fields are just stored, not indexed
-                        continue
-
-                    # Get the field value, use the default if it's not set
-                    value = getattr(document, field.attname, None)
-                    value = field.default if value is None else value
-                    value = field.normalize_value(value)
-
-                    # Tokenize the value, this will effectively mean lower-casing
-                    # removing punctuation etc. and returning a list of things
-                    # to index
-                    tokens = field.tokenize_value(value)
-
-                    if tokens is None:
-                        # Nothing to index
-                        continue
-
-                    tokens = set(tokens)  # Remove duplicates
-
-                    for token in tokens:
-                        token = field.clean_token(token)
-                        if token is None:
-                            continue
-
-                        if not token.strip():
-                            # Ignore whitespace tokens
-                            continue
-
-                        with transaction.atomic(independent=True):
-                            # FIXME: Update occurrances
-                            obj, _ = TokenFieldIndex.objects.get_or_create(
-                                record_id=document.id,
-                                token=token,
-                                index_stats=self.index,
-                                field_name=field.attname
-                            )
-
-                        record.token_field_indexes.add(obj)
-                record.save()
+                    # This wipes out any existing document, bumps the revision
+                    # and then indexes this one
+                    reindex_document(document)
 
         return added_document_ids if was_list else added_document_ids[0]
 
