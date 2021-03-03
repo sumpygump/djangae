@@ -153,6 +153,8 @@ class IndexingTests(TestCase):
         self.assertTrue(i0.remove(d0))
         self.assertFalse(i0.remove(d0))
 
+        self.process_task_queues()
+
         self.assertEqual(i0.document_count(), 1)
         self.assertEqual(i1.document_count(), 1)
 
@@ -165,6 +167,8 @@ class IndexingTests(TestCase):
 
         self.assertTrue(i0.remove(d1))
 
+        self.process_task_queues()
+
         self.assertEqual(i0.document_count(), 0)
         self.assertEqual(i1.document_count(), 1)
 
@@ -176,6 +180,7 @@ class IndexingTests(TestCase):
         self.assertFalse([x for x in i0.search("text:Two", Doc)])
 
         self.assertTrue(i1.remove(d2))
+        self.process_task_queues()
 
         self.assertEqual(i0.document_count(), 0)
         self.assertEqual(i1.document_count(), 0)
@@ -298,3 +303,50 @@ class IndexingTests(TestCase):
 
         # Startswith matching overrides matching of stopwords (as other tokens may start with the stop word)
         self.assertTrue(list(index.search("about", Doc, use_startswith=True, match_stopwords=False)))
+
+    def test_document_revision(self):
+        """
+            Revisions exist to counter the problem that deletion from
+            the index may take some time. The revision is replicated onto
+            index entries so that new indexes can be created while old ones
+            are being deleted.
+
+            It doesn't protect against the eventual consistency of searching,
+            it just means that we don't need to index inline.
+        """
+
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index("test")
+        doc1 = Doc(text="about")
+
+        index.add(doc1)
+        self.assertTrue(doc1.persisted)
+
+        rev = doc1.revision
+
+        self.assertIsNotNone(rev)
+        self.assertEqual(TokenFieldIndex.objects.filter(record_id=doc1.id).count(), 1)
+
+        # Adding an existing document again will update the revision
+        index.add(doc1)
+        self.assertNotEqual(doc1.revision, rev)
+        rev = doc1.revision
+
+        self.assertEqual(TokenFieldIndex.objects.count(), 2)
+        self.assertEqual(TokenFieldIndex.objects.filter(record_id=doc1.id, revision=doc1.revision).count(), 1)
+
+        # Remove then re-add should reset the revision
+        self.assertEqual(index.remove(doc1), 1)
+
+        index.add(doc1)
+        self.assertNotEqual(doc1.revision, rev)
+
+        self.assertEqual(TokenFieldIndex.objects.count(), 3)
+        self.assertEqual(TokenFieldIndex.objects.filter(record_id=doc1.id, revision=doc1.revision).count(), 1)
+
+        # Clean up everything
+        self.process_task_queues()
+
+        self.assertEqual(TokenFieldIndex.objects.count(), 1)

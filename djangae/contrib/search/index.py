@@ -1,3 +1,5 @@
+import uuid
+
 from collections.abc import Iterable
 from gcloudc.db import transaction
 
@@ -39,16 +41,16 @@ def reindex_document(document):
         qs, _destroy_record, _finalize
     )
 
-    record.revision += 1
+    # Generate a brand new revision ID for this document
+    record.revision = uuid.uuid4()
     record.save()
 
-    index_document(document.index, record)
+    index_document(document.index_name, document)
 
 
 def unindex_document(document):
     """
-        Deletes a document. Removes all associated entries
-        in the index, even stale ones
+        Deletes a document from its index
     """
 
     from djangae.tasks.deferred import defer_iteration_with_finalize
@@ -58,11 +60,12 @@ def unindex_document(document):
     try:
         record = document._record or DocumentRecord.objects.get(pk=document.id)
     except DocumentRecord.DoesNotExist:
-        return
+        return 0
 
     # Find all the things to delete
     qs = TokenFieldIndex.objects.filter(
         record_id=document.id,
+        revision=document.revision
     ).all()
 
     defer_iteration_with_finalize(
@@ -70,9 +73,10 @@ def unindex_document(document):
     )
 
     record.delete()
+    return 1
 
 
-def index_document(index, document):
+def index_document(index_name, document):
     from .models import TokenFieldIndex
 
     assert(document.id)  # This should be a thing by now
@@ -108,12 +112,19 @@ def index_document(index, document):
 
             with transaction.atomic(independent=True):
                 # FIXME: Update occurrances
+                key = TokenFieldIndex.generate_key(
+                    index_name, token, field.attname, document.id, document.revision
+                )
+
                 obj, _ = TokenFieldIndex.objects.get_or_create(
-                    record_id=document.id,
-                    revision=document.revision,
-                    token=token,
-                    index_stats=index.index,
-                    field_name=field.attname
+                    pk=key,
+                    defaults=dict(
+                        record_id=document.id,
+                        revision=document.revision,
+                        token=token,
+                        index_stats_id=index_name,
+                        field_name=field.attname
+                    )
                 )
 
 
@@ -190,14 +201,14 @@ class Index(object):
                 document._record = record
 
                 if created:
-                    index_document(self, document)
+                    index_document(self.name, document)
                     added_document_ids.append(record.id)
                 else:
                     # This wipes out any existing document, bumps the revision
                     # and then indexes this one
                     reindex_document(document)
 
-        return added_document_ids if was_list else added_document_ids[0]
+        return added_document_ids if was_list else (added_document_ids[0] if added_document_ids else 0)
 
     def remove(self, document_or_documents):
         """
@@ -210,7 +221,6 @@ class Index(object):
 
         from .models import (
             DocumentRecord,
-            TokenFieldIndex,
         )
 
         if not document_or_documents:
@@ -225,20 +235,15 @@ class Index(object):
         removed_count = 0
 
         for doc_or_id in document_or_documents:
-            doc_id = doc_or_id.id if isinstance(doc_or_id, Document) else doc_or_id
-
             try:
-                doc = DocumentRecord.objects.get(pk=doc_id)
-                removed_count += 1
+                document = (
+                    doc_or_id
+                    if isinstance(doc_or_id, Document)
+                    else Document(_record=DocumentRecord.objects.get(pk=doc_or_id))
+                )
+                removed_count += unindex_document(document)
             except DocumentRecord.DoesNotExist:
                 continue
-
-            TokenFieldIndex.objects.filter(
-                record_id=doc.pk,
-                index_stats_id=self.index.pk
-            ).delete()
-
-            doc.delete()
 
         return removed_count
 

@@ -97,6 +97,8 @@ class SearchableTest(TestCase):
         self.i2.delete()
         self.assertEqual(idx.document_count(), doc_count - 1)
 
+        self.process_task_queues()
+
         new_count = TokenFieldIndex.objects.count()
         self.assertTrue(new_count < count)
 
