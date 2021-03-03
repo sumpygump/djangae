@@ -103,11 +103,7 @@ def index_document(index, document):
 
         for token in tokens:
             token = field.clean_token(token)
-            if token is None:
-                continue
-
-            if not token.strip():
-                # Ignore whitespace tokens
+            if token is None or token == '':
                 continue
 
             with transaction.atomic(independent=True):
