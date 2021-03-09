@@ -23,7 +23,7 @@ class IAPAuthenticationTests(TestCase):
         user = '99999'
         user_email = 'test@example.com'
         verify_token_mock.return_value = {
-            'sub': user,
+            'sub': f'auth.example.com:{user}',
             'email': user_email,
         }
 
@@ -49,7 +49,7 @@ class IAPAuthenticationTests(TestCase):
         user = '99999'
         user_email = 'test@example.com'
         verify_token_mock.return_value = {
-            'sub': user,
+            'sub': f'auth.example.com:{user}',
             'email': user_email,
         }
 
@@ -72,7 +72,7 @@ class IAPAuthenticationTests(TestCase):
         user = '99999'
         user_email = 'test22@example.com'
         verify_token_mock.return_value = {
-            'sub': user,
+            'sub': f'auth.example.com:{user}',
             'email': user_email,
         }
 
@@ -112,7 +112,7 @@ class IAPAuthenticationTests(TestCase):
         user = '99999'
         user_email = 'tESt22@example.com'
         verify_token_mock.return_value = {
-            'sub': user,
+            'sub': f'auth.example.com:{user}',
             'email': user_email,
         }
 
@@ -150,7 +150,7 @@ class IAPAuthenticationTests(TestCase):
         JWT = 'JWT'
 
         verify_token_mock.return_value = {
-            'sub': user,
+            'sub': f'auth.example.com:{user}',
             'email': user_email,
         }
 
@@ -193,7 +193,7 @@ class IAPAuthenticationTests(TestCase):
         JWT = 'JWT'
 
         verify_token_mock.return_value = {
-            'sub': user,
+            'sub': f'auth.example.com:{user}',
             'email': user_email,
         }
 
@@ -213,7 +213,7 @@ class IAPAuthenticationTests(TestCase):
         JWT = 'JWT'
 
         verify_token_mock.return_value = {
-            'sub': user,
+            'sub': f'auth.example.com:{user}',
             'email': user_email,
         }
 
