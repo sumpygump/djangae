@@ -47,7 +47,10 @@ setup(
         'google-cloud-tasks>=1.5.0,<2.0.0',
         'psutil>=5.7.3',
         # requests required by cloud storage file backend
-        'requests>=2.22.0'
+        'requests>=2.22.0',
+        # required for iap backend
+        'cryptography==3.4.6',
+        'python-jose[cryptography]==3.2.0',
     ],
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],

@@ -58,6 +58,7 @@ class IAPBackend(BaseBackend):
 
             try:
                 signed_user_id, signed_user_email = _validate_iap_jwt(iap_jwt, audience)
+                signed_user_namespace, signed_user_id = signed_user_id.split(":", 1)
             except ValueError as e:
                 raise SuspiciousOperation("**ERROR: JWT validation error {}**\n{}".format(e, error_partial))
 
