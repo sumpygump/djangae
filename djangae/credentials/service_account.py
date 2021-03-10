@@ -18,13 +18,15 @@ class ServiceAccountCredentials(credentials.Scoped, credentials.Credentials):
     scopes, even though it uses the metadata service which does.
     """
 
-    def __init__(self, scopes=None, service_account_id="default"):
+    def __init__(self, scopes=None, default_scopes=None, service_account_id="default"):
         super().__init__()
         self._scopes = scopes
+        self._default_scopes = default_scopes
         self._service_account_id = service_account_id
 
     def refresh(self, request):
-        data = self._get_token(request, self._scopes)
+        scopes = self._scopes if self._scopes is not None else self._default_scopes
+        data = self._get_token(request, scopes)
         seconds = data["expires_in"]
         token_expiry = _helpers.utcnow() + datetime.timedelta(seconds=seconds)
 
@@ -49,7 +51,7 @@ class ServiceAccountCredentials(credentials.Scoped, credentials.Credentials):
     def requires_scopes(self):
         return not self._scopes
 
-    def with_scopes(self, scopes):
+    def with_scopes(self, scopes, default_scopes=None):
         return self.__class__(
-            scopes=scopes, service_account_id=self._service_account_id
+            scopes=scopes, default_scopes=default_scopes, service_account_id=self._service_account_id
         )
