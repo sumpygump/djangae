@@ -25,7 +25,8 @@ class ServiceAccountCredentials(credentials.Scoped, credentials.Credentials):
         self._service_account_id = service_account_id
 
     def refresh(self, request):
-        data = self._get_token(request, self._scopes)
+        scopes = self._scopes if self._scopes is not None else self._default_scopes
+        data = self._get_token(request, scopes)
         seconds = data["expires_in"]
         token_expiry = _helpers.utcnow() + datetime.timedelta(seconds=seconds)
 
