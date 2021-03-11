@@ -35,10 +35,18 @@ lint:python3:
   script:
     - tox -e flake8
 
-test:python3.8:
+test:python3.8:django2.2:
  image: $CI_REGISTRY_IMAGE:python3.8
  stage: test
  before_script:
    - source /root/google-cloud-sdk/path.bash.inc
  script:
-   - tox
+   - tox -e py38-22
+
+test:python3.8:django3.0:
+ image: $CI_REGISTRY_IMAGE:python3.8
+ stage: test
+ before_script:
+   - source /root/google-cloud-sdk/path.bash.inc
+ script:
+   - tox -e py38-30
