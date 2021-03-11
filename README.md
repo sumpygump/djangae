@@ -23,7 +23,7 @@ If you're interested in commercial support, training, or consultancy then go ahe
 ---
 
 
-**Note: Djangae is under heavy development, stability is not guaranteed. A 2.0 release will happen when it's ready. If you are using Django 1.11 / Python 2.7, please use the 1.x branch**
+**Note: Djangae is under heavy development, stability is not guaranteed. A 2.0 release will happen when it's ready. If you are using Django 1.11 / Python 2.7, please use the 1.x branch which is stable**
 
 ## Features
 
@@ -53,30 +53,30 @@ Djangae is actively developed and maintained, so if you're thinking of contribut
 
 ## Get started with development
 
-1. First off, head to [our Github page](https://github.com/potatolondon/djangae) and fork the repository to have your own copy of it.
+1. First off, head to [our GitLab page](https://gitlab.com/potato-oss/djangae/djangae) and fork the repository to have your own copy of it.
 2. Clone it locally to start setting up your development environment
 3. Run all tests to make sure your local version is working: `tox -e py37`
 
-## Pick an issue & send a pull request
+## Pick an issue & send a Merge Request
 
 If you spotted a bug in Djangae that you want to fix, it's a good idea to start
-off by [adding an issue](https://github.com/potatolondon/djangae/issues/new).
+off by [adding an issue](https://gitlab.com/potato-oss/djangae/djangae/-/issues/new?issue%5Bassignee_id%5D=&issue%5Bmilestone_id%5D=).
 This will allow us to verify that your issue is valid, and suggest ideas for fixing it, so
 no time is wasted for you.
 
-For help with creating the pull request, check out [Github documentation](https://help.github.com/articles/creating-a-pull-request/).
+For help with creating the merge request, check out [GitLab documentation](https://docs.gitlab.com/ee/user/project/merge_requests/).
 
 ## Code style
 
-Code style should follow PEP-8 with a loose line length of 100 characters.
+Code style should follow PEP-8 with a line length of 100 characters.
 
 ## Need help?
 
 Reach out to us on [djangae-users](https://groups.google.com/forum/#!forum/djangae-users) mailing list.
 
-## Pull request requirements
+## Merge request requirements
 
-For pull request to be merged, following requirements should be met:
+For merge request to be merged, following requirements should be met:
 
 - Tests covering new or changed code are added or updated
 - Relevant documentation should be updated or added
@@ -104,7 +104,3 @@ For running the tests, you just need to run:
 You can run specific tests in the usual way by doing:
 
     tox -e py37 -- some_app.SomeTestCase.some_test_method
-
-
-[build-status-image]: https://secure.travis-ci.org/potatolondon/djangae.png?branch=master
-[travis]: https://travis-ci.org/potatolondon/djangae?branch=master
