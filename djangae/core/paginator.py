@@ -1,6 +1,5 @@
 import collections
 
-from django.utils import six
 from django.core.paginator import PageNotAnInteger, EmptyPage
 
 
@@ -89,7 +88,7 @@ class DatastorePage(collections.Sequence):
         return len(self.object_list)
 
     def __getitem__(self, index):
-        if not isinstance(index, (slice,) + six.integer_types):
+        if not isinstance(index, (slice, int)):
             raise TypeError
 
         return self.object_list[index]

@@ -7,7 +7,6 @@ import time
 # THRID PARTY
 from django.db import models
 from django.utils import timezone
-from django.utils.encoding import python_2_unicode_compatible
 
 from gcloudc.db import transaction
 from gcloudc.db.backends.datastore.transaction import TransactionFailedError
@@ -69,7 +68,6 @@ class LockQuerySet(models.query.QuerySet):
         return lock
 
 
-@python_2_unicode_compatible
 class DatastoreLock(models.Model):
     """ A marker for locking a block of code. """
 

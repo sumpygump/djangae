@@ -10,7 +10,6 @@ from django.core.files.base import (
 )
 from django.db import models
 from django.test.utils import override_settings
-from django.utils import six
 
 # DJANGAE
 from djangae.contrib import sleuth
@@ -58,13 +57,13 @@ class CloudStorageTests(TestCase):
 
         f = ContentFile(content, name='my_file')
         filename = storage.save(name, f)
-        self.assertIsInstance(filename, six.string_types)
+        self.assertIsInstance(filename, str)
         self.assertTrue(filename.endswith(name))
 
         self.assertTrue(storage.exists(filename))
         self.assertEqual(storage.size(filename), len(content))
         url = storage.url(filename)
-        self.assertIsInstance(url, six.string_types)
+        self.assertIsInstance(url, str)
         self.assertNotEqual(url, '')
 
         response = requests.get(url)
