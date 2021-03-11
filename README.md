@@ -1,6 +1,6 @@
 # Djangae
 
-[![Join the chat at https://gitter.im/potatolondon/djangae](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/potatolondon/djangae?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) ![https://gitlab.com/potato-oss/djangae/djangae/badges/master/pipeline.svg]
+![Pipeline status](https://gitlab.com/potato-oss/djangae/djangae/badges/master/pipeline.svg)
 
 The best way to run Django on Google Cloud.
 
