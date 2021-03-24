@@ -67,4 +67,12 @@ test:python3.8:django3.1:
  before_script:
    - source /root/google-cloud-sdk/path.bash.inc
  script:
-   - tox -e py38-30
+   - tox -e py38-31
+
+test:python3.8:django3.2:
+ image: $CI_REGISTRY_IMAGE:python3.8
+ stage: test
+ before_script:
+   - source /root/google-cloud-sdk/path.bash.inc
+ script:
+   - tox -e py38-32

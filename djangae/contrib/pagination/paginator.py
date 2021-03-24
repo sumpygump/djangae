@@ -1,7 +1,8 @@
 from hashlib import md5
 from django.conf import settings
-from django.db import models, router
+from django.db import router
 from django.core import paginator
+from django.core.exceptions import FieldDoesNotExist
 from django.core.cache import cache
 
 from djangae.contrib.pagination.decorators import _field_name_for_ordering
@@ -120,7 +121,7 @@ class Paginator(paginator.Paginator):
 
         try:
             object_list.model._meta.get_field(self.field_required)
-        except models.FieldDoesNotExist:
+        except FieldDoesNotExist:
             raise PaginationOrderingRequired(
                 "No pagination ordering specified for {}. Field required: {}".format(
                     self.original_orderings,

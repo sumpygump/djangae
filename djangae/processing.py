@@ -1,10 +1,11 @@
+from gcloudc.db.backends.datastore.expressions import Scatter
 
 
 def _find_random_keys(queryset, shard_count):
     OVERSAMPLING_FACTOR = 32
 
     return list(
-        queryset.model.objects.order_by("__scatter__").values_list("pk", flat=True)[
+        queryset.model.objects.order_by(Scatter()).values_list("pk", flat=True)[
             :(shard_count * OVERSAMPLING_FACTOR)
         ]
     )
