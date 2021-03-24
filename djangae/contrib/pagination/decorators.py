@@ -2,7 +2,7 @@ import random
 from functools import partial
 
 from gcloudc.db.models.fields.computed import ComputedCharField
-from django.db.models.fields import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist
 
 NULL_CHARACTER = u"\0"
 
