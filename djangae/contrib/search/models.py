@@ -1,6 +1,7 @@
+import uuid
+
 from django.db import models
 
-from gcloudc.db.models.fields.related import RelatedSetField
 from gcloudc.db.models.fields.json import JSONField
 
 from .document import Document
@@ -21,10 +22,8 @@ class DocumentRecord(models.Model):
     """
     index_stats = models.ForeignKey("IndexStats", on_delete=models.CASCADE)
 
-    # This allows for up-to 10000 unique terms in a single
-    # document. We need this data when deleting a document
-    # from the index
-    token_field_indexes = RelatedSetField("TokenFieldIndex")
+    # The revision of the document. This gets changed on each reindex
+    revision = models.UUIDField(default=uuid.uuid4, editable=False)
 
     # This is the data at the time the field was indexed so the doc
     # can be reconstructed on fetch
@@ -43,9 +42,21 @@ class TokenFieldIndex(models.Model):
     id = models.CharField(primary_key=True, max_length=1500, default=None)
 
     index_stats = models.ForeignKey("IndexStats", on_delete=models.CASCADE)
-    record = models.ForeignKey("DocumentRecord", on_delete=models.CASCADE)
+
+    # We don't cascade delete when a document is deleted, because we clear up
+    # in a background task
+    record = models.ForeignKey("DocumentRecord", on_delete=models.DO_NOTHING)
+
+    revision = models.UUIDField(default=None, editable=False, blank=False)
+
     token = models.CharField(max_length=500)
     field_name = models.CharField(max_length=500)
+
+    @classmethod
+    def generate_key(cls, index_name, token, field_name, document_id, revision):
+        return WORD_DOCUMENT_JOIN_STRING.join(
+            [str(x) for x in (index_name, token, field_name, document_id, revision)]
+        )
 
     @classmethod
     def document_id_from_pk(cls, pk):
@@ -55,7 +66,7 @@ class TokenFieldIndex(models.Model):
         if pk is None:
             return None
 
-        return int(pk.split(WORD_DOCUMENT_JOIN_STRING)[-1])
+        return int(pk.split(WORD_DOCUMENT_JOIN_STRING)[-2])
 
     @property
     def document_id(self):
@@ -71,10 +82,9 @@ class TokenFieldIndex(models.Model):
 
         orig_pk = self.pk
 
-        self.pk = WORD_DOCUMENT_JOIN_STRING.join(
-            [str(x) for x in (self.index_stats_id, self.token, self.field_name, self.document_id)]
+        self.pk = TokenFieldIndex.generate_key(
+            self.index_stats_id, self.token, self.field_name, self.document_id, self.revision
         )
-
         # Just check that we didn't *change* the PK
         assert((orig_pk is None) or orig_pk == self.pk)
         super().save(*args, **kwargs)

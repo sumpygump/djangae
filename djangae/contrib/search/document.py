@@ -14,6 +14,21 @@ class Document(object):
     def pk(self):
         return self.id
 
+    @property
+    def revision(self):
+        return self._record.revision if self._record else 0
+
+    @property
+    def persisted(self):
+        return bool(self._record)
+
+    @property
+    def index_name(self):
+        if not self.persisted:
+            return None
+
+        return self._record.index_stats_id
+
     def __init__(self, _record=None, **kwargs):
         self._record = _record
 

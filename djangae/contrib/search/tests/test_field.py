@@ -20,3 +20,15 @@ class fieldTestCase(TestCase):
         token = "++"
         cleaned_token = field.clean_token(token)
         self.assertEqual(token, cleaned_token)
+
+    def test_clean_token_only_spaces_strip(self):
+        field = Field()
+        token = "      "
+        cleaned_token = field.clean_token(token)
+        self.assertEqual('', cleaned_token)
+
+    def test_clean_token_strip_spaces(self):
+        field = Field()
+        token = "  token    "
+        cleaned_token = field.clean_token(token)
+        self.assertEqual('token', cleaned_token)
