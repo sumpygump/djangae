@@ -2,6 +2,7 @@
 
 ### New features & improvements:
 
+- Added CloudStorageTestCaseMixin to take care of wiping data between tests
 - Upgraded the codebase to Python 3
 - Added support for Django 2.2, 3.0 and 3.1
 - Switched to running the tests using tox (remove testapp etc.)

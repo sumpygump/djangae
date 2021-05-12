@@ -1,5 +1,6 @@
+from unittest.mock import patch
 from djangae.tasks import deferred
-from djangae.test import TestCase, TaskFailedBehaviour, TaskFailedError
+from djangae.test import TestCase, TaskFailedBehaviour, TaskFailedError, CloudStorageTestCaseMixin
 
 
 def my_task():
@@ -50,3 +51,10 @@ class TaskQueueTests(TestCase):
             failure_behaviour=TaskFailedBehaviour.RAISE_ERROR
         )
         self.assertEqual(throw_once.counter, 1)
+
+
+@patch('djangae.test.wipe_cloud_storage')
+class CloudStorageTestCaseMixinTests(CloudStorageTestCaseMixin, TestCase):
+    def test_wipes_on_setup(self, wipe_cloud_storage_mock):
+        self.setUp()
+        wipe_cloud_storage_mock.assert_called_once()
