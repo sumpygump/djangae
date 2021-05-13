@@ -236,4 +236,4 @@ def wipe_cloud_storage():
     if not storage_emulator_host:
         logger.warning("Cloud storage emulator wipe operation failed. Cloud storage emulator has not been started.")
 
-    urlopen(f"{storage_emulator_host}/wipe")
+    urlopen(f"{storage_emulator_host}/wipe?keep-buckets=true")
