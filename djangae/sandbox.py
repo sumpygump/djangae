@@ -234,8 +234,9 @@ def enable_test_environment_variables():
 def wipe_cloud_storage():
     storage_emulator_host = os.environ['STORAGE_EMULATOR_HOST']
     if not storage_emulator_host:
-        return logger.warning(
+        logger.warning(
             "Cloud storage emulator wipe operation failed."
             "Cloud storage emulator has not been started.")
+        return
 
     urlopen(f"{storage_emulator_host}/wipe?keep-buckets=true")
