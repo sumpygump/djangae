@@ -7,8 +7,7 @@ from djangae.tasks.test import (
 )
 from django import test
 from django.core.cache import cache
-from djangae.sandbox import start_emulators, stop_emulators
-
+from djangae.sandbox import start_emulators, stop_emulators, wipe_cloud_storage
 
 TaskFailedError = TaskFailedError
 TaskFailedBehaviour = TaskFailedBehaviour
@@ -17,6 +16,12 @@ TaskFailedBehaviour = TaskFailedBehaviour
 class TestEnvironmentMixin(object):
     def setUp(self):
         cache.clear()
+        super().setUp()
+
+
+class CloudStorageTestCaseMixin(object):
+    def setUp(self):
+        wipe_cloud_storage()
         super().setUp()
 
 

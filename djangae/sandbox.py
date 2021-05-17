@@ -26,9 +26,9 @@ _DJANGO_DEFAULT_PORT = 8000
 SERVICE_HOST = "127.0.0.1"
 SERVICE_PROTOCOL_HOST = f"http://{SERVICE_HOST}"
 
-DATASTORE_PORT = 10901
-TASKS_PORT = 10908
-STORAGE_PORT = 10911
+DEFAULT_DATASTORE_PORT = 10901
+DEFAULT_TASKS_PORT = 10908
+DEFAULT_STORAGE_PORT = 10911
 
 DEFAULT_PROJECT_ID = "example"
 DEFAULT_BUCKET = "%s.appspot.com" % DEFAULT_PROJECT_ID
@@ -108,12 +108,12 @@ def start_emulators(
     persist_data: bool,
     project_id: str = DEFAULT_PROJECT_ID,
     emulators: Sequence[str] = _ALL_EMULATORS,
-    datastore_port: int = DATASTORE_PORT,
+    datastore_port: int = DEFAULT_DATASTORE_PORT,
     datastore_dir: Optional[str] = None,
-    tasks_port: int = TASKS_PORT,
+    tasks_port: int = DEFAULT_TASKS_PORT,
     task_target_port: Optional[int] = None,
     autodetect_task_port: bool = True,
-    storage_port: int = STORAGE_PORT,
+    storage_port: int = DEFAULT_STORAGE_PORT,
     storage_dir: Optional[str] = None,
 
 ):
@@ -128,7 +128,7 @@ def start_emulators(
         if not port_is_open(SERVICE_HOST, datastore_port):
             # If start_emulators is call explicitly passing the Datastore Emulator port
             # and the port is not available raise and Runtime exception.
-            if datastore_port != DATASTORE_PORT:
+            if datastore_port != DEFAULT_DATASTORE_PORT:
                 raise RuntimeError(f"Unable to start Cloud Datastore Emulator at port {datastore_port}.")
             else:
                 datastore_port = get_next_available_port(SERVICE_HOST, datastore_port)
@@ -152,7 +152,7 @@ def start_emulators(
         # If start_emulators is call explicitly passing the Cloud Task emulator port
         # and the port is not available raise and Runtime exception.
         if not port_is_open(SERVICE_HOST, tasks_port):
-            if tasks_port != TASKS_PORT:
+            if tasks_port != DEFAULT_TASKS_PORT:
                 raise RuntimeError(f"Unable to start Cloud Tasks Emulator at port {tasks_port}.")
             else:
                 tasks_port = get_next_available_port(SERVICE_HOST, tasks_port)
@@ -192,7 +192,7 @@ def start_emulators(
         # If start_emulators is call explicitly passing the Cloud Storage emulator port
         # and the port is not available raise and Runtime exception.
         if not port_is_open(SERVICE_HOST, storage_port):
-            if storage_port != STORAGE_PORT:
+            if storage_port != DEFAULT_STORAGE_PORT:
                 raise RuntimeError(f"Unable to start Cloud Storage Emulator at port {storage_port}.")
             else:
                 storage_port = get_next_available_port(SERVICE_HOST, storage_port)
@@ -229,3 +229,14 @@ def enable_test_environment_variables():
     os.environ.setdefault("GOOGLE_CLOUD_PROJECT", DEFAULT_PROJECT_ID)
     os.environ.setdefault("GAE_APPLICATION", "e~%s" % DEFAULT_PROJECT_ID)
     os.environ.setdefault("GAE_ENV", "development")
+
+
+def wipe_cloud_storage():
+    storage_emulator_host = os.environ['STORAGE_EMULATOR_HOST']
+    if not storage_emulator_host:
+        logger.warning(
+            "Cloud storage emulator wipe operation failed."
+            "Cloud storage emulator has not been started.")
+        return
+
+    urlopen(f"{storage_emulator_host}/wipe?keep-buckets=true")
