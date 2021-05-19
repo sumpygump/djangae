@@ -18,11 +18,14 @@ from djangae.tasks.decorators import (
 from djangae.tasks.deferred import defer
 from djangae.tasks.environment import (
     is_in_cron,
+    is_in_task,
     task_name,
     task_queue_name,
     task_execution_count,
+    task_retry_count,
 )
-from djangae.tasks.middleware import _TASK_NAME_HEADER
+from djangae.tasks import environment
+from djangae.tasks.middleware import _TASK_NAME_HEADER, task_environment_middleware
 from djangae.test import TestCase
 
 
@@ -163,3 +166,36 @@ class EnvironmentTests(TestCase):
         self.assertFalse(task_name())
         self.assertFalse(task_queue_name())
         self.assertFalse(task_execution_count())
+
+    def test_middleware_resets_thread_locals_flags(self):
+        # Set all the task environment flags that should be reset
+        for attr, set_value in (
+            ("task_name", "footask"),
+            ("queue_name", "fooqueue"),
+            ("task_execution_count", 1),
+            ("task_retry_count", 1),
+            ("is_cron", True),
+        ):
+            setattr(environment._TASK_ENV, attr, set_value)
+
+        # All helpers should return their active value
+        self.assertTrue(is_in_task())
+        self.assertTrue(is_in_cron())
+        self.assertEquals(task_name(), "footask")
+        self.assertEquals(task_queue_name(), "fooqueue")
+        self.assertEquals(task_retry_count(), 1)
+        self.assertEquals(task_execution_count(), 1)
+
+        # Running the middleware should unset flags
+        def get_response(request):
+            return HttpResponse()
+        request = RequestFactory().get("/")
+        task_environment_middleware(get_response)(request)
+
+        # All helpers should be reset to their default
+        self.assertFalse(is_in_task())
+        self.assertFalse(is_in_cron())
+        self.assertIsNone(task_name())
+        self.assertIsNone(task_queue_name())
+        self.assertIsNone(task_retry_count())
+        self.assertIsNone(task_execution_count())

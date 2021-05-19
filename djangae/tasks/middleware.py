@@ -24,8 +24,8 @@ def task_environment_middleware(get_response):
                 "task_name",
                 "queue_name",
                 "task_execution_count",
-                "task_retry_count"
-                "is_cron"
+                "task_retry_count",
+                "is_cron",
             ):
                 setattr(_TASK_ENV, attr, None)
 
