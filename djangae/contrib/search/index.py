@@ -6,6 +6,7 @@ from gcloudc.db import transaction
 from djangae.contrib.search.document import Document
 from djangae.contrib.search.fields import IntegrityError
 from djangae.contrib.search import _SEARCH_QUEUE
+from djangae.tasks.deferred import defer_iteration_with_finalize
 
 _DEFAULT_INDEX_NAME = "default"
 
@@ -24,7 +25,6 @@ def reindex_document(document):
         then indexes the document
     """
 
-    from djangae.tasks.deferred import defer_iteration_with_finalize
     from .models import DocumentRecord
     from .models import TokenFieldIndex
 
@@ -37,7 +37,6 @@ def reindex_document(document):
         record_id=document.id,
         revision=document.revision
     )
-
     defer_iteration_with_finalize(
         qs, _destroy_record, _finalize, _shards=1, _queue=_SEARCH_QUEUE
     )
@@ -54,7 +53,6 @@ def unindex_document(document):
         Deletes a document from its index
     """
 
-    from djangae.tasks.deferred import defer_iteration_with_finalize
     from .models import DocumentRecord
     from .models import TokenFieldIndex
 

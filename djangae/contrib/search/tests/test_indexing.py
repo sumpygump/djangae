@@ -1,4 +1,4 @@
-from unittest import skip
+from unittest import skip, mock
 
 from djangae.contrib.search import fields
 from djangae.contrib.search.document import Document
@@ -6,6 +6,7 @@ from djangae.contrib.search.index import Index
 from djangae.contrib.search.models import TokenFieldIndex
 from djangae.contrib.search.tokens import tokenize_content
 from djangae.test import TestCase
+from django.test import override_settings
 
 
 class QueryStringParseTests(TestCase):
@@ -350,3 +351,56 @@ class IndexingTests(TestCase):
         self.process_task_queues()
 
         self.assertEqual(TokenFieldIndex.objects.count(), 1)
+
+    @mock.patch('djangae.contrib.search.index.defer_iteration_with_finalize')
+    def test_search_queue_add_to_index_does_not_defer(self, defer_mock):
+
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index("test")
+        doc1 = Doc(text="about")
+
+        index.add(doc1)
+        self.assertTrue(doc1.persisted)
+
+        self.process_task_queues()
+
+        self.assertFalse(defer_mock.called)
+
+
+    @mock.patch('djangae.contrib.search.index.defer_iteration_with_finalize')
+    def test_search_queue_reindex_call_defer(self, defer_mock):
+
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index("test")
+        doc1 = Doc(text="about")
+
+        index.add(doc1)
+        # Adding an existing document again will update the revision
+        index.add(doc1)
+        self.assertTrue(doc1.persisted)
+
+        self.process_task_queues()
+        defer_mock.assert_called_with(mock.ANY, mock.ANY, mock.ANY, _queue="default", _shards=1)
+
+
+    @override_settings(DJANGAE_SEARCH_QUEUE="search")
+    @mock.patch('djangae.contrib.search.index.defer_iteration_with_finalize')
+    def test_search_queue_reindex_queue_override(self, defer_mock):
+
+        class Doc(Document):
+            text = fields.TextField()
+
+        index = Index("test")
+        doc1 = Doc(text="about")
+
+        index.add(doc1)
+        # Adding an existing document again will update the revision
+        index.add(doc1)
+        self.assertTrue(doc1.persisted)
+
+        self.process_task_queues()
+        defer_mock.assert_called_with(mock.ANY, mock.ANY, mock.ANY, _queue="default", _shards=1)
