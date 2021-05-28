@@ -38,7 +38,7 @@ def reindex_document(document):
     )
 
     defer_iteration_with_finalize(
-        qs, _destroy_record, _finalize
+        qs, _destroy_record, _finalize, _shards=1
     )
 
     # Generate a brand new revision ID for this document
@@ -69,7 +69,7 @@ def unindex_document(document):
     ).all()
 
     defer_iteration_with_finalize(
-        qs, _destroy_record, _finalize
+        qs, _destroy_record, _finalize, _shards=1
     )
 
     record.delete()
