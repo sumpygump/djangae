@@ -1,6 +1,6 @@
 from unittest import skip
 
-from djangae.contrib.search import fields, IntegrityError
+from djangae.contrib.search import fields
 from djangae.contrib.search.document import Document
 from djangae.contrib.search.index import Index
 from djangae.contrib.search.models import TokenFieldIndex
@@ -260,7 +260,7 @@ class IndexingTests(TestCase):
         doc1 = Doc(text="test")
         doc2 = Doc(text=None)
 
-        self.assertRaises(IntegrityError, index.add, [doc1, doc2])
+        self.assertRaises(fields.IntegrityError, index.add, [doc1, doc2])
         self.assertEqual(index.document_count(), 0)  # Nothing should've been indexed
 
     def test_field_index_flag_respected(self):

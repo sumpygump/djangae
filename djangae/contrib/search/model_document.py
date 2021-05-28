@@ -7,8 +7,9 @@ from django.db.models import Manager
 
 from djangae.contrib import search
 from djangae.contrib.search import fields as search_fields
+from djangae.contrib.search import document
 
-from .index import Index
+from djangae.contrib.search.index import Index
 
 
 class ModelDocument(object):
@@ -106,7 +107,7 @@ def document_from_model_document(model, model_document):
 
     Document = type(
         '%sDocument' % model.__name__,
-        (search.Document,),
+        (document.Document,),
         attrs
     )
 
