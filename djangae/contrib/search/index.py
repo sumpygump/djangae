@@ -6,6 +6,7 @@ from gcloudc.db import transaction
 from djangae.contrib.search.document import Document
 from djangae.contrib.search.fields import IntegrityError
 from djangae.contrib.search import _SEARCH_QUEUE
+from djangae.contrib.search.models import DocumentRecord, TokenFieldIndex, IndexStats
 from djangae.tasks.deferred import defer_iteration_with_finalize
 
 _DEFAULT_INDEX_NAME = "default"
@@ -24,9 +25,6 @@ def reindex_document(document):
         Deletes old tokens, bumps the revision
         then indexes the document
     """
-
-    from .models import DocumentRecord
-    from .models import TokenFieldIndex
 
     try:
         record = document._record or DocumentRecord.objects.get(pk=document.id)
@@ -53,9 +51,6 @@ def unindex_document(document):
         Deletes a document from its index
     """
 
-    from .models import DocumentRecord
-    from .models import TokenFieldIndex
-
     try:
         record = document._record or DocumentRecord.objects.get(pk=document.id)
     except DocumentRecord.DoesNotExist:
@@ -76,7 +71,6 @@ def unindex_document(document):
 
 
 def index_document(index_name, document):
-    from .models import TokenFieldIndex
 
     assert(document.id)  # This should be a thing by now
 
@@ -130,7 +124,6 @@ def index_document(index_name, document):
 class Index(object):
 
     def __init__(self, name):
-        from .models import IndexStats  # Prevent import too early
 
         name = name or _DEFAULT_INDEX_NAME
 
@@ -159,10 +152,6 @@ class Index(object):
             added. If document_or_documents was a list, the result
             will also be a list.
         """
-
-        from .models import (  # Prevent import too early
-            DocumentRecord,
-        )
 
         added_document_ids = []
 
@@ -217,10 +206,6 @@ class Index(object):
             Returns the number of documents that were successfully removed
             from the index.
         """
-
-        from .models import (
-            DocumentRecord,
-        )
 
         if not document_or_documents:
             return 0
@@ -309,6 +294,4 @@ class Index(object):
             yield document_class(_record=record, **data)
 
     def document_count(self):
-        from .models import DocumentRecord  # Prevent import too early
-
         return DocumentRecord.objects.filter(index_stats=self.index).count()
