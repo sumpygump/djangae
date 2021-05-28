@@ -3,8 +3,9 @@ import uuid
 from collections.abc import Iterable
 from gcloudc.db import transaction
 
-from .document import Document
-from .fields import IntegrityError
+from djangae.contrib.search.document import Document
+from djangae.contrib.search.fields import IntegrityError
+from djangae.contrib.search import _SEARCH_QUEUE
 
 _DEFAULT_INDEX_NAME = "default"
 
@@ -38,7 +39,7 @@ def reindex_document(document):
     )
 
     defer_iteration_with_finalize(
-        qs, _destroy_record, _finalize, _shards=1
+        qs, _destroy_record, _finalize, _shards=1, _queue=_SEARCH_QUEUE
     )
 
     # Generate a brand new revision ID for this document
@@ -69,7 +70,7 @@ def unindex_document(document):
     ).all()
 
     defer_iteration_with_finalize(
-        qs, _destroy_record, _finalize, _shards=1
+        qs, _destroy_record, _finalize, _shards=1, _queue=_SEARCH_QUEUE
     )
 
     record.delete()

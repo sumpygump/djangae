@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils.module_loading import autodiscover_modules
 
 from . import model_document
@@ -17,6 +18,9 @@ from .fields import (  # noqa
 )
 
 default_app_config = 'djangae.contrib.search.apps.SearchConfig'
+
+DJANGAE_SEARCH_QUEUE_SETTING = "DJANGAE_SEARCH_QUEUE"
+_SEARCH_QUEUE = getattr(settings, DJANGAE_SEARCH_QUEUE_SETTING, "default")
 
 
 def autodiscover():
