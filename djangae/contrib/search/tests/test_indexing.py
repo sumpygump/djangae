@@ -368,7 +368,6 @@ class IndexingTests(TestCase):
 
         self.assertFalse(defer_mock.called)
 
-
     @mock.patch('djangae.contrib.search.index.defer_iteration_with_finalize')
     def test_search_queue_reindex_call_defer(self, defer_mock):
 
@@ -385,7 +384,6 @@ class IndexingTests(TestCase):
 
         self.process_task_queues()
         defer_mock.assert_called_with(mock.ANY, mock.ANY, mock.ANY, _queue="default", _shards=1)
-
 
     @override_settings(DJANGAE_SEARCH_QUEUE="search")
     @mock.patch('djangae.contrib.search.index.defer_iteration_with_finalize')

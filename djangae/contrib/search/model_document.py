@@ -5,7 +5,6 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import Manager
 
-from djangae.contrib import search
 from djangae.contrib.search import fields as search_fields
 from djangae.contrib.search import document
 

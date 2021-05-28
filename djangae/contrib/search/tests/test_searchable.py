@@ -1,4 +1,3 @@
-from djangae.contrib import search
 from djangae.contrib.search import fields
 from djangae.contrib.search.model_document import (
     document_from_model_document,
