@@ -12,6 +12,8 @@ stages:
  - prepare
  - lint
  - test
+ - build
+ - publish
 
 prepare:python3.8:
   stage: prepare
@@ -76,3 +78,37 @@ test:python3.8:django3.2:
    - source /root/google-cloud-sdk/path.bash.inc
  script:
    - tox -e py38-32
+
+build and test-publish:
+  stage: build
+  image: python:3.8
+  only:
+    - tags
+  before_script:
+    - pip install twine setuptools wheel
+    - rm -rf dist
+    - python setup.py sdist bdist_wheel
+  script:
+    - python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+  artifacts:
+    paths:
+      - dist
+  variables:
+    TWINE_PASSWORD: $TEST_PYPI_TOKEN
+    TWINE_USERNAME: __token__
+
+publish to prod pypi:
+  stage: publish
+  dependencies: ["build and test-publish"]
+  needs: ["build and test-publish"]
+  when: manual
+  image: python:3.8
+  only:
+    - tags
+  before_script:
+    - pip install twine
+  script:
+    - python -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
+  variables:
+    TWINE_PASSWORD: $PROD_PYPI_TOKEN
+    TWINE_USERNAME: __token__
