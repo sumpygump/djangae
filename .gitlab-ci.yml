@@ -81,6 +81,7 @@ test:python3.8:django3.2:
 build and publish:
   stage: publish
   image: python:3.8
+  when: manual
   only:
     - tags
   before_script:
