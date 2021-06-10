@@ -89,13 +89,10 @@ build and test-publish:
     - rm -rf dist
     - python setup.py sdist bdist_wheel
   script:
-    - python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+    - python -m twine upload --username __token__ --password $TEST_PYPI_TOKEN --repository-url https://test.pypi.org/legacy/ dist/*
   artifacts:
     paths:
       - dist
-  variables:
-    TWINE_PASSWORD: $TEST_PYPI_TOKEN
-    TWINE_USERNAME: __token__
 
 publish to prod pypi:
   stage: publish
