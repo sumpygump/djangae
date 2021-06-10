@@ -4,8 +4,8 @@ from django.db import models
 
 from gcloudc.db.models.fields.json import JSONField
 
-from .document import Document
-from .constants import WORD_DOCUMENT_JOIN_STRING
+from djangae.contrib.search.document import Document
+from djangae.contrib.search.constants import WORD_DOCUMENT_JOIN_STRING
 
 
 class DocumentRecord(models.Model):

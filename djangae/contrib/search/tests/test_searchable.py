@@ -1,6 +1,9 @@
-from djangae.contrib import search
 from djangae.contrib.search import fields
-from djangae.contrib.search.model_document import document_from_model_document
+from djangae.contrib.search.model_document import (
+    document_from_model_document,
+    ModelDocument,
+    register
+)
 from djangae.contrib.search.models import TokenFieldIndex
 from djangae.test import TestCase
 
@@ -10,7 +13,7 @@ from .models import (
 )
 
 
-class SearchableModelDocument(search.ModelDocument):
+class SearchableModelDocument(ModelDocument):
     class Meta:
         index = "index1"
         fields = (
@@ -20,7 +23,7 @@ class SearchableModelDocument(search.ModelDocument):
     other_thing = fields.NumberField()
 
 
-class CharFieldPK(search.ModelDocument):
+class CharFieldPK(ModelDocument):
     class Meta:
         fields = (
             "sid",
@@ -30,8 +33,8 @@ class CharFieldPK(search.ModelDocument):
 class SearchableTest(TestCase):
     def setUp(self):
         # Ensure that the model has been registered
-        search.register(SearchableModel1, SearchableModelDocument)
-        search.register(SearchableModel2, CharFieldPK)
+        register(SearchableModel1, SearchableModelDocument)
+        register(SearchableModel2, CharFieldPK)
 
         super().setUp()
 

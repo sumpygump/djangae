@@ -4,11 +4,10 @@ from datetime import (
 )
 from unittest import skip
 
-from djangae.contrib.search import (
-    Document,
-    Index,
-    fields,
-)
+from djangae.contrib.search.document import Document
+from djangae.contrib.search.index import Index
+
+from djangae.contrib.search import fields
 from djangae.contrib.search.query import _tokenize_query_string
 from djangae.test import TestCase
 
