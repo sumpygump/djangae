@@ -12,7 +12,6 @@ stages:
  - prepare
  - lint
  - test
- - build
  - publish
 
 prepare:python3.8:
@@ -79,8 +78,8 @@ test:python3.8:django3.2:
  script:
    - tox -e py38-32
 
-build and test-publish:
-  stage: build
+build and publish:
+  stage: publish
   image: python:3.8
   only:
     - tags
@@ -89,23 +88,10 @@ build and test-publish:
     - rm -rf dist
     - python setup.py sdist bdist_wheel
   script:
-    - python -m twine upload --username=__token__ --password=$TEST_PYPI_TOKEN --repository-url https://test.pypi.org/legacy/ dist/*
-  artifacts:
-    paths:
-      - dist
-
-publish to prod pypi:
-  stage: publish
-  dependencies: ["build and test-publish"]
-  needs: ["build and test-publish"]
-  when: manual
-  image: python:3.8
-  only:
-    - tags
-  before_script:
-    - pip install twine
-  script:
     - python -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
   variables:
     TWINE_PASSWORD: $PROD_PYPI_TOKEN
     TWINE_USERNAME: __token__
+  artifacts:
+    paths:
+      - dist
