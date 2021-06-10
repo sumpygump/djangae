@@ -89,10 +89,4 @@ build and publish:
     - rm -rf dist
     - python setup.py sdist bdist_wheel
   script:
-    - python -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
-  variables:
-    TWINE_PASSWORD: $PROD_PYPI_TOKEN
-    TWINE_USERNAME: __token__
-  artifacts:
-    paths:
-      - dist
+    - python -m twine upload --username=__token__ --password=$PROD_PYPI_TOKEN --repository-url https://upload.pypi.org/legacy/ dist/*
