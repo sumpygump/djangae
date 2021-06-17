@@ -13,10 +13,11 @@ from urllib.error import (
 )
 from urllib.request import urlopen
 
-from django.utils.autoreload import DJANGO_AUTORELOAD_ENV
-
-from djangae.environment import get_application_root
 from djangae.utils import get_next_available_port, port_is_open
+
+# This is copied from Django so that we don't import Django, and therefore
+# settings.py before we've got the Datastore etc. up and running
+DJANGO_AUTORELOAD_ENV = 'RUN_MAIN'
 
 _ACTIVE_EMULATORS = {}
 _ALL_EMULATORS = ("datastore", "tasks", "storage")
@@ -112,16 +113,15 @@ def start_emulators(
     datastore_dir: Optional[str] = None,
     tasks_port: int = DEFAULT_TASKS_PORT,
     task_target_port: Optional[int] = None,
+    task_queue_yaml: Optional[str] = None,
     autodetect_task_port: bool = True,
     storage_port: int = DEFAULT_STORAGE_PORT,
     storage_dir: Optional[str] = None,
-
 ):
     # This prevents restarting of the emulators when Django code reload kicks in
     if os.environ.get(DJANGO_AUTORELOAD_ENV) == 'true':
         return
 
-    storage_dir = storage_dir or os.path.join(get_application_root(), ".storage")
     enable_test_environment_variables()
 
     if "datastore" in emulators:
@@ -178,11 +178,12 @@ def start_emulators(
 
         # If the project contains a queue.yaml, pass it to the Tasks Emulator so that those queues
         # can be created (needs version >= 0.4.0)
-        queue_yaml = os.path.join(get_application_root(), "queue.yaml")
-        if os.path.exists(queue_yaml):
+        if task_queue_yaml and os.path.exists(task_queue_yaml):
             command += " --queue-yaml=%s --queue-yaml-project=%s --queue-yaml-location=%s" % (
-                queue_yaml, cloud_tasks_project(), cloud_tasks_location()
+                task_queue_yaml, cloud_tasks_project(), cloud_tasks_location()
             )
+        elif task_queue_yaml:
+            logger.warn("task_queue_yaml was passed, but the file does not exist. Ignoring.")
 
         os.environ["TASKS_EMULATOR_HOST"] = f"{SERVICE_HOST}:{tasks_port}"
         _ACTIVE_EMULATORS["tasks"] = _launch_process(command)

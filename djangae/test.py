@@ -1,4 +1,4 @@
-
+import tempfile
 from django.test.runner import DiscoverRunner
 from djangae.tasks.test import (
     TaskFailedBehaviour,
@@ -35,7 +35,15 @@ class TransactionTestCase(TestEnvironmentMixin, TestCaseMixin, test.TransactionT
 
 class AppEngineDiscoverRunner(DiscoverRunner):
     def setup_test_environment(self, **kwargs):
-        start_emulators(persist_data=False)
+        datastore_dir = tempfile.mkdtemp()
+        storage_dir = tempfile.mkdtemp()
+
+        start_emulators(
+            persist_data=False,
+            datastore_dir=datastore_dir,
+            storage_dir=storage_dir
+        )
+
         super().setup_test_environment(**kwargs)
 
     def teardown_test_environment(self, **kwargs):
