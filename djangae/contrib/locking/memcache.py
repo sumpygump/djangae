@@ -24,7 +24,7 @@ class MemcacheLock(object):
                 return None
             else:
                 # We are waiting for the lock
-                if (datetime.utcnow() - start_time).total_seconds() * 1000 > steal_after_ms:
+                if steal_after_ms and (datetime.utcnow() - start_time).total_seconds() * 1000 > steal_after_ms:
                     # Steal anyway
                     cache.set(identifier, unique_value)
                     return cls(identifier, cache, unique_value)
