@@ -1,5 +1,6 @@
 # STANDARD LIB
 import hashlib
+import threading
 
 # THIRD PARTY
 from django.utils import timezone
@@ -147,6 +148,31 @@ class MemcacheLocksTestCase(TestCase):
         self.assertFalse(MemcacheLock.acquire('x', wait=False))
 
         self.assertTrue(do_context())  # Should succeed eventually
+
+    def test_context_manager_no_steal(self):
+        did_raise_error = False
+
+        def acquire_lock():
+            nonlocal did_raise_error
+
+            try:
+                lock = MemcacheLock.acquire('x')
+                lock.release()
+            except Exception:
+                did_raise_error = True
+
+        # acquire lock x
+        lock = MemcacheLock.acquire('x')
+        # try to acquire the same lock x in a thread
+        t = threading.Thread(target=acquire_lock)
+        t.start()
+        # release lock
+        lock.release()
+        # wait for the thread to finish
+        t.join()
+
+        # assert that the thread did not raise an error when acquiring the lock
+        self.assertFalse(did_raise_error)
 
     def test_context_manager_no_wait(self):
         """ If the lock is already acquired, then our context manager with wait=False should raise
