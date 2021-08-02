@@ -1,4 +1,4 @@
-# Djangae 2
+# Djangae
 
 **The best way to run Django on Google App Engine.**
 
@@ -25,5 +25,4 @@ Gitter: [https://gitter.im/potatolondon/djangae](https://gitter.im/potatolondon/
 
 ## Supported Django Versions
 
-Djangae currently supports Django 2.2.
-
+Djangae currently supports Django 3.2.
