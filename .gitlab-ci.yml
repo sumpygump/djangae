@@ -46,6 +46,21 @@ lint:python3:
   script:
     - tox -e flake8
 
+test:pages:
+  image: python:3.9
+  stage: test
+  needs: []  # We can execute this out-of-order
+  before_script:
+  - pip install mkdocs>=1.1.2
+  script:
+  - mkdir -p test
+  - mkdocs build --strict --verbose --site-dir test
+  artifacts:
+    paths:
+    - test
+  except:
+  - master
+
 test:python3.8:django2.2:
  image: $CI_REGISTRY_IMAGE:python3.8
  stage: test
@@ -90,3 +105,18 @@ build and publish:
     - python setup.py sdist bdist_wheel
   script:
     - python -m twine upload --username=__token__ --password=$PROD_PYPI_TOKEN --repository-url https://upload.pypi.org/legacy/ dist/*
+
+publish:pages:
+  image: python:3.9
+  stage: publish
+  needs: []
+  before_script:
+  - pip install mkdocs>=1.1.2
+  script:
+  - mkdir -p public
+  - mkdocs build --strict --verbose
+  artifacts:
+    paths:
+    - public
+  only:
+  - master
