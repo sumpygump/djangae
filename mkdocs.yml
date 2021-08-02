@@ -1,5 +1,5 @@
 site_name: Djangae Documentation
-site_url: https://pages.gitlab.io/potato-oss/djangae/djangae
+site_url: https://potato-oss.gitlab.io/djangae/djangae/
 site_dir: public
 repo_url: https://gitlab.com/potato-oss/djangae/djangae
 nav:
