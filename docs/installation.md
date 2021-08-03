@@ -76,7 +76,7 @@ Deploying your application is the same as deploying any Google App Engine projec
 
 ## Cache Backend
 
-By default, Djangae uses `FileBasedCache` storing data in `.cache/` in your local env and in `/tmp` when deployed to GAE. This provides an in-memory caching system (`/tmp` is an in-memory filesystem), which is not shared across instances. If you need cross-instances cache we recomment using [Memorystore for Redis](https://cloud.google.com/memorystore/docs/redis) with [django-redis-cache](https://django-redis-cache.readthedocs.io/en/latest/index.html). Make sure you configure [VPC](https://cloud.google.com/appengine/docs/standard/python3/connecting-vpc) for your project to allow access to the redis instance from your GAE standard environment app. Your configuration should look something like this:
+By default, Djangae uses `FileBasedCache` storing data in `.cache/` in your local env and in `/tmp` when deployed to GAE. This provides an in-memory caching system (`/tmp` is an in-memory filesystem), which is not shared across instances. If you need cross-instances cache we recommend using [Memorystore for Redis](https://cloud.google.com/memorystore/docs/redis) with [django-redis-cache](https://django-redis-cache.readthedocs.io/en/latest/index.html). Make sure you configure [VPC](https://cloud.google.com/appengine/docs/standard/python3/connecting-vpc) for your project to allow access to the redis instance from your GAE standard environment app. Your configuration should look something like this:
 
 ```python
 # ...
@@ -103,4 +103,4 @@ urlpatterns = [
 The `_ah/` path is important as the views handle the built-in App Engine requests to `/_ah/warmup`, `/_ah/start`, and `/_ah/stop`.
 
 Additionally Djangae implements a view at `/_ah/clearsessions` to handle clearing expired Django sessions from the database. You should
-configure cron to post to this URL (see [sessions.md](Sessions))
+configure cron to post to this URL (see [sessions.md](sessions.md))
