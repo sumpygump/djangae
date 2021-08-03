@@ -8,9 +8,8 @@ Google Group: [https://groups.google.com/forum/#!forum/djangae-users](https://gr
 
 Website: [https://djangae.org](https://djangae.org)
 
-GitHub: [https://github.com/potatolondon/djangae](https://github.com/potatolondon/djangae)
+GitLab: [https://gitlab.com/potato-oss/djangae/djangae](https://gitlab.com/potato-oss/djangae/djangae)
 
-Gitter: [https://gitter.im/potatolondon/djangae](https://gitter.im/potatolondon/djangae)
 
 **Note: Djangae is under heavy development, stability is not guaranteed. A 2.0 release will happen when it's ready. If you are looking to use Djangae on Python 2, then take a look at the 1.x branch**
 
@@ -22,6 +21,7 @@ Gitter: [https://gitter.im/potatolondon/djangae](https://gitter.im/potatolondon/
 * A series of security patches and checks to improve the security of your project
 * Test utils for testing code that uses the Cloud Tasks API
 * Apps for cross-request locking and efficient pagination on the Google Cloud Datastore
+* Django authentication backends for Google OAuth and IAP
 
 ## Supported Django Versions
 
