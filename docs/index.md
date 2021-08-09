@@ -1,8 +1,9 @@
 # Djangae
 
-**The best way to run Django on Google App Engine.**
+**Serverless Django on Google Cloud Platform**
 
-Djangae (jan-gee) is a Django app that allows you to run Django applications on Google App Engine.
+Djangae (djan-gee) is a Django app that allows you to run serverless Django applications on Google's Cloud Platform. It provides
+everything you need to write scalable Django apps using technologies like Google Cloud Datastore, Google Cloud Tasks, and Google App Engine.
 
 Google Group: [https://groups.google.com/forum/#!forum/djangae-users](https://groups.google.com/forum/#!forum/djangae-users)
 
@@ -15,13 +16,13 @@ GitLab: [https://gitlab.com/potato-oss/djangae/djangae](https://gitlab.com/potat
 
 ## Features
 
-* Hooks to manage a series of Google Cloud emulators to simulate the Google App Engine environment locally
-* A tasks app which implements "deferred" tasks on Google Cloud Tasks, and functions for iterating large datasets
-* Utility functions to discover information about the running environment
-* A series of security patches and checks to improve the security of your project
-* Test utils for testing code that uses the Cloud Tasks API
-* Apps for cross-request locking and efficient pagination on the Google Cloud Datastore
+* Tight integration with the Django G-Cloud Connectors sibling project, which provides an ORM backend for Google Cloud Datastore
 * Django authentication backends for Google OAuth and IAP
+* Easy launching and management of Google Cloud emulators for local development
+* Integration with Google Cloud Tasks - easily defer functions for background processing
+* System checks to improve the security of your project
+* Test utilities for writing tests that leverage the Google Cloud Platform (e.g. task queue processing)
+* Apps for cross-request locking and efficient pagination on the Google Cloud Datastore
 
 ## Supported Django Versions
 
