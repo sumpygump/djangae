@@ -41,3 +41,7 @@ LOGGING = {
 # Setting to * is OK, because GAE takes care of domain routing - setting it to anything
 # else just causes unnecessary pain when something isn't accessible under a custom domain
 ALLOWED_HOSTS = ("*",)
+
+
+# We set this default because Cloud Datastore uses signed 64 bit integers for IDs
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
