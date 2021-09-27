@@ -1,13 +1,18 @@
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
+from django.db.models import Q
+
 from ..models import (
     AbstractGoogleUser,
     Group,
     UserManager,
     UserPermission,
 )
-from . import _find_atomic_decorator, _generate_unused_username
+from . import (
+    _find_atomic_decorator,
+    _generate_unused_username,
+)
 from .base import BaseBackend
 
 User = get_user_model()
@@ -44,7 +49,9 @@ class OAuthBackend(BaseBackend):
 
             if not user:
                 # Only fallback to email if we didn't find by session ID
-                user = User.objects.filter(email_lower=email.lower()).first()
+                user = User.objects.filter(
+                    Q(email_lower=email.lower()) | Q(email=email)
+                ).first()
 
             # So we previously had a user sign in by email, but not
             # via OAuth, so let's update their user with their oauth
