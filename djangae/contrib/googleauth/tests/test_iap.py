@@ -128,6 +128,46 @@ class IAPAuthenticationTests(TestCase):
 
         self.assertEqual(user.email, 'tESt22@example.com')
 
+    @patch('djangae.contrib.googleauth.backends.iap.id_token.verify_token')
+    def test_email_case_sensitive_fallback(self, verify_token_mock):
+        """
+            Even though we try to find users by email_lower - there are occasions
+            where this calculated field might not have been populated yet (e.g.
+            a move to using contrib.googleauth from another system). For this
+            reason we should do a final fallback search for case-sensitive email
+            matches.
+        """
+
+        user = User.objects.create(
+            email='tESt22@example.com'
+        )
+
+        User.objects.update(email_lower="")
+        user.refresh_from_db()
+
+        self.assertEqual(user.email, 'tESt22@example.com')
+        self.assertEqual(user.email_lower, "")
+
+        user = '99999'
+        user_email = 'tESt22@example.com'
+        verify_token_mock.return_value = {
+            'sub': f'auth.example.com:{user}',
+            'email': user_email,
+        }
+
+        headers = {
+            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': f'auth.example.com:{user}',
+            'HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL': f'auth.example.com:{user_email}',
+            'HTTP_X_GOOG_IAP_JWT_ASSERTION': 'JWT',
+        }
+
+        self.client.get("/", **headers)
+
+        user = User.objects.get()
+
+        self.assertEqual(user.email, 'tESt22@example.com')
+        self.assertEqual(user.email_lower, 'test22@example.com')
+
     @override_settings()
     def test_raises_if_missing_setting(self):
         user = '99999'

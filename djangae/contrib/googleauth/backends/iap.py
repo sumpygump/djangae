@@ -2,19 +2,26 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ImproperlyConfigured, SuspiciousOperation
+from django.core.exceptions import (
+    ImproperlyConfigured,
+    SuspiciousOperation,
+)
+from django.db.models import Q
+from google.auth.transport import requests
+from google.oauth2 import id_token
 
 from djangae.contrib.googleauth import (
-    _GOOG_JWT_ASSERTION_HEADER,
     _GOOG_AUTHENTICATED_USER_EMAIL_HEADER,
     _GOOG_AUTHENTICATED_USER_ID_HEADER,
-    _IAP_AUDIENCE
+    _GOOG_JWT_ASSERTION_HEADER,
+    _IAP_AUDIENCE,
 )
 from djangae.contrib.googleauth.models import UserManager
 
-from google.auth.transport import requests
-from google.oauth2 import id_token
-from . import _find_atomic_decorator, _generate_unused_username
+from . import (
+    _find_atomic_decorator,
+    _generate_unused_username,
+)
 from .base import BaseBackend
 
 User = get_user_model()
@@ -83,7 +90,9 @@ class IAPBackend(BaseBackend):
                 # We explicitly don't do an OR query here, because we only want
                 # to search by email if the user doesn't exist by ID. ID takes
                 # precendence.
-                user = User.objects.filter(email_lower=email.lower()).first()
+                user = User.objects.filter(
+                    Q(email_lower=email.lower()) | Q(email=email)
+                ).first()
 
                 if user and user.google_iap_id:
                     logging.warning(
