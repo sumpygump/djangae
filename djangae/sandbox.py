@@ -14,6 +14,7 @@ from urllib.error import (
 from urllib.request import urlopen
 
 from djangae.utils import get_next_available_port, port_is_open
+from djangae.environment import get_application_root
 
 # This is copied from Django so that we don't import Django, and therefore
 # settings.py before we've got the Datastore etc. up and running
@@ -122,6 +123,27 @@ def start_emulators(
     if os.environ.get(DJANGO_AUTORELOAD_ENV) == 'true':
         return
 
+    # If storage_dir and datastore_dir are specified, we just
+    # use them verbatim, otherwise we do some guesswork
+    if not (storage_dir and datastore_dir):
+        # sys.path[0] is nearly always the parent path of the
+        # executed script (e.g. manage.py)
+        base_path = sys.path[0]
+
+        # Fall-back to the application root with a warning
+        if not base_path:
+            logging.warn(
+                "Unable to determine script path, using "
+                "application root for storage directories"
+            )
+            base_path = get_application_root()
+
+        storage_dir = storage_dir or os.path.join(base_path, ".clouddata", "storage")
+        datastore_dir = datastore_dir or os.path.join(base_path, ".clouddata", "datastore")
+
+    os.makedirs(storage_dir, exist_ok=True)
+    os.makedirs(datastore_dir, exist_ok=True)
+
     enable_test_environment_variables()
 
     if "datastore" in emulators:
@@ -201,6 +223,9 @@ def start_emulators(
         os.environ["STORAGE_EMULATOR_HOST"] = f"http://{SERVICE_HOST}:{storage_port}"
         command = "gcloud-storage-emulator start -q --port=%s --default-bucket=%s" % (
             storage_port, DEFAULT_BUCKET)
+
+        if storage_dir:
+            command += " --data-dir=%s" % storage_dir
 
         if not persist_data:
             command += " --no-store-on-disk"
