@@ -427,7 +427,6 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, ar
                         _queue=queue,
                         **kwargs
                     )
-
             retry(mark_shard_complete, _attempts=6)
 
     except (Exception, TimeoutException) as e:
