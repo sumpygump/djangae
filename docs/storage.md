@@ -2,7 +2,7 @@
 
 Djangae provides two storage backends. `djangae.storage.CloudStorage` and `djangae.storage.BlobstoreStorage`.
 
-If you've imported `djangae.settings_base.*`, then the default backend is `djangae.storage.CloudStorage`
+If you've imported `djangae.settings_base.*`, then the default backend is `djangae.storage.CloudStorage`. If you want to configure it manually in a settings module, you can set your `DEFAULT_FILE_STORAGE` accordingly e.g. `DEFAULT_FILE_STORAGE = 'djangae.storage.CloudStorage'`.
 
 ## Cloud Storage
 
