@@ -82,7 +82,7 @@ For merge request to be merged, following requirements should be met:
 - Relevant documentation should be updated or added
 - Line item should be added to CHANGELOG.md, unless change is really irrelevant
 
-# Running tests
+## Running tests
 
 On setting up the first time, create a Python 3 virtualenv and install the prerequisites with
 
@@ -104,3 +104,7 @@ For running the tests, you just need to run:
 You can run specific tests in the usual way by doing:
 
     tox -e py37 -- some_app.SomeTestCase.some_test_method
+
+# Come work with Potato
+
+Like Django? So do we! Why not come and work for the company that created Djangae? Check out the [Potato jobs page](https://p.ota.to/jobs/) for our open positions, or reach out to [jobs@p.ota.to](mailto:jobs@p.ota.to).
