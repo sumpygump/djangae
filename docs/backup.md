@@ -66,7 +66,7 @@ DJANGAE_BACKUP_EXCLUDE_APPS = [
 
 ### Exclude specific models
 
-Use the form <app_label>_<model_name>
+Use the form `<app_label>_<model_name>`
 
 ```python
 DJANGAE_BACKUP_EXCLUDE_MODELS = [
