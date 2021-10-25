@@ -1,3 +1,4 @@
+import logging
 import os
 
 from django.urls import (
@@ -98,3 +99,8 @@ urlpatterns = [
 ]
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+# We set this default because Cloud Datastore uses signed 64 bit integers for IDs
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+logging.disable(logging.ERROR)
