@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 NAME = 'djangae'
 PACKAGES = find_packages()
 DESCRIPTION = 'Django integration with Google App Engine'
-URL = "https://github.com/potatolondon/djangae"
+URL = "https://gitlab.com/potato-oss/djangae/djangae"
 LONG_DESCRIPTION = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
 AUTHOR = 'Potato London Ltd.'
 
