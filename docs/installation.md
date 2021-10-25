@@ -1,8 +1,19 @@
 # Installation
 
-1. Make sure you have gcloud tools installed, and you've installed the Datastore Emulator
-1. For local development, you'll want to pip install `gcloud-tasks-emulator` and `gcloud-storage-emulator` from PyPi
-1. Create a Django project, add app.yaml and main.py to the root. Make sure Django 2.2+ is in your project and importable.
+## Quickstart
+
+The easiest and quickest way to get a project up and running with Djangae is to use the
+[Djangae Scaffold](https://gitlab.com/potato-oss/djangae/djangae-scaffold) template.
+This gives you a skeleton project with all the necessary configuration to get running right away.
+
+
+## Manual installation
+
+To create a project manually, or to adapt an existing Django project to run with Djangae follow these steps:
+
+1. Make sure you have [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed, and you've installed the Datastore Emulator component.
+1. For local development, you'll want to pip install `gcloud-tasks-emulator` and `gcloud-storage-emulator` from PyPi.
+1. Create a Django project, add app.yaml and main.py to the root. Make sure Django 3.2+ is in your project and importable.
 1. Add a requirements.txt to the root of your project, add djangae to it and install in your environment
 1. Add `'djangae'` to `INSTALLED_APPS`, and probably also `'djangae.tasks'`.  This must come before any `django` apps.
 1. We also recommend that you:
