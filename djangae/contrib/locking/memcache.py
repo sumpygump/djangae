@@ -6,9 +6,8 @@ from django.core.cache import cache
 
 
 class MemcacheLock(object):
-    def __init__(self, identifier, cache, unique_value):
+    def __init__(self, identifier, unique_value):
         self.identifier = identifier
-        self._cache = cache
         self.unique_value = unique_value
 
     @classmethod
@@ -19,7 +18,7 @@ class MemcacheLock(object):
         while True:
             acquired = cache.add(identifier, unique_value)
             if acquired:
-                return cls(identifier, cache, unique_value)
+                return cls(identifier, unique_value)
             elif not wait:
                 return None
             else:
@@ -27,13 +26,11 @@ class MemcacheLock(object):
                 if steal_after_ms and (datetime.utcnow() - start_time).total_seconds() * 1000 > steal_after_ms:
                     # Steal anyway
                     cache.set(identifier, unique_value)
-                    return cls(identifier, cache, unique_value)
+                    return cls(identifier, unique_value)
 
                 time.sleep(0)
 
     def release(self):
-        cache = self._cache
-
         # Delete the key if it was ours. There is a race condition here
         # if something steals the lock between the if and the delete...
         if cache.get(self.identifier) == self.unique_value:
