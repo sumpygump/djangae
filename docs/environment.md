@@ -43,14 +43,14 @@ running on a queue
 
 # Decorators
 
-## djangae.decorators.task_only
+## djangae.tasks.decorators.task_only
 
 View decorator to allow restricting views to tasks (including crons) or admins of the application.
 
-## djangae.decorators.task_or_superuser_only
+## djangae.tasks.decorators.task_or_superuser_only
 
 View decorator that allows through tasks, or users with `is_superuser == True`
 
-## djangae.decorators.csrf_except_if_task
+## djangae.tasks.decorators.csrf_excempt_if_task
 
 View decorator that marks the view csrf_exempt *only* if it's being requested by Cloud Tasks
