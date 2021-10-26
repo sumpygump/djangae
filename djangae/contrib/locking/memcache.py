@@ -1,8 +1,21 @@
+import logging
 import random
 import time
 from datetime import datetime
 
-from django.core.cache import cache
+from django.conf import settings
+from django.core.cache import caches
+from django.core.cache.backends.db import BaseDatabaseCache
+from django.core.cache.backends.memcached import BaseMemcachedCache
+
+try:
+    from redis_cache.backends.base import BaseRedisCache
+except ImportError:
+    class BaseRedisCache:
+        pass
+
+
+logger = logging.getLogger(__name__)
 
 
 class MemcacheLock(object):
@@ -12,6 +25,7 @@ class MemcacheLock(object):
 
     @classmethod
     def acquire(cls, identifier, wait=True, steal_after_ms=None):
+        cache = _get_cache()
         start_time = datetime.utcnow()
         unique_value = random.randint(1, 100000)
 
@@ -31,7 +45,24 @@ class MemcacheLock(object):
                 time.sleep(0)
 
     def release(self):
+        cache = _get_cache()
         # Delete the key if it was ours. There is a race condition here
         # if something steals the lock between the if and the delete...
         if cache.get(self.identifier) == self.unique_value:
             cache.delete(self.identifier)
+
+
+def _get_cache():
+    cache_name = getattr(settings, "DJANGAE_LOCKING_CACHE_NAME", "default")
+    cache = caches[cache_name]
+    if not getattr(_get_cache, "_checked", False):  # Avoid endless spam on every access
+        # This check is inherently uncertain, but it's about as good as we can get
+        if not isinstance(cache, (BaseDatabaseCache, BaseMemcachedCache, BaseRedisCache)):
+            logger.warning(
+                "You are using a djangae.contrib.locking weak lock with a non-global cache "
+                "backend. This means it cannot prevent simultaneous code execution across App "
+                "Engine instances. Change your default cache or set DJANGAE_LOCKING_CACHE_NAME to "
+                "a global cache to fix this."
+            )
+        _get_cache._checked = True
+    return cache
