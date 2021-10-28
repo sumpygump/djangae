@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 NAME = 'djangae'
 PACKAGES = find_packages()
 DESCRIPTION = 'Django integration with Google App Engine'
-URL = "https://github.com/potatolondon/djangae"
+URL = "https://gitlab.com/potato-oss/djangae/djangae"
 LONG_DESCRIPTION = open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
 AUTHOR = 'Potato London Ltd.'
 
@@ -43,8 +43,8 @@ setup(
     # dependencies
     install_requires=[
         'django>=2.2,<=3.3.*',
-        'django-gcloud-connectors>=0.3.4',
-        'google-api-python-client>=1.7.11',
+        'django-gcloud-connectors>=0.3.5',
+        'google-api-python-client>=2.27.0',
         'google-cloud-tasks>=1.5.0,<2.0.0',
         'psutil>=5.7.3',
         # requests required by cloud storage file backend

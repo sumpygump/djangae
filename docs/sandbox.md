@@ -59,7 +59,7 @@ App Engine tasks are stored in the Datastore, so when you are in the remote shel
 
     ./manage.py --sandbox=remote shell
     >>> from my_code import my_function
-    >>> from google.appengine.ext.deferred import defer
+    >>> from djangae.tasks.deferred import defer
     >>> defer(my_function, arg1, arg2, _queue="queue_name")
 
 

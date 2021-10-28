@@ -10,20 +10,28 @@ It is useful for things such as performing Datastore transactions which may coll
 ### `djangae.utils.retry`
 
 ```python
-retry(function, _catch=None, _attempts=3, _initial_wait=375, _max_wait=30000, _avoid_clashes=True)
+retry(
+	function,
+	_catch=None,
+	_attempts=3,
+	_initial_wait=375,
+	_max_wait=30000,
+	_avoid_clashes=True,
+	*function_args,
+	**function_kwargs,
+)
 ```
 
-Calls the given function, catching the given exception(s), and (re)trying up to a maximum of `_attempts` times.
-If the intial call fails, it will wait `_initial_wait` milliseconds before making the second attempt.
+Calls the given function, catching the given exception(s), and (re)tries up to a maximum of `_attempts` times.
+If the initial call fails, it will wait `_initial_wait` milliseconds before making the second attempt.
 The wait will double on each subsequent retry, up to a maximum of `_max_wait` milliseconds.
 
 `_catch` defaults to:
 
 ```python
 (
-    djangae.db.transaction.TransactionFailedError,
-	google.appengine.api.datastore_errors.Error,
-	google.appengine.runtime.apiproxy_errors.Error
+    google.api_core.exceptions.GoogleAPIError,
+	django.db.DatabaseError,
 )
 ```
 
@@ -43,8 +51,16 @@ def my_function():
 
 ### `djangae.utils.retry_until_successful`
 
-```pythonn
-retry(function, _catch=None, _attempts=∞, _initial_wait=375, _max_wait=30000)
+```python
+retry_until_successful(
+	function,
+	_catch=None,
+	_attempts=∞,
+	_initial_wait=375,
+	_max_wait=30000,
+	*function_args,
+	**function_kwargs
+)
 ```
 
 The same as `retry`, but `_attempts` is unlimited, so it will keep on retrying until either it succeeds or you hit an uncaught exception, such as the App Engine `DeadlineExceededError`.

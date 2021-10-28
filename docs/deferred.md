@@ -14,26 +14,39 @@ Djangae's sandbox.py provides functionality to start/stop the emulator for you, 
 
 ## djangae.tasks.deferred.defer
 
-The App Engine SDK provides a utility function called `defer()` which is used to call
-functions and methods from the task queue.
+This allows you to take any function along with the arguments to be passed to it, and defer the function call to be run in the background by Google Cloud Tasks.
 
-The built-in `defer()` method suffers from a number of issues with both bugs, and the API itself.
+A similar function exists in the old Python 2.x version of the App Engine SDK.
+Djangae's version brings this functionality to the Python 3 App Engine environment, and also fixes a number of issues with the original App Engine implementation.
 
-`djangae.deferred.defer` is a near-drop-in replacement for `google.appengine.ext.deferred.defer` with a few differences:
 
- - The code has been altered to always use a Datastore entity group unless the task is explicitly marked as being "small" (less than 100k) with the `_small_task=True` flag.
- - If a Django instance is passed as an argument to the called function, then the foreign key caches are wiped before
-   deferring to avoid bloating and stale data when the task runs. This can be disabled with `_wipe_related_caches=False`
+```defer(function, *args, **kwargs)```
+
+You can optionally pass any of the following kwargs, which are used to control the behaviour, and are not passed to the function call:
+
+* `_queue` - Name of the Cloud Tasks queue on which to run the task.
+* `_eta` - A `datetime` object specifying when you want the task to run.
+* `_countdown` - Number of seconds by which to delay execution of the task. Overrides `_eta`.
+* `_name` - A name for the Cloud Tasks task. Can be used to avoid repeated execution of the same task.
+* `_service` - Name of the App Engine service on which to run the task.
+* `_version` - Name of the version of the App Engine service on which to run the task.
+* `_instance` - Name of the App Engine instance on which to run the task.
+* `_transactional` - Boolean, which if True delays the deferring of the task until after the current database transaction has successfully committed. Defaults to False, unless called from within an atomic block, in which case it's forced to True.
+* `_using` - Name of the Django database connection to which `_transactional` relates. Defaults to "default".
+* `_small_task` - If you know that the task payload will be less than 100KB, then you can set this to True and a Datastore entity will not be used to store the task payload.
+* `_wipe_related_caches` - By default, if a Django instance is passed as an argument to the called function, then the foreign key caches are wiped before
+   deferring to avoid bloating and stale data when the task runs. Set this to False to disable this functionality.
+* `_retry_options` - Not yet implemented.
+
+Usage notes:
+
+ - It is good practice to not pass Django model instances as arguments for the function, as if you do, when the function runs it will get the model instance as it was when the function was deferred, which may be different to how that instance is in the database when the function _runs_, especially if the task gets retried due to an error, or if the `_countdown` or `_eta` was specified. It's better to pass the PK of the instance and reload it inside the function.
  - Transactional tasks do not *guarantee* that the task will run. It's possible (but unlikely) for the transaction to complete
    successfully, but the queuing of the task to fail. It is not possible for the transaction to fail and the task to queue however.
- - `_transactional` defaults to `True` if called within an atomic() block, or `False` otherwise.
- - `_using` is provided to choose which connection should control transactional queuing. Defaults to "default".
-
-Everything else should behave in the same way.
 
 ## djange.tasks.deferred.defer_iteration_with_finalize
 
-`defer_iteration_with_finalize(queryset, callback, finalize, args=None, _queue='default', _shards=5, _delete_marker=True, _transactional=False)`
+`defer_iteration_with_finalize(queryset, callback, finalize, _queue='default', _shards=5, _delete_marker=True, _transactional=False, *args, **kwargs)`
 
 This function provides similar functionality to a Mapreduce pipeline, but it's entirely self-contained and leverages
 defer to process the tasks.
@@ -45,7 +58,7 @@ avoids hitting the 10 minute deadline for background tasks.
 This means that callbacks should complete **within a maximum of 30 seconds**. Callbacks that take longer than this could cause the iteration to fail,
 or, more likely, repeatedly retry running the callback on the same instances.
 
-If `args` is specified, these arguments are passed as positional arguments to both `callback` (after the instance) and `finalize`.
+If additional `*args` and/or `**kwargs` are specified, are passed to both `callback` (after the instance) and `finalize`.
 
 `_shards` is the number of shards to use for processing. If `_delete_marker` is `True` then the Datastore entity that
 tracks complete shards is deleted. If you want to keep these (as a log of sorts) then set this to `False`.
@@ -54,7 +67,7 @@ tracks complete shards is deleted. If you want to keep these (as a log of sorts)
 
 ### Identifying a task shard
 
-From a shard callback, you can identify the current shard by using the `get_deferred_shard_index()` method:
+From a shard callback, you can identify the current shard by using the `get_deferred_shard_index()` function:
 
 ```
 from djangae.deferred import get_deferred_shard_index
