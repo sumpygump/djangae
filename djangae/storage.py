@@ -86,7 +86,8 @@ class CloudStorageFile(File):
 
         f = BytesIO()
         self._blob.download_to_file(f)
-        return f.getvalue()
+        content = f.getvalue()
+        return content[:num_bytes]
 
     def write(self, content):
         raise NotImplementedError("Write of CloudStorageFile object not currently supported.")
