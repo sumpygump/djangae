@@ -81,8 +81,6 @@ class CloudStorageFile(File):
     def read(self, num_bytes=None):
         if "r" not in self._mode:
             raise UnsupportedOperation("File open in '{}' mode is not readable".format(self._mode))
-        if num_bytes:
-            raise NotImplementedError("Specified argument 'num_bytes: {}' not supported".format(num_bytes))
 
         f = BytesIO()
         self._blob.download_to_file(f)
