@@ -75,7 +75,7 @@ def app_host() -> str:
     Fallbacks to example-dot-example.appspost.com on local
     """
     version = gae_version() or 'example'
-    return "{}-dot-{}".format(version, default_app_host)
+    return "{}-dot-{}".format(version, default_app_host())
 
 
 def project_id() -> str:
