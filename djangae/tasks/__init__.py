@@ -4,6 +4,7 @@ from djangae.environment import project_id as gae_project_id
 import logging
 import os
 import grpc
+from google.protobuf import field_mask_pb2
 
 default_app_config = 'djangae.tasks.apps.DjangaeTasksConfig'
 
@@ -47,8 +48,8 @@ def get_cloud_tasks_client():
 
 def ensure_required_queues_exist():
     """
-        Reads settings.CLOUD_TASK_QUEUES_REQUIRED
-        and calls create_queue for them if they don't exist
+        Reads settings.CLOUDS_TASKS_QUEUES
+        and creates or updates the specified queues
     """
     client = get_cloud_tasks_client()
     parent_path = cloud_tasks_parent_path()
@@ -61,13 +62,32 @@ def ensure_required_queues_exist():
         # etc. involves changing a load of settings.
         assert("/" not in queue_name)  # Don't specify the full path
 
-        queue_dict = queue.copy()
+        update_mask = ["name"]
+        queue_dict = {}
         queue_dict["name"] = "%s/queues/%s" % (parent_path, queue_name)
+        queue_dict["rate_limits"] = {}
+        queue_dict["retry_config"] = {}
 
-        logging.info("Ensuring task queue: %s", queue_dict["name"])
-        client.create_queue(
-            parent=parent_path,
-            queue=queue_dict
+        if "rate_per_second" in queue:
+            update_mask.append("rate_limits.max_dispatches_per_second")
+            queue_dict["rate_limits"]["max_dispatches_per_second"] = queue["rate_per_second"]
+
+        if "rate_max_concurrent" in queue:
+            update_mask.append("rate_limits.max_concurrent_dispatches")
+            queue_dict["rate_limits"]["max_concurrent_dispatches"] = queue["rate_max_concurrent"]
+
+        if "retry_max_attempts" in queue:
+            update_mask.append("retry_config.max_attempts")
+            queue_dict["retry_config"]["max_attempts"] = queue["retry_max_attempts"]
+
+        logging.info("Ensuring task queue is up-to-date: %s", queue_dict["name"])
+
+        from google.cloud.tasks_v2.types import Queue
+        queue = Queue(**queue_dict)
+
+        client.update_queue(
+            queue=queue,
+            update_mask=field_mask_pb2.FieldMask(paths=update_mask)
         )
 
 

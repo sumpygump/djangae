@@ -1,4 +1,5 @@
 from djangae.environment import is_production_environment
+from djangae.tasks.environment import tasks_location
 
 FILE_CACHE_LOCATION = '/tmp/cache' if is_production_environment() else '.cache'
 
@@ -45,3 +46,7 @@ ALLOWED_HOSTS = ("*",)
 
 # We set this default because Cloud Datastore uses signed 64 bit integers for IDs
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Set a default CLOUD_TASKS_LOCATION variable based on the environment (if we can)
+CLOUD_TASKS_LOCATION = tasks_location()
