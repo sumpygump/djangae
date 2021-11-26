@@ -51,6 +51,27 @@ class LocalIAPMiddlewareTests(TestCase):
             ).exists()
         )
 
+    def test_is_superuser_flag_set(self):
+        form_data = {
+            "email": "test@example.com",
+            "is_superuser": True,
+        }
+
+        response = self.client.post("/_dj/login/?next=/", form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn('_auth_user_id', self.client.session)
+
+        self.assertTrue(
+            User.objects.filter(
+                email="test@example.com"
+            ).exists()
+        )
+
+        self.assertTrue(
+            User.objects.get(email="test@example.com").is_superuser
+        )
+
     def test_login_failure(self):
         form_data = {
             "email": "test"

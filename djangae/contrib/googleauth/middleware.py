@@ -1,4 +1,5 @@
 
+
 from djangae.contrib.googleauth import (
     _GOOG_AUTHENTICATED_USER_EMAIL_HEADER,
     _GOOG_AUTHENTICATED_USER_ID_HEADER,
@@ -20,6 +21,7 @@ from django.contrib.auth import (
     load_backend,
     login,
     logout,
+    get_user_model
 )
 from django.contrib.auth.middleware import AuthenticationMiddleware
 from django.http import HttpResponseRedirect
@@ -143,6 +145,10 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
 
 class ProfileForm(forms.Form):
     email = forms.EmailField()
+    is_superuser = forms.BooleanField(
+        initial=False,
+        required=False
+    )
 
 
 _CREDENTIALS_FILE = os.path.join(
@@ -160,8 +166,9 @@ def _login_view(request):
             #    is not writable.
             with open(_CREDENTIALS_FILE, "w") as f:
                 f.write(
-                    "%s\n" % (
-                        form.cleaned_data["email"]
+                    "%s\n%s\n" % (
+                        form.cleaned_data["email"],
+                        form.cleaned_data["is_superuser"],
                     )
                 )
 
@@ -189,6 +196,8 @@ def id_from_email(email):
 
 
 def local_iap_login_middleware(get_response):
+    User = get_user_model()
+
     def middleware(request):
         request._through_local_iap_middleware = True
 
@@ -213,11 +222,25 @@ def local_iap_login_middleware(get_response):
             if os.path.exists(_CREDENTIALS_FILE):
                 # Update the request headers with the stored credentials
                 with open(_CREDENTIALS_FILE, "r") as f:
-                    data = f.read()
+                    data = f.readline()
                     email = data.strip()
 
+                    # Set is_superuser according to the
+                    # data in the credentials file.
+                    data = f.readline()
+                    is_superuser = data.strip() == "True"
+
+                    user, _ = User.objects.update_or_create(
+                        google_iap_id=id_from_email(email),
+                        google_iap_namespace="auth.example.com",
+                        defaults=dict(
+                            is_superuser=is_superuser,
+                            email=email,
+                        )
+                    )
+
                     request.META[_GOOG_JWT_ASSERTION_HEADER] = "JWT TOKEN"
-                    request.META[_GOOG_AUTHENTICATED_USER_ID_HEADER] = "auth.example.com:%s" % id_from_email(email)
+                    request.META[_GOOG_AUTHENTICATED_USER_ID_HEADER] = "auth.example.com:%s" % user.google_iap_id
                     request.META[_GOOG_AUTHENTICATED_USER_EMAIL_HEADER] = "auth.example.com:%s" % email
 
             response = get_response(request)
