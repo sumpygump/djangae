@@ -5,7 +5,7 @@ from django.apps import apps
 
 import googleapiclient.discovery
 from djangae.environment import (
-    application_id,
+    project_id,
     is_production_environment,
 )
 import google.auth
@@ -50,7 +50,7 @@ def backup_datastore(bucket=None, kinds=None):
             'kinds': valid_kinds,
         }
     }
-    app_id = application_id()
+    app_id = project_id()
     request = service.projects().export(projectId=app_id, body=body)
     request.execute()
 
