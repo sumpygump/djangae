@@ -3,7 +3,7 @@ from typing import Optional
 
 from django.core.exceptions import ImproperlyConfigured
 
-from djangae.environment import application_id
+from djangae.environment import project_id
 
 _TASK_ENV = threading.local()
 
@@ -70,7 +70,7 @@ def tasks_location(app_id_with_prefix=None) -> Optional[str]:
         Returns the cloud tasks location based on the application
         ID prefix. Returns None if unsuccessful. If no app_id
         is specified then it is read from the result of
-        djangae.environment.application_id
+        djangae.environment.project_id
     """
 
     LOOKUP = {
@@ -99,6 +99,6 @@ def tasks_location(app_id_with_prefix=None) -> Optional[str]:
         'zwn': 'us-west4',
     }
 
-    app_id_with_prefix = app_id_with_prefix or application_id()
+    app_id_with_prefix = app_id_with_prefix or project_id()
     location_id = app_id_with_prefix.split("~", 1)[0]
     return LOOKUP.get(location_id)

@@ -35,7 +35,7 @@ def deprecated(replacement):
     return wrapper
 
 
-@deprecated(replacement="djangae.environment.application_id")
+@deprecated(replacement="djangae.environment.project_id")
 def application_id():
     from . import environment
     return environment.application_id()

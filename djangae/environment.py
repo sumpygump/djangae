@@ -1,12 +1,13 @@
 import os
 from typing import Optional
 
-from djangae.utils import memoized
+from djangae.utils import deprecated, memoized
 
 # No SDK imports allowed in module namespace because `./manage.py runserver`
 # imports this before the SDK is added to sys.path. See bugs #899, #1055.
 
 
+@deprecated(replacement="djangae.environment.project_id")
 def application_id() -> str:
     # Fallback to example on local or if this is not specified in the
     # environment already
@@ -59,7 +60,7 @@ def get_application_root() -> str:
 
 
 def default_gcs_bucket_name() -> str:
-    return "%s.appspot.com" % application_id()
+    return "%s.appspot.com" % project_id()
 
 
 def default_app_host() -> str:
@@ -67,7 +68,7 @@ def default_app_host() -> str:
     Fallbacks to example.appspost.com on local
     """
 
-    return "%s.appspot.com" % application_id()
+    return "%s.appspot.com" % project_id()
 
 
 def app_host() -> str:
@@ -78,7 +79,7 @@ def app_host() -> str:
     return "{}-dot-{}".format(version, default_app_host())
 
 
-def project_id() -> str:
+def project_id(default="example") -> str:
     # Environment variable will exist on production servers
     # fallback to "example" locally if it doesn't exist
-    return os.environ.get("GOOGLE_CLOUD_PROJECT", "example")
+    return os.environ.get("GOOGLE_CLOUD_PROJECT", default)

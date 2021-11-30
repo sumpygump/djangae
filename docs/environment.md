@@ -11,9 +11,11 @@ Returns if the request is currently running on the live GAE servers
 
 Returns whether or not the code is running on the local development environment
 
-## djangae.environment.application_id()
+## djangae.environment.project_id(default="example")
 
-Returns the application id from app.yaml (or wherever the code is deployed)
+Returns the Google Cloud Platform project ID for wherever the code is deployed (or the `default` if running locally).
+
+This replaces the old `djangae.environment.application_id()`.
 
 ## djangae.environment.get_application_root()
 
