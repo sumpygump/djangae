@@ -1,5 +1,6 @@
 from djangae.environment import is_production_environment
 from djangae.tasks.environment import tasks_location
+from django.utils.log import DEFAULT_LOGGING
 
 FILE_CACHE_LOCATION = '/tmp/cache' if is_production_environment() else '.cache'
 
@@ -12,32 +13,20 @@ CACHES = {
     }
 }
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
-    },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        }
-    },
-    'loggers': {
-        'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'djangae': {
-            'level': 'WARN'
-        }
-    }
-}
+LOGGING = DEFAULT_LOGGING.copy()
+LOGGING['loggers']['djangae'] = {'level': 'WARN'}
+
+# If on a production service, enable the StackDriver logging so that
+# request logs are correctly grouped.
+if is_production_environment():
+    from google.cloud import logging
+    client = logging.Client()
+
+    LOGGING['handlers']['console']['class'] = 'google.cloud.logging_v2.handlers.CloudLoggingHandler'
+    LOGGING['handlers']['console']['client'] = client
+    LOGGING['handlers']['django.server']['class'] = 'google.cloud.logging_v2.handlers.CloudLoggingHandler'
+    LOGGING['handlers']['django.server']['client'] = client
+
 
 # Setting to * is OK, because GAE takes care of domain routing - setting it to anything
 # else just causes unnecessary pain when something isn't accessible under a custom domain
