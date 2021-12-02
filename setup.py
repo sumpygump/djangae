@@ -52,6 +52,7 @@ setup(
         # required for iap backend
         'cryptography==3.4.6',
         'python-jose[cryptography]==3.2.0',
+        'google-cloud-storage==1.43.0',
     ],
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],
