@@ -37,6 +37,9 @@ class DjangaeLoggingHandler(AppEngineHandler):
                 "You must install the %s middleware to use the DjangaeLoggingHandler" % _DJANGAE_MIDDLEWARE_NAME
             )
 
+        # We use a lock here to avoid the potential race condition between
+        # checking to see if the client was initialised, and it actually being
+        # initialized.
         with _client_lock:
             if not _client:
                 _client = logging.Client()
