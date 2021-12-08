@@ -350,4 +350,3 @@ class AuthBackendTests(TestCase):
 
         """
         pass
-
