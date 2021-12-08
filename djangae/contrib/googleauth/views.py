@@ -173,7 +173,7 @@ def oauth2callback(request):
     # back to the version we started on. This avoids having to add authorized
     # redirect URIs to the console for every deployed version.
     if _get_oauth_redirect_host_from_settings() and original_hostname != request.META['HTTP_HOST']:
-        logging.info('Redirect to version %s', original_hostname)
+        logging.debug('Redirect to version %s', original_hostname)
         return shortcuts.redirect(
             '{}://{}{}'.format(
                 request.scheme,

@@ -80,7 +80,7 @@ def ensure_required_queues_exist():
             update_mask.append("retry_config.max_attempts")
             queue_dict["retry_config"]["max_attempts"] = queue["retry_max_attempts"]
 
-        logging.info("Ensuring task queue is up-to-date: %s", queue_dict["name"])
+        logging.debug("Ensuring task queue is up-to-date: %s", queue_dict["name"])
 
         from google.cloud.tasks_v2.types import Queue
         queue = Queue(**queue_dict)
