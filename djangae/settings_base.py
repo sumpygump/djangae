@@ -42,6 +42,7 @@ CLOUD_TASKS_LOCATION = tasks_location()
 # Default Django middleware, with the addition of the RequestStorageMiddleware
 # for logging purposes
 MIDDLEWARE = [
+    'djangae.common.middleware.RequestStorageMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -49,5 +50,4 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'djangae.common.middleware.RequestStorageMiddleware',
 ]
