@@ -14,18 +14,16 @@ CACHES = {
 }
 
 LOGGING = DEFAULT_LOGGING.copy()
-LOGGING['loggers']['djangae'] = {'level': 'WARN'}
+LOGGING['loggers']['djangae'] = {'level': 'INFO'}
 
 # If on a production service, enable the StackDriver logging so that
 # request logs are correctly grouped.
 if is_production_environment():
-    from google.cloud import logging
-    client = logging.Client()
-
-    LOGGING['handlers']['console']['class'] = 'google.cloud.logging_v2.handlers.CloudLoggingHandler'
-    LOGGING['handlers']['console']['client'] = client
-    LOGGING['handlers']['django.server']['class'] = 'google.cloud.logging_v2.handlers.CloudLoggingHandler'
-    LOGGING['handlers']['django.server']['client'] = client
+    LOGGING = DEFAULT_LOGGING.copy()
+    LOGGING['handlers']['stackdriver'] = {'class': 'djangae.core.logging.DjangaeLoggingHandler', 'level': 'DEBUG'}
+    LOGGING['handlers']['console']['class'] = 'djangae.core.logging.DjangaeLoggingHandler'
+    LOGGING['handlers']['django.server']['class'] = 'djangae.core.logging.DjangaeLoggingHandler'
+    LOGGING['root'] = {'handlers': ['stackdriver'], 'level': 'DEBUG'}
 
 
 # Setting to * is OK, because GAE takes care of domain routing - setting it to anything
@@ -39,3 +37,17 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Set a default CLOUD_TASKS_LOCATION variable based on the environment (if we can)
 CLOUD_TASKS_LOCATION = tasks_location()
+
+
+# Default Django middleware, with the addition of the RequestStorageMiddleware
+# for logging purposes
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'djangae.common.middleware.RequestStorageMiddleware',
+]
