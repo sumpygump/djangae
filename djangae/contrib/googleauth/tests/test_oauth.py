@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.contrib.auth.hashers import is_password_usable
 from django.http import HttpResponse
 from django.shortcuts import reverse
 from django.test import (
@@ -182,6 +183,19 @@ class OAuth2CallbackTests(TestCase):
         user = User.objects.get(email="test@example.com")
         self.assertFalse(user.has_usable_password())
 
+    def test_existing_email_has_unusable_password_set(self):
+        """
+            Log someone in who previously had no password and make sure
+            an unusable password was set.
+        """
+
+        user = User.objects.create(email="test@example.com")
+        self.assertFalse(user.password)
+        self.test_valid_credentials_log_user()
+        user.refresh_from_db()
+        self.assertTrue(user.password)
+        self.assertFalse(is_password_usable(user.password))
+
     @patch('django.contrib.auth.login', autospec=True)
     @patch('django.contrib.auth.authenticate', autospec=True)
     @patch('djangae.contrib.googleauth.views.OAuth2Session', autospec=True)
@@ -336,3 +350,4 @@ class AuthBackendTests(TestCase):
 
         """
         pass
+

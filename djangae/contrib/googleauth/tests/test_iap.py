@@ -107,6 +107,7 @@ class IAPAuthenticationTests(TestCase):
             email='test22@example.com'
         )
 
+        self.assertFalse(user.password)
         self.assertEqual(user.email, 'test22@example.com')
 
         user = '99999'
@@ -127,6 +128,7 @@ class IAPAuthenticationTests(TestCase):
         user = User.objects.get()
 
         self.assertEqual(user.email, 'tESt22@example.com')
+        self.assertTrue(user.password)  # Should've set an unusable password
 
     @patch('djangae.contrib.googleauth.backends.iap.id_token.verify_token')
     def test_email_case_sensitive_fallback(self, verify_token_mock):
