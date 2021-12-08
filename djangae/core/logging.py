@@ -71,6 +71,4 @@ class DjangaeLoggingHandler(AppEngineHandler):
 
     def emit(self, record):
         record.trace, record.span_id = self.get_trace_and_span_id_from_djangae()
-
-        with _client_lock:
-            return super().emit(record)
+        return super().emit(record)
