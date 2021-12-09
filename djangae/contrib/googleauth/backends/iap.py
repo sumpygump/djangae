@@ -129,6 +129,14 @@ class IAPBackend(BaseBackend):
                 # sensitivity of the email differs etc.
                 user.email = email
 
+                # If the user doesn't currently have a password, it could
+                # mean that this backend has just been enabled on existing
+                # data that uses some other authentication system (e.g. the
+                # App Engine Users API) - for safety we make sure that an
+                # unusable password is set.
+                if not user.password:
+                    user.set_unusable_password()
+
                 # Note we don't update the username, as that may have
                 # been overridden by something post-creation
                 user.save()

@@ -64,8 +64,18 @@ class OAuthBackend(BaseBackend):
                     # We got the user by google_oauth_id, but their email
                     # might have changed (maybe), so update that just in case
                     user.email = email
+
                 if not user.username:
                     user.username = _generate_unused_username(username)
+
+                # If the user doesn't currently have a password, it could
+                # mean that this backend has just been enabled on existing
+                # data that uses some other authentication system (e.g. the
+                # App Engine Users API) - for safety we make sure that an
+                # unusable password is set.
+                if not user.password:
+                    user.set_unusable_password()
+
                 user.save()
             else:
                 # First time we've seen this user
