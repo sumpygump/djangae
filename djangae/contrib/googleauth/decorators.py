@@ -48,7 +48,7 @@ def oauth_scopes_required(scopes, offline=False):
 
                 difference = additional_scopes - current_scopes
                 if difference:
-                    logging.info(
+                    logging.debug(
                         "Additional scopes (%s) requested for user (%s). Initiating auth flow.",
                         difference, request.user
                     )
