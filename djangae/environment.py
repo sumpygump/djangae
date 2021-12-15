@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 
-from djangae.utils import deprecated, memoized
+from djangae.utils import memoized
 
 # No SDK imports allowed in module namespace because `./manage.py runserver`
 # imports this before the SDK is added to sys.path. See bugs #899, #1055.
