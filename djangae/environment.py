@@ -1,17 +1,16 @@
 import os
 from typing import Optional
 
-from djangae.utils import deprecated, memoized
+from djangae.utils import memoized
 
 # No SDK imports allowed in module namespace because `./manage.py runserver`
 # imports this before the SDK is added to sys.path. See bugs #899, #1055.
 
 
-@deprecated(replacement="djangae.environment.project_id")
-def application_id() -> str:
+def application_id(default="e~example") -> str:
     # Fallback to example on local or if this is not specified in the
     # environment already
-    result = os.environ.get("GAE_APPLICATION", "e~example").split("~", 1)[-1]
+    result = os.environ.get("GAE_APPLICATION", default)
     return result
 
 

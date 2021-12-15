@@ -33,6 +33,7 @@ DEFAULT_TASKS_PORT = 10908
 DEFAULT_STORAGE_PORT = 10911
 
 DEFAULT_PROJECT_ID = "example"
+DEFAULT_GAE_APPLICATION = "e~{}".format(DEFAULT_PROJECT_ID)
 DEFAULT_BUCKET = "%s.appspot.com" % DEFAULT_PROJECT_ID
 
 logger = logging.getLogger(__name__)
@@ -253,7 +254,7 @@ def enable_test_environment_variables():
     """
 
     os.environ.setdefault("GOOGLE_CLOUD_PROJECT", DEFAULT_PROJECT_ID)
-    os.environ.setdefault("GAE_APPLICATION", "e~%s" % DEFAULT_PROJECT_ID)
+    os.environ.setdefault("GAE_APPLICATION", DEFAULT_GAE_APPLICATION)
     os.environ.setdefault("GAE_ENV", "development")
 
 
