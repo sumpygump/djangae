@@ -40,3 +40,7 @@ STOP_WORDS = [
 
 # Symbol used to seperate the parts of TokenFieldIndex keys
 WORD_DOCUMENT_JOIN_STRING = "|"
+
+SPACE = " "
+EMPTY = ""
+SPECIAL_SYMBOLS = {"<", "+", "#", "'", ".", "-"}
