@@ -2,6 +2,8 @@ from django.db.models import Q
 
 from .constants import (
     STOP_WORDS,
+    SPACE,
+    EMPTY,
 )
 
 from .models import (
@@ -107,7 +109,7 @@ def _tokenize_query_string(query_string, match_stopwords):
                 continue
 
             # Split on punctuation, remove double-spaces
-            content = [x.replace(" ", "") for x in tokenize_content(content)]
+            content = [x.replace(SPACE, EMPTY) for x in tokenize_content(content)]
 
             if len(content) == 1:
                 # Do nothing, this was a single token
