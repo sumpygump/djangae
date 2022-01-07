@@ -29,8 +29,11 @@ class QueryTests(TestCase):
         kinds = set(x[0] for x in tokens[0])
         tokens = [x[-1] for x in tokens[0]]
 
+        expected_tokens = ["hi", "hi,", "100", "100%", "chance", "works",
+                           "honest", "[honest]", "[honest", "honest]"]
+
         self.assertEqual(kinds, {"word"})  # All tokens should be recognised as "word" tokens
-        self.assertCountEqual(tokens, ["hi", ",", "100", "%", "chance", "works", "[", "honest", "]"])
+        self.assertCountEqual(tokens, expected_tokens)
 
     @skip("Implement stemming and fix this test")
     def test_fuzzy_matching(self):

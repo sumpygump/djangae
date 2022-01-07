@@ -374,9 +374,9 @@ class TokenizingTests(TestCase):
             (e.g. 2020-01-01)
         """
         text = "This-is some text with - hyphens. I-B-M"
-        tokens, new_tokens = tokenize_content(text)
+        tokens = tokenize_content(text)
         self.assertCountEqual(
-            tokens + new_tokens,
+            tokens,
             ["This", "is", "Thisis", "This-is", "some", "text", "with", "hyphens",
              "hyphens.", "I-B-M", "IBM", "I.B.M", "I", "B", "M"]
         )
@@ -391,16 +391,16 @@ class TokenizingTests(TestCase):
 
         "`'` is configured in `SPECIAL_SYMBOLS`"
         text = "l'oreal"
-        tokens, new_tokens = tokenize_content(text)
+        tokens = tokenize_content(text)
         self.assertCountEqual(
-            tokens + new_tokens,
+            tokens,
             ["l", "oreal", "l'oreal", "loreal"]
         )
 
         text = "H*M"
-        tokens, new_tokens = tokenize_content(text)
+        tokens = tokenize_content(text)
         self.assertCountEqual(
-            tokens + new_tokens,
+            tokens,
             ["H", "M", "HM", "H*M"]
         )
 
@@ -411,10 +411,10 @@ class TokenizingTests(TestCase):
             (e.g. "H&M" would generate ["H&M"])
         """
         text = "H&M"
-        tokens, new_tokens = tokenize_content(text)
+        tokens = tokenize_content(text)
         self.assertCountEqual(
-            tokens + new_tokens,
-            ["H&M"]
+            tokens,
+            ["H&M", "HM"]
         )
 
     def test_tokenization_of_symbols_as_word_on_its_own(self):
@@ -423,15 +423,15 @@ class TokenizingTests(TestCase):
             (e.g. "H & M" would generate ["H", "M"])
         """
         text = "H & M"
-        tokens, new_tokens = tokenize_content(text)
+        tokens = tokenize_content(text)
         self.assertCountEqual(
-            tokens + new_tokens,
+            tokens,
             ["H", "M"]
         )
         text = "Hello!"
-        tokens, new_tokens = tokenize_content(text)
+        tokens = tokenize_content(text)
         self.assertCountEqual(
-            tokens + new_tokens,
+            tokens,
             ["Hello", "Hello!"]
         )
 
@@ -442,9 +442,9 @@ class TokenizingTests(TestCase):
             (e.g. 2020-01-01)
         """
         text = "du du du da da da"
-        tokens, new_tokens = tokenize_content(text)
+        tokens = tokenize_content(text)
         self.assertCountEqual(
-            tokens + new_tokens,
+            tokens,
             ["du", "da"]
         )
 
@@ -454,10 +454,33 @@ class TokenizingTests(TestCase):
             hyphen are not an acronym.
         """
         text = "This-is-not-an-acronym"
-        tokens, new_tokens = tokenize_content(text)
+        tokens = tokenize_content(text)
         self.assertCountEqual(
-            tokens + new_tokens,
+            tokens,
             ["This", "is", "not", "an", "acronym", "This-is-not-an-acronym", "Thisisnotanacronym"]
+        )
+
+    def test_tokenization_of_not_acronyms_pipes(self):
+        """
+            When a word contains WORD_DOCUMENT_JOIN_STRING special char,
+            it's replaced by an EMPTY char.
+        """
+        text = "Tokenize    multiple chars ||"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["Tokenize", "multiple", "chars"]
+        )
+
+    def test_tokenization_of_word_multiple_symbols(self):
+        """
+            When tokenizing a word, we also save its version with no symbols
+        """
+        text = "[[[[Tokenize]]]]"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["[[[[Tokenize]]]]", "[[[[Tokenize", "Tokenize]]]]", "Tokenize"]
         )
 
     def test_tokenization_of_dates(self):
@@ -467,9 +490,9 @@ class TokenizingTests(TestCase):
             (e.g. 2020-01-01)
         """
         text = "This is a date 2020-01-02"
-        tokens, new_tokens = tokenize_content(text)
+        tokens = tokenize_content(text)
         self.assertCountEqual(
-            tokens + new_tokens,
+            tokens,
             ["This", "is", "a", "date", "2020-01-02", "20200102", "2020.01.02", "2020", "01", "02"]
         )
 

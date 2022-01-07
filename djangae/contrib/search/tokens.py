@@ -1,5 +1,6 @@
 from .constants import (
     PUNCTUATION,
+    WORD_DOCUMENT_JOIN_STRING,
     SPECIAL_SYMBOLS,
     SPACE,
     EMPTY,
@@ -11,16 +12,21 @@ def _tokenize_words(content):
     words = content.split(SPACE)
 
     for word in words:
-        # append word as it is
-        tokens.append(word)
+        # append word as it is except if it contains WORD_DOCUMENT_JOIN_STRING
+        word = word.replace(WORD_DOCUMENT_JOIN_STRING, EMPTY)
+        if word != EMPTY:
+            tokens.append(word)
 
-        # split on PUNCTUATION
-        for punct in PUNCTUATION | SPECIAL_SYMBOLS:
-            tokens.extend(word.split(punct))
-            tokens.append(word.replace(punct, EMPTY))
+            # split on PUNCTUATION
+            if not word.isalnum():
+                for punct in PUNCTUATION | SPECIAL_SYMBOLS:
+                    tokens.extend(word.split(punct))
+                    tokens.append(word.replace(punct, EMPTY))
+                # append a version of the word stripped by all its symbols
+                tokens.append("".join([c for c in word if c.isalnum()]))
 
     # exclude single char symbols
-    tokens = list(filter(lambda x: len(x) > 1 or (len(x) == 1 and x[0].isalpha()), tokens))
+    tokens = list(filter(lambda x: len(x) > 1 or (len(x) == 1 and x[0].isalnum()), tokens))
 
     return set(tokens)
 
@@ -106,4 +112,4 @@ def tokenize_content(content):
         if acronyms_list:
             all_tokens |= set(acronyms_list)
 
-    return list(all_tokens), []
+    return list(all_tokens)
