@@ -28,3 +28,9 @@ GitLab: [https://gitlab.com/potato-oss/djangae/djangae](https://gitlab.com/potat
 Djangae currently supports Django 3.2.
 
 Support for Django 1.11 / Python 2.7 lives in the `1.x` branch.
+
+
+## Supported Platforms
+
+Djangae is primarily aimed at running applications on App Engine.
+See the [Cloud Run](cloud_run.md) page for information on using it for Cloud Run.

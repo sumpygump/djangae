@@ -17,6 +17,7 @@ nav:
   - Scheduled backups: backup.md
   - Security: security.md
   - Thread locking: locking.md
+- Cloud Run: cloud_run.md
 - Contributing & Testing: contributing.md
 - Commercial Support: commercial_support.md
 - Work with us!: work_with_potato.md
