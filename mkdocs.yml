@@ -18,4 +18,6 @@ nav:
   - Security: security.md
   - Thread locking: locking.md
 - Contributing & Testing: contributing.md
+- Commercial Support: commercial_support.md
+- Work with us!: work_with_potato.md
 theme: readthedocs
