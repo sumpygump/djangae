@@ -25,6 +25,11 @@ want to) using Django's models with Google Cloud Datastore as the underlying dat
 If you're looking at this on GitHub, please note that you're seeing a mirror of the project which now lives on [GitLab](https://gitlab.com/potato-oss/djangae/djangae).
 
 
+# Contributing to Djangae
+
+See [https://djangae.readthedocs.io/en/latest/contributing/](https://djangae.readthedocs.io/en/latest/contributing/)
+
+
 # Looking for Commercial Support?
 
 Potato offers Commercial Support for all its Open Source projects and we can tailor a support package to your needs.
