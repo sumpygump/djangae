@@ -10,11 +10,11 @@ you can simply install the [django-cloud-connectors](https://gitlab.com/potato-o
 sister project into your application and configure the `DATABASES` setting as described in the
 [Installation](installation.md) section.
 
+
 Below is a non-exhaustive list of differences between running Djangae on Cloud Run compared to App Engine.
 
-* In general, you will probably want to consider Djangae as a library to be imported for its utilities:
 * The emulators for the Cloud Datastore, Tasks and Storage may need to be run as their own container images, rather than started by `manage.py`. 
-* The [incoming `X-Appengine-...` headers(https://cloud.google.com/appengine/docs/standard/python3/reference/request-response-headers) are not sanitised, so cannot be trusted. As such, you should:
+* The [incoming `X-Appengine-...` headers(https://cloud.google.com/appengine/docs/standard/python3/reference/request-response-headers) are not sanitised, so cannot be trusted. As such
   - You should not use `djangae.tasks.deferred` out of the box.
   - You should not trust `is_in_cron` or `is_in_task` from `djangae.tasks.environment`.
 * With the except of `project_id`, the functions in `djangae.environment` will not behave as expected.
