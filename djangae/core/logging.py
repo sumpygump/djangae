@@ -19,7 +19,7 @@ from djangae.contrib.common import get_request
 _client = None
 _client_lock = threading.Lock()
 
-_DJANGAE_MIDDLEWARE_NAME = "djangae.common.middleware.RequestStorageMiddleware"
+_DJANGAE_MIDDLEWARE_NAME = "djangae.contrib.common.middleware.RequestStorageMiddleware"
 
 
 class DjangaeLoggingHandler(AppEngineHandler):
