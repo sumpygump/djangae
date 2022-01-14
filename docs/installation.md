@@ -72,11 +72,25 @@ if __name__ == '__main__':
         stop_emulators()
 ```
 
-Use the Django WSGI handler in your main.py, something like
+Use the Django WSGI handler in your `main.py`, something like
 
 ```python
 from .wsgi import application
 app = application
+```
+
+If you want to use the Google Cloud Datastore as your database backend, add the following to your `settings.py`:
+
+```python
+from djangae.environment import project_id
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'gcloudc.db.backends.datastore',
+        'PROJECT': project_id(),
+        'INDEXES_FILE': DATASTORE_INDEX_YAML,
+    }
+}
 ```
 
 It is recommended that for improved security you add `djangae.contrib.security.middleware.AppEngineSecurityMiddleware` as the first of your middleware classes. This middleware patches a number of insecure parts of the Python and App Engine libraries and warns if your Django settings aren't as secure as they could be.
