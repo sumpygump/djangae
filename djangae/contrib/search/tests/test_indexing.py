@@ -4,7 +4,7 @@ from djangae.contrib.search import fields
 from djangae.contrib.search.document import Document
 from djangae.contrib.search.index import Index
 from djangae.contrib.search.models import TokenFieldIndex
-from djangae.contrib.search.tokens import tokenize_content
+from djangae.contrib.search.tokens import tokenize_content, acronyms
 from djangae.test import TestCase
 from django.test import override_settings
 
@@ -209,44 +209,6 @@ class IndexingTests(TestCase):
         self.assertEqual(index.document_count(), 1)
         self.assertEqual(TokenFieldIndex.objects.count(), 1)  # Just "pipes"
 
-    def test_tokenization_of_acronyms(self):
-        """
-            Hyphens are stop characters except when they are part
-            of an ancronym (e.g I-B-M), this handling also covers dates
-            (e.g. 2020-01-01)
-        """
-        text = "This-is some text with - hyphens. I-B-M"
-        tokens, new_tokens = tokenize_content(text)
-        self.assertCountEqual(
-            tokens + new_tokens,
-            ["This", "-", "is", "some", "text", "with", "-", "hyphens", ".", "I-B-M", "IBM", "I.B.M"]
-        )
-
-    def test_tokenization_of_not_acronyms(self):
-        """
-            Words than have more than 1 letter and separated by an
-            hyphen are not an acronym.
-        """
-        text = "This-is-not-an-acronym"
-        tokens, new_tokens = tokenize_content(text)
-        self.assertCountEqual(
-            tokens + new_tokens,
-            ["This", "-", "is", "-", "not", "-", "an", "-", "acronym", ]
-        )
-
-    def test_tokenization_of_dates(self):
-        """
-            Hyphens are stop characters except when they are part
-            of a date
-            (e.g. 2020-01-01)
-        """
-        text = "This is a date 2020-01-01"
-        tokens, new_tokens = tokenize_content(text)
-        self.assertCountEqual(
-            tokens + new_tokens,
-            ["This", "is", "a", "date", "2020-01-01", "20200101", "2020.01.01", ]
-        )
-
     def test_null_validation(self):
         """
             If a field is marked as null=False, and someone tries to index
@@ -402,3 +364,183 @@ class IndexingTests(TestCase):
 
         self.process_task_queues()
         defer_mock.assert_called_with(mock.ANY, mock.ANY, mock.ANY, _queue="default", _shards=1)
+
+
+class TokenizingTests(TestCase):
+    def test_tokenization_of_acronyms(self):
+        """
+            Hyphens are stop characters except when they are part
+            of an ancronym (e.g I-B-M), this handling also covers dates
+            (e.g. 2020-01-01)
+        """
+        text = "This-is some text with - hyphens. I-B-M"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["This", "is", "Thisis", "This-is", "some", "text", "with", "hyphens",
+             "hyphens.", "I-B-M", "IBM", "I.B.M", "I", "B", "M"]
+        )
+
+    def test_tokenization_of_special_symbols_within_a_word(self):
+        """
+            Symbols configured in `PUNCTUATION` and `SPECIAL_SYMBOLS` constants
+            are considered stop words characters, but they do not count as token
+            themselves.
+            (e.g. "l'oreal" would generate ["l", "oreal", "l'oreal", "loreal"])
+        """
+
+        "`'` is configured in `SPECIAL_SYMBOLS`"
+        text = "l'oreal"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["l", "oreal", "l'oreal", "loreal"]
+        )
+
+        text = "H*M"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["H", "M", "HM", "H*M"]
+        )
+
+    def test_tokenization_of_generic_symbols_within_a_word(self):
+        """
+            Symbols that are not listed in `PUNCTUATION` or `SPECIAL_SYMBOLS` constants
+            are considered normal characters and they won't be stopwords
+            (e.g. "H&M" would generate ["H&M"])
+        """
+        text = "H&M"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["H&M", "HM"]
+        )
+
+    def test_tokenization_of_symbols_as_word_on_its_own(self):
+        """
+            Symbols on their own are not considered tokens
+            (e.g. "H & M" would generate ["H", "M"])
+        """
+        text = "H & M"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["H", "M"]
+        )
+        text = "Hello!"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["Hello", "Hello!"]
+        )
+
+    def test_tokenization_of_repeated_words(self):
+        """
+            Hyphens are stop characters except when they are part
+            of an ancronym (e.g I-B-M), this handling also covers dates
+            (e.g. 2020-01-01)
+        """
+        text = "du du du da da da"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["du", "da"]
+        )
+
+    def test_tokenization_of_not_acronyms(self):
+        """
+            Words than have more than 1 letter and separated by an
+            hyphen are not an acronym.
+        """
+        text = "This-is-not-an-acronym"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["This", "is", "not", "an", "acronym", "This-is-not-an-acronym", "Thisisnotanacronym"]
+        )
+
+    def test_tokenization_of_not_acronyms_pipes(self):
+        """
+            When a word contains WORD_DOCUMENT_JOIN_STRING special char,
+            it's replaced by an EMPTY char.
+        """
+        text = "Tokenize    multiple chars ||"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["Tokenize", "multiple", "chars"]
+        )
+
+    def test_tokenization_of_word_multiple_symbols(self):
+        """
+            When tokenizing a word, we also save its version with no symbols
+        """
+        text = "[[[[Tokenize]]]]"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["[[[[Tokenize]]]]", "[[[[Tokenize", "Tokenize]]]]", "Tokenize"]
+        )
+
+    def test_tokenization_of_dates(self):
+        """
+            Hyphens are stop characters except when they are part
+            of a date
+            (e.g. 2020-01-01)
+        """
+        text = "This is a date 2020-01-02"
+        tokens = tokenize_content(text)
+        self.assertCountEqual(
+            tokens,
+            ["This", "is", "a", "date", "2020-01-02", "20200102", "2020.01.02", "2020", "01", "02"]
+        )
+
+    def test_acronyms_not_an_acronym(self):
+        """
+            Words longer than one character which are separated by stop characters
+            should not be an acronym.
+        """
+        text = "This-is-not-an-acronym"
+        acronyms_list = acronyms(text)
+        self.assertEqual(len(acronyms_list), 0)
+
+    def test_acronyms_is_an_acronym(self):
+        """
+            Consistent stop characters should generate acronyms
+            (e.g I.B-M)
+        """
+        text = "I.B.M"
+        acronyms_list = acronyms(text)
+        self.assertCountEqual(acronyms_list, ["IBM", "I-B-M"])
+        self.assertTrue("IBM" in acronyms_list)
+        self.assertTrue("I-B-M" in acronyms_list)
+
+    def test_acronyms_not_an_acronym_different_symbols(self):
+        """
+            Mixed stop characters should not be generate acronyms
+            (e.g I.B-M)
+        """
+        text = "I.B-M"
+        acronyms_list = acronyms(text)
+        self.assertEqual(len(acronyms_list), 0)
+
+    def test_acronyms_is_an_acronym_date(self):
+        """
+            Consisent stop characters should generate acronyms in a date
+            (e.g. 2022-01-06)
+        """
+        text = "2022-01-06"
+        acronyms_list = acronyms(text)
+        self.assertCountEqual(acronyms_list, ["2022.01.06", "20220106"])
+        self.assertTrue("2022.01.06" in acronyms_list)
+        self.assertTrue("20220106" in acronyms_list)
+
+    def test_acronyms_not_an_acronym_date(self):
+        """
+            Mixed stop characters should not be generate acronyms for a date
+            (e.g. 2022-01.06)
+        """
+        text = "2022-01.06"
+        acronyms_list = acronyms(text)
+        self.assertEqual(len(acronyms_list), 0)

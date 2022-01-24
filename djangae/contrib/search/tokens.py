@@ -1,15 +1,96 @@
 from .constants import (
     PUNCTUATION,
     WORD_DOCUMENT_JOIN_STRING,
+    SPECIAL_SYMBOLS,
+    SPACE,
+    EMPTY,
 )
 
 
-def is_digit_or_single_char(token):
+def _tokenize_words(content):
+    tokens = []
+    words = content.split(SPACE)
+
+    for word in words:
+        # append word as it is except if it contains WORD_DOCUMENT_JOIN_STRING
+        word = word.replace(WORD_DOCUMENT_JOIN_STRING, EMPTY)
+        if word != EMPTY:
+            tokens.append(word)
+
+            # split on PUNCTUATION
+            if not word.isalnum():
+                for punct in PUNCTUATION | SPECIAL_SYMBOLS:
+                    tokens.extend(word.split(punct))
+                    tokens.append(word.replace(punct, EMPTY))
+                # append a version of the word stripped by all its symbols
+                tokens.append("".join([c for c in word if c.isalnum()]))
+
+    # exclude single char symbols
+    tokens = list(filter(lambda x: len(x) > 1 or (len(x) == 1 and x[0].isalnum()), tokens))
+
+    return set(tokens)
+
+
+def _word_acronyms(token):
+    acronyms_list = []
+    ACRONYM_TOKENS = {".", "-"}
+    letters = list(token)[0::2]
+    symbols = list(token)[1::2]
+    # if all the symbols are the same and they're in the list of ACRONYM_TOKENS look for acronyms
+    if len(set(symbols)) == 1 and symbols[0] in ACRONYM_TOKENS:
+        list_of_non_alpha = list(filter(lambda x: not x.isalpha(), letters))
+        if len(list_of_non_alpha) == 0:
+            symbol_to_replace = symbols[0]
+            for symbol in ACRONYM_TOKENS - set(symbols):
+                acronyms_list.append(token.replace(symbol_to_replace, symbol))
+                acronyms_list.append(token.replace(symbol_to_replace, EMPTY))
+
+    return acronyms_list
+
+
+def _date_acronyms(token):
+    acronyms_list = []
+    ACRONYM_TOKENS = {".", "-"}
+    date = []
+    token_delimiter = None
+    found_first_delimiter = False
+    for acronym_delimiter in ACRONYM_TOKENS:
+        if acronym_delimiter in token:
+            if found_first_delimiter:
+                # found two delimiters in the same date
+                return []
+            date = token.split(acronym_delimiter)
+            token_delimiter = acronym_delimiter
+            found_first_delimiter = True
+
+    # if all the symbols are the same and they're in the list of ACRONYM_TOKENS look for acronyms
+    list_of_non_digit = list(filter(lambda x: not x.isdigit(), "".join(date)))
+    if len(list_of_non_digit) == 0 and token_delimiter:
+        for symbol in ACRONYM_TOKENS - set(token_delimiter):
+            acronyms_list.append(token.replace(token_delimiter, symbol))
+            acronyms_list.append(token.replace(token_delimiter, EMPTY))
+
+    return acronyms_list
+
+
+def acronyms(token):
     """
-    Acronyms or dates are formed either by tokens that have a sigle letter (acronyms ie. I-B-M)
-    or numerical strings that can have more than 1 digit. (ie 2020-10-10).
+    Return list of tokens when an acronym is detected for a given token.
+
+    Acronyms examples:
+    - I-B-M would be detected as acronym and it would return I.B.M as additional token
+    - C.I.A would be detected as acronym and it would return C-I-A as additional token
+
+    If no acronyms are detected for a token, an empty list is returned.
     """
-    return token.isdigit() or len(token) < 2
+    if not len(token):
+        return []
+
+    if token[0].isalpha():
+        return _word_acronyms(token)
+    elif token[0].isdigit():
+        return _date_acronyms(token)
+    return []
 
 
 def tokenize_content(content):
@@ -23,69 +104,12 @@ def tokenize_content(content):
         https://cloud.google.com/appengine/docs/standard/python/search#special-treatment
     """
 
-    tokens = []
-    current = ""
+    tokens = _tokenize_words(content)
+    all_tokens = set(tokens)
 
-    STOP_CHARS = list(PUNCTUATION) + [" "]
+    for token in tokens:
+        acronyms_list = acronyms(token)
+        if acronyms_list:
+            all_tokens |= set(acronyms_list)
 
-    for c in content:
-        if c in STOP_CHARS:
-            if current.strip():
-                tokens.append(current)
-
-            if c.strip() and c != WORD_DOCUMENT_JOIN_STRING:
-                tokens.append(c)
-
-            current = ""
-        else:
-            current += c
-    else:
-        if current.strip():
-            tokens.append(current)
-
-    new_tokens = []
-    tokens_to_append = []
-    indexes_to_remove = []
-
-    ACRONYM_TOKENS = (".", "-")
-    current_at = None
-    # Detect acronyms
-    acronym_run = 0
-    for i, token in enumerate(tokens):
-        if (
-            ((acronym_run and token == current_at) or (not acronym_run and token in ACRONYM_TOKENS)) and
-                i > 0 and tokens[i - 1] != token and is_digit_or_single_char(tokens[i - 1])
-        ):
-            acronym_run += 1
-            if acronym_run == 1:
-                current_at = token
-        else:
-            if acronym_run > 1 and token != current_at:
-                start = i - (2 * acronym_run)
-
-                original = "".join(tokens[start:start + (acronym_run * 2) + 1])
-                parts = [tokens[start + (x * 2)] for x in range(acronym_run + 1)]
-                acronym = "".join(parts)
-
-                # Add variations of the acronym
-                new_tokens.append(acronym)
-                new_tokens.append(".".join(parts))
-                new_tokens.append("-".join(parts))
-
-                # Remove the original characters
-                indexes_to_remove.extend(range(start, start + (acronym_run * 2) + 1))
-
-                if original in new_tokens:
-                    new_tokens.remove(original)
-
-                # Extend a single token made up of the whole original acronym
-                # rather than seperate chars
-                tokens_to_append.append(original)
-
-                acronym_run = 0
-            elif i > 0 and (tokens[i - 1] != current_at or not is_digit_or_single_char(token)):
-                acronym_run = 0
-
-    tokens = [x for i, x in enumerate(tokens) if i not in indexes_to_remove]
-    tokens.extend(tokens_to_append)
-    return tokens, new_tokens
+    return list(all_tokens)

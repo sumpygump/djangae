@@ -48,9 +48,7 @@ class Field(object):
         if value is None:
             return value
 
-        tokens, new_tokens = tokenize_content(value)
-        tokens.extend(new_tokens)
-        return tokens
+        return tokenize_content(value)
 
     def clean_token(self, token):
         """

@@ -2,6 +2,8 @@ from django.db.models import Q
 
 from .constants import (
     STOP_WORDS,
+    SPACE,
+    EMPTY,
 )
 
 from .models import (
@@ -107,9 +109,7 @@ def _tokenize_query_string(query_string, match_stopwords):
                 continue
 
             # Split on punctuation, remove double-spaces
-            content, _ = tokenize_content(content)
-
-            content = [x.replace(" ", "") for x in content]
+            content = [x.replace(SPACE, EMPTY) for x in tokenize_content(content)]
 
             if len(content) == 1:
                 # Do nothing, this was a single token
@@ -275,7 +275,13 @@ def build_document_queryset(
                         return False
                 return True
             else:
-                return len(searched) == len(found)
+                if len(searched) == len(found):
+                    return True
+                # found len is 1, we could be dealing with an acronym
+                elif len(found) == 1:
+                    found_tokenized = set(tokenize_content(found.pop()))
+                    return len(found_tokenized) == len(searched)
+                return False
 
         for doc_id, found_tokens in doc_results.items():
             if compare_tokens(tokens, found_tokens):
