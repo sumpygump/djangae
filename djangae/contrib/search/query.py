@@ -111,7 +111,7 @@ def _tokenize_query_string(query_string, match_stopwords):
             # Split on punctuation, remove double-spaces
             content = [x.replace(SPACE, EMPTY) for x in tokenize_content(content)]
 
-            if len(content) == 1:
+            if not content or len(content) == 1:
                 # Do nothing, this was a single token
                 continue
             else:
@@ -268,12 +268,11 @@ def build_document_queryset(
                 for stoken in searched:
                     for ftoken in found:
                         if ftoken.startswith(stoken):
-                            break
-                    else:
-                        # Went through all found tokens and couldn't
-                        # find one that matched the searched token
-                        return False
-                return True
+                            return True
+                else:
+                    # Went through all found tokens and couldn't
+                    # find one that matched the searched token
+                    return False
             else:
                 if len(searched) == len(found):
                     return True
