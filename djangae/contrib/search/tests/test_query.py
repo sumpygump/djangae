@@ -103,8 +103,9 @@ class QueryTests(TestCase):
             for x in index.search("test ltd", CompanyDocument, use_startswith=True)
         ]
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0], "My test")
+        self.assertEqual(len(results), 2)
+        self.assertTrue("My test" in results)
+        self.assertTrue("Internal testing test" in results)
 
     def test_startswith_multiple_tokens(self):
         index = Index(name="test")
@@ -126,14 +127,14 @@ class QueryTests(TestCase):
             for x in index.search("goo llc", document_class=CompanyDocument, use_startswith=True)
         ]
 
-        self.assertCountEqual(results, [("Google", "LLC")])
+        self.assertCountEqual(results, [("Google", "LLC"), ("Google", "Ltd."), ("Awesome", "LLC")])
 
         results = [
             (x.company_name, x.company_type)
             for x in index.search("pot ltd", document_class=CompanyDocument, use_startswith=True)
         ]
 
-        self.assertCountEqual(results, [("Potato", "Ltd.")])
+        self.assertCountEqual(results, [("Potato", "Ltd."), ("Google", "Ltd.")])
 
     def test_number_field_querying(self):
         class Doc(Document):
