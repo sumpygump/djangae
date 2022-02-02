@@ -141,8 +141,8 @@ class SearchMatchAllFalseWordsTests(TestCase):
 
     def test_should_default_to_or_flag(self):
         index = Index(name="test")
-        doc1 = index.add(DocumentText(text="test string one"))
-        doc2 = index.add(DocumentText(text="test string two"))
+        index.add(DocumentText(text="test string one"))
+        index.add(DocumentText(text="test string two"))
 
         # Should return both as we're defaulting to OR behaviour
         results = list(index.search("string one", DocumentText, match_all=False))
@@ -396,11 +396,4 @@ class SearchMatchAllTrueAcronymsTests(TestCase):
         self.assertEqual(len(results), 0)
 
         results = list(self.index.search("2-3", DocumentText, use_startswith=False, match_all=True))
-        self.assertEqual(len(results), 0)
-
-    def test_acronyms_partial_match_with_symbols_startswith(self):
-        results = list(self.index.search("b.c", DocumentText, use_startswith=True, match_all=True))
-        self.assertEqual(len(results), 0)
-
-        results = list(self.index.search("2-3", DocumentText, use_startswith=True, match_all=True))
         self.assertEqual(len(results), 0)
