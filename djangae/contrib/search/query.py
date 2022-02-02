@@ -175,7 +175,7 @@ def build_document_queryset(
     use_stemming=False,
     use_startswith=False,
     match_stopwords=True,
-    match_all=True,
+    match_all=False,
 ):
 
     """
@@ -268,11 +268,12 @@ def build_document_queryset(
                 for stoken in searched:
                     for ftoken in found:
                         if ftoken.startswith(stoken):
-                            return True
-                else:
-                    # Went through all found tokens and couldn't
-                    # find one that matched the searched token
-                    return False
+                            break
+                    else:
+                        # Went through all found tokens and couldn't
+                        # find one that matched the searched token
+                        return False
+                return True
             else:
                 if len(searched) == len(found):
                     return True

@@ -242,7 +242,7 @@ class Index(object):
         use_stemming=False,
         use_startswith=False,
         match_stopwords=True,
-        match_all=True,
+        match_all=False,
         order_by=None
     ):
         """
