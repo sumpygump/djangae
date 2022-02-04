@@ -230,13 +230,18 @@ def local_iap_login_middleware(get_response):
                     data = f.readline()
                     is_superuser = data.strip() == "True"
 
+                    defaults = dict(
+                        is_superuser=is_superuser,
+                        email=email,
+                    )
+
+                    if is_superuser:
+                        defaults["is_staff"] = True
+
                     user, _ = User.objects.update_or_create(
                         google_iap_id=id_from_email(email),
                         google_iap_namespace="auth.example.com",
-                        defaults=dict(
-                            is_superuser=is_superuser,
-                            email=email,
-                        )
+                        defaults=defaults
                     )
 
                     request.META[_GOOG_JWT_ASSERTION_HEADER] = "JWT TOKEN"
