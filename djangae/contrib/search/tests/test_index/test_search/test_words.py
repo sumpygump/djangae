@@ -336,6 +336,9 @@ class SearchMatchAllTrueWordsTests(TestCase):
         results = list(index.search("ltd.", DocumentText, match_all=True))
         self.assertEqual(len(results), 1)
 
+        results = list(index.search("ltd .", DocumentText, match_all=True))
+        self.assertEqual(len(results), 1)
+
     def test_or_queries(self):
         index = Index(name="test")
         index.add(DocumentText(text="test string one"))
