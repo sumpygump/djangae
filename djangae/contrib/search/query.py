@@ -4,6 +4,10 @@ from .constants import (
     STOP_WORDS,
     SPACE,
     EMPTY,
+    DOUBLE_QUOTE,
+    PUNCTUATION,
+    SPECIAL_SYMBOLS,
+    COLUMN,
 )
 
 from .models import (
@@ -31,6 +35,10 @@ from .tokens import tokenize_content
 _PER_TOKEN_HARD_QUERY_LIMIT = 5000
 
 
+_WORD = 'word'
+_EXACT = 'exact'
+
+
 def _tokenize_query_string(query_string, match_stopwords):
     """
         Returns a list of WordDocumentField keys to fetch
@@ -53,26 +61,28 @@ def _tokenize_query_string(query_string, match_stopwords):
         in_quotes = False
 
         def finalize_token(token):
+            SINGLE_CHAR_SYMBOL_FILTER = (PUNCTUATION | SPECIAL_SYMBOLS) - set([DOUBLE_QUOTE, COLUMN])
             final_token = "".join(token)
 
             if not final_token:
                 token.clear()
                 return
 
-            if ":" in token:
-                field, final_token = final_token.split(":", 1)
+            if COLUMN in token:
+                field, final_token = final_token.split(COLUMN, 1)
             else:
                 field = None
-            branch_queries.append((field, final_token))
+            if final_token not in SINGLE_CHAR_SYMBOL_FILTER:
+                branch_queries.append((field, final_token))
             token.clear()
 
         for i, c in enumerate(branch_text):
-            if c == " " and not in_quotes:
+            if c == SPACE and not in_quotes:
                 finalize_token(token)
             else:
                 token.append(c)
 
-            if c == '"':
+            if c == DOUBLE_QUOTE:
                 in_quotes = not in_quotes
         else:
             finalize_token(token)
@@ -91,10 +101,10 @@ def _tokenize_query_string(query_string, match_stopwords):
         branch_result = []
 
         for field, token in branch:
-            if token[0] == '"' and token[-1] == '"':
-                branch_result.append(("exact", field, token.strip('"')))
+            if token[0] == DOUBLE_QUOTE and token[-1] == DOUBLE_QUOTE:
+                branch_result.append((_EXACT, field, token.strip(DOUBLE_QUOTE)))
             else:
-                branch_result.append(("word", field, token))
+                branch_result.append((_WORD, field, token))
 
         result.append(branch_result)
 
@@ -105,7 +115,7 @@ def _tokenize_query_string(query_string, match_stopwords):
         start_length = len(branch_result)
         for i in range(start_length):
             kind, field, content = branch_result[i]
-            if kind == "exact":
+            if kind == _EXACT:
                 continue
 
             # Split on punctuation, remove double-spaces
@@ -120,7 +130,7 @@ def _tokenize_query_string(query_string, match_stopwords):
 
                 # Append the rest to branch_result
                 for token in content[1:]:
-                    branch_result.append(("word", field, token))
+                    branch_result.append((_WORD, field, token))
 
     # If we're not matching stopwords, remove them from the query
     if not match_stopwords:
@@ -170,11 +180,84 @@ def _append_stemming_word_filters(filters, prefix, field, string):
     return filters
 
 
+def _calculate_score(searched, tokens):
+    score = 0
+    for token in tokens:
+        if token in STOP_WORDS:
+            score += 0.25  # 1/4 pt for stop words
+        else:
+            if token in searched:
+                score += 1.0  # 1 point for exact match
+            else:
+                potentials = []
+                for searched_token in searched:
+                    if token.startswith(searched_token):
+                        potentials.append(searched_token)
+
+                # Find the closest match (which would be the shortest)
+                best = sorted(potentials, key=lambda x: len(x))[0]
+
+                # Just use a percentage of matched length
+                score += len(best) / len(token)
+
+    return score
+
+
+def _compare_tokens(searched, found, match_all, use_startswith):
+    if not match_all:
+        # Match all, means match all
+        return True
+
+    if use_startswith:
+        # We need to make sure that each searched token matched at least
+        # one found token
+        for stoken in searched:
+            for ftoken in found:
+                if ftoken.startswith(stoken):
+                    break
+            else:
+                # Went through all found tokens and couldn't
+                # find one that matched the searched token
+                return False
+        return True
+    else:
+        if len(searched) == len(found):
+            return True
+        # found len is 1, we could be dealing with an acronym
+        elif len(found) == 1:
+            found_tokenized = set(tokenize_content(found.pop()))
+            return len(found_tokenized) == len(searched)
+        return False
+
+
+def _build_filters(index, branch, use_startswith, use_stemming):
+    # All queries need to prefix the index
+    prefix = "%s%s" % (str(index.id), WORD_DOCUMENT_JOIN_STRING)
+    filters = Q()
+
+    for kind, field, string in branch:
+        if kind == _WORD:
+            filters = _append_exact_word_filters(filters, prefix, field, string)
+            if use_startswith:
+                filters = _append_startswith_word_filters(
+                    filters, prefix, field, string
+                )
+
+            if use_stemming:
+                filters = _append_stemming_word_filters(
+                    filters, prefix, field, string,
+                )
+        else:
+            raise NotImplementedError("Need to implement exact matching")
+
+    return filters
+
+
 def build_document_queryset(
     query_string, index,
     use_stemming=False,
     use_startswith=False,
-    match_stopwords=True,
+    match_stopwords=False,
     match_all=False,
 ):
 
@@ -200,29 +283,11 @@ def build_document_queryset(
     # We now need to gather document IDs, for each branch we need to
     # look for matching tokens in a single query, then post-process them
     # to only fetch documents that match all of them.
-
     doc_scores = {}
     for branch in tokenization:
         tokens = set([x[-1] for x in branch])
 
-        # All queries need to prefix the index
-        prefix = "%s%s" % (str(index.id), WORD_DOCUMENT_JOIN_STRING)
-        filters = Q()
-
-        for kind, field, string in branch:
-            if kind == "word":
-                filters = _append_exact_word_filters(filters, prefix, field, string)
-                if use_startswith:
-                    filters = _append_startswith_word_filters(
-                        filters, prefix, field, string
-                    )
-
-                if use_stemming:
-                    filters = _append_stemming_word_filters(
-                        filters, prefix, field, string,
-                    )
-            else:
-                raise NotImplementedError("Need to implement exact matching")
+        filters = _build_filters(index, branch, use_startswith, use_stemming)
 
         keys = TokenFieldIndex.objects.filter(
             filters
@@ -235,57 +300,9 @@ def build_document_queryset(
             token = pk.split("|")[1]
             doc_results.setdefault(doc_id, set()).add(token)
 
-        def calculate_score(searched, tokens):
-            score = 0
-            for token in tokens:
-                if token in STOP_WORDS:
-                    score += 0.25  # 1/4 pt for stop words
-                else:
-                    if token in searched:
-                        score += 1.0  # 1 point for exact match
-                    else:
-                        potentials = []
-                        for searched_token in searched:
-                            if token.startswith(searched_token):
-                                potentials.append(searched_token)
-
-                        # Find the closest match (which would be the shortest)
-                        best = sorted(potentials, key=lambda x: len(x))[0]
-
-                        # Just use a percentage of matched length
-                        score += len(best) / len(token)
-
-            return score
-
-        def compare_tokens(searched, found):
-            if not match_all:
-                # Match all, means match all
-                return True
-
-            if use_startswith:
-                # We need to make sure that each searched token matched at least
-                # one found token
-                for stoken in searched:
-                    for ftoken in found:
-                        if ftoken.startswith(stoken):
-                            break
-                    else:
-                        # Went through all found tokens and couldn't
-                        # find one that matched the searched token
-                        return False
-                return True
-            else:
-                if len(searched) == len(found):
-                    return True
-                # found len is 1, we could be dealing with an acronym
-                elif len(found) == 1:
-                    found_tokenized = set(tokenize_content(found.pop()))
-                    return len(found_tokenized) == len(searched)
-                return False
-
         for doc_id, found_tokens in doc_results.items():
-            if compare_tokens(tokens, found_tokens):
-                doc_scores[doc_id] = doc_scores.get(doc_id, 0) + calculate_score(
+            if _compare_tokens(tokens, found_tokens, match_all, use_startswith):
+                doc_scores[doc_id] = doc_scores.get(doc_id, 0) + _calculate_score(
                     tokens, found_tokens
                 )
 
