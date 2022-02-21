@@ -1,12 +1,17 @@
+from unittest.mock import (
+    ANY,
+    patch,
+)
+
 from django.conf import settings
+from django.contrib.auth import get_user_model, SESSION_KEY
+from django.core.exceptions import ImproperlyConfigured
 from django.http.response import HttpResponse
 from django.test.utils import override_settings
-from djangae.test import TestCase
-from django.contrib.auth import get_user_model
-from django.core.exceptions import ImproperlyConfigured
 from django.urls import path
 
-from unittest.mock import patch, ANY
+from djangae.contrib import sleuth
+from djangae.test import TestCase
 
 User = get_user_model()
 
@@ -289,3 +294,45 @@ class IAPAuthenticationTests(TestCase):
         settings.MIDDLEWARE.remove(
             'djangae.contrib.googleauth.middleware.LocalIAPLoginMiddleware'
         )
+
+    @patch('djangae.contrib.googleauth.backends.iap.id_token.verify_token')
+    def test_login_called_when_necessary(self, verify_token_mock):
+        """
+            login should only be called if:
+
+             - There is no user ID stored in request.session
+             - The user ID in request.session does not match
+        """
+
+        user = '99999'
+        user_email = 'test@example.com'
+        verify_token_mock.return_value = {
+            'sub': f'auth.example.com:{user}',
+            'email': user_email,
+        }
+
+        headers = {
+            'HTTP_X_GOOG_AUTHENTICATED_USER_ID': f'auth.example.com:{user}',
+            'HTTP_X_GOOG_AUTHENTICATED_USER_EMAIL': f'auth.example.com:{user_email}',
+            'HTTP_X_GOOG_IAP_JWT_ASSERTION': 'JWT',
+        }
+
+        # First authentication, login should be called
+        with sleuth.watch("djangae.contrib.googleauth.middleware.login") as login:
+            self.client.get("/", **headers)
+            self.assertTrue(User.objects.exists())
+            self.assertTrue(login.called)
+
+        # Already logged-in, login shouldn't be called
+        with sleuth.watch("djangae.contrib.googleauth.middleware.login") as login:
+            self.client.get("/", **headers)
+            self.assertFalse(login.called)
+
+        session = self.client.session
+        session[SESSION_KEY] = 1
+        session.save()
+
+        # Mismatched user ID, login should be called again
+        with sleuth.watch("djangae.contrib.googleauth.middleware.login") as login:
+            self.client.get("/", **headers)
+            self.assertTrue(login.called)

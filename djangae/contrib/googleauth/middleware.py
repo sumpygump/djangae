@@ -1,10 +1,5 @@
 
 
-from djangae.contrib.googleauth import (
-    _GOOG_AUTHENTICATED_USER_EMAIL_HEADER,
-    _GOOG_AUTHENTICATED_USER_ID_HEADER,
-    _GOOG_JWT_ASSERTION_HEADER
-)
 import hashlib
 import logging
 import os
@@ -15,28 +10,35 @@ from django.contrib.auth import (
     BACKEND_SESSION_KEY,
     HASH_SESSION_KEY,
     REDIRECT_FIELD_NAME,
+    SESSION_KEY,
     _get_user_session_key,
-    get_backends,
     constant_time_compare,
+    get_backends,
+    get_user_model,
     load_backend,
     login,
     logout,
-    get_user_model
 )
 from django.contrib.auth.middleware import AuthenticationMiddleware
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, redirect
+from django.shortcuts import (
+    redirect,
+    render,
+)
 from django.urls.base import reverse
 from django.utils.functional import SimpleLazyObject
 from django.utils.http import urlencode
 
-
+from djangae.contrib.googleauth import (
+    _GOOG_AUTHENTICATED_USER_EMAIL_HEADER,
+    _GOOG_AUTHENTICATED_USER_ID_HEADER,
+    _GOOG_JWT_ASSERTION_HEADER,
+)
 from djangae.environment import is_production_environment
 
 from .backends.iap import IAPBackend
 from .backends.oauth2 import OAuthBackend
 from .models import OAuthUserSession
-
 
 _OAUTH_LINK_EXPIRY_SETTING = "GOOGLEAUTH_LINK_OAUTH_SESSION_EXPIRY"
 
@@ -137,10 +139,29 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
             # Try to authenticate with IAP if the headers
             # are available
             if iap_backend and IAPBackend.can_authenticate(request):
+                # Calling login() cycles the csrf token which causes POST request
+                # to break. We only call login if authenticating with IAP changed
+                # the user ID in the session, or the user ID was not in the session
+                # at all.
                 user = iap_backend.authenticate(request)
                 if user and user.is_authenticated:
+                    should_login = (
+                        SESSION_KEY not in request.session
+                        or _get_user_session_key(request) != user.pk
+                    )
+
+                    # We always set the backend to IAP so that it truely reflects what was the last
+                    # backend to authenticate this user
                     user.backend = 'djangae.contrib.googleauth.backends.iap.%s' % IAPBackend.__name__
-                    login(request, user)
+
+                    if should_login:
+                        # Setting the backend is needed for the call to login
+                        login(request, user)
+                    else:
+                        # If we don't call login, we need to set request.user ourselves
+                        # and update the backend string in the session
+                        request.user = user
+                        request.session[BACKEND_SESSION_KEY] = user.backend
 
 
 class ProfileForm(forms.Form):
