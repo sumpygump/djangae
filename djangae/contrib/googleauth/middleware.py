@@ -150,13 +150,18 @@ class AuthenticationMiddleware(AuthenticationMiddleware):
                         or _get_user_session_key(request) != user.pk
                     )
 
+                    # We always set the backend to IAP so that it truely reflects what was the last
+                    # backend to authenticate this user
+                    user.backend = 'djangae.contrib.googleauth.backends.iap.%s' % IAPBackend.__name__
+
                     if should_login:
                         # Setting the backend is needed for the call to login
-                        user.backend = 'djangae.contrib.googleauth.backends.iap.%s' % IAPBackend.__name__
                         login(request, user)
                     else:
                         # If we don't call login, we need to set request.user ourselves
+                        # and update the backend string in the session
                         request.user = user
+                        request.session[BACKEND_SESSION_KEY] = user.backend
 
 
 class ProfileForm(forms.Form):
