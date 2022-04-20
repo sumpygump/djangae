@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from djangae.processing import sequential_int_key_ranges
 from djangae.tasks.deferred import (
     defer_iteration_with_finalize,
     get_deferred_shard_index,
@@ -32,6 +33,12 @@ class DeferStringKeyModel(models.Model):
         )
 
 
+class DeferIntegerKeyModel(models.Model):
+    id = models.IntegerField(primary_key=True)
+    touched = models.BooleanField(default=False)
+    finalized = models.BooleanField(default=False)
+
+
 def callback(instance, touch=True):
     shard_index = get_deferred_shard_index()
 
@@ -58,10 +65,12 @@ def sporadic_error(instance):
     instance.save()
 
 
-def finalize(touch=True):
-    for instance in DeferIterationTestModel.objects.all():
-        instance.finalized = True
-        instance.save()
+def finalize(*args, **kwargs):
+    DeferIterationTestModel.objects.all().update(finalized=True)
+
+
+def finalize_int(*args, **kwargs):
+    DeferIntegerKeyModel.objects.all().update(finalized=True)
 
 
 def update_timestamp(instance):
@@ -162,3 +171,18 @@ class DeferIterationTestCase(TestCase):
         for instance in instances:
             self.assertTrue(instance.pk > last_id)
             last_id = instance.pk
+
+    def test_autoint_hits(self):
+        [DeferIntegerKeyModel.objects.create(id=i+1) for i in range(25)]
+        defer_iteration_with_finalize(
+            DeferIntegerKeyModel.objects.all(),
+            callback,
+            finalize_int,
+            key_ranges_getter=sequential_int_key_ranges,
+            _shards=_SHARD_COUNT
+        )
+
+        self.process_task_queues()
+
+        self.assertEqual(25, DeferIntegerKeyModel.objects.filter(touched=True).count())
+        self.assertEqual(25, DeferIntegerKeyModel.objects.filter(finalized=True).count())
