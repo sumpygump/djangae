@@ -95,8 +95,6 @@ tracks complete shards is deleted. If you want to keep these (as a log of sorts)
 
 `_transactional` and `_queue` work in the same way as `defer()`
 
-By default, shards are generated assuming
-
 ### Identifying a task shard
 
 From a shard callback, you can identify the current shard by using the `get_deferred_shard_index()` function:
