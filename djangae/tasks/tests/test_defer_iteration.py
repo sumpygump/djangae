@@ -65,16 +65,12 @@ def sporadic_error(instance):
     instance.save()
 
 
-def finalize(touch=True):
-    for instance in DeferIterationTestModel.objects.all():
-        instance.finalized = True
-        instance.save()
+def finalize(*args, **kwargs):
+    DeferIterationTestModel.objects.all().update(finalized=True)
 
 
-def finalize_int():
-    for instance in DeferIntegerKeyModel.objects.all():
-        instance.finalized = True
-        instance.save()
+def finalize_int(*args, **kwargs):
+    DeferIntegerKeyModel.objects.all().update(finalized=True)
 
 
 def update_timestamp(instance):
