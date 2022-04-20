@@ -43,7 +43,7 @@ from google.protobuf.timestamp_pb2 import Timestamp
 
 from djangae.environment import gae_version
 from djangae.models import DeferIterationMarker
-from djangae.processing import find_key_ranges_for_queryset
+from djangae.processing import datastore_key_ranges
 from djangae.utils import retry
 
 from . import (
@@ -461,13 +461,13 @@ def _process_shard(marker_id, shard_number, model, query, callback, finalize, ar
 
 
 def _generate_shards(
-    model, query, callback, finalize, args, kwargs, shards, delete_marker
+    model, query, callback, finalize, args, kwargs, shards, delete_marker, key_ranges_getter
 ):
 
     queryset = model.objects.all()
     queryset.query = query
 
-    key_ranges = find_key_ranges_for_queryset(queryset, shards)
+    key_ranges = key_ranges_getter(queryset, shards)
 
     marker = DeferIterationMarker.objects.create(
         delete_on_completion=delete_marker,
@@ -522,7 +522,7 @@ def _generate_shards(
 
 
 def defer_iteration_with_finalize(
-        queryset, callback, finalize, _queue='default', _shards=5,
+        queryset, callback, finalize, key_ranges_getter=datastore_key_ranges, _queue='default', _shards=5,
         _delete_marker=True, _transactional=False, *args, **kwargs):
 
     defer(
@@ -534,6 +534,7 @@ def defer_iteration_with_finalize(
         args=args,
         kwargs=kwargs,
         delete_marker=_delete_marker,
+        key_ranges_getter=key_ranges_getter,
         shards=_shards,
         _queue=_queue,
         _transactional=_transactional
