@@ -32,6 +32,7 @@ class DeferStringKeyModel(models.Model):
             "-other",
         )
 
+
 class DeferIntegerKeyModel(models.Model):
     id = models.IntegerField(primary_key=True)
     touched = models.BooleanField(default=False)
@@ -68,6 +69,7 @@ def finalize(touch=True):
     for instance in DeferIterationTestModel.objects.all():
         instance.finalized = True
         instance.save()
+
 
 def finalize_int():
     for instance in DeferIntegerKeyModel.objects.all():
