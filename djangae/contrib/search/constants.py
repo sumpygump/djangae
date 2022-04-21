@@ -44,3 +44,5 @@ WORD_DOCUMENT_JOIN_STRING = "|"
 SPACE = " "
 EMPTY = ""
 SPECIAL_SYMBOLS = {"<", "+", "#", "'", ".", "-"}
+DOUBLE_QUOTE = '"'
+COLUMN = ':'

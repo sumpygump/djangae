@@ -1,259 +1,9 @@
-from datetime import (
-    datetime,
-    timedelta,
-)
-from unittest import skip
-
 from djangae.contrib.search.document import Document
 from djangae.contrib.search.index import Index
 
 from djangae.contrib.search import fields
-from djangae.contrib.search.query import _tokenize_query_string
+from djangae.contrib.search import query
 from djangae.test import TestCase
-
-
-class CompanyDocument(Document):
-    company_name = fields.TextField()
-    company_type = fields.TextField()
-
-
-class FuzzyDocument(Document):
-    company_name = fields.FuzzyTextField()
-
-
-class QueryTests(TestCase):
-    def test_tokenization_breaks_at_punctuation(self):
-        q = "hi, there is a 100% chance this works [honest]"
-
-        tokens = _tokenize_query_string(q, match_stopwords=False)
-        kinds = set(x[0] for x in tokens[0])
-        tokens = [x[-1] for x in tokens[0]]
-
-        expected_tokens = ["hi", "hi,", "100", "100%", "chance", "works",
-                           "honest", "[honest]", "[honest", "honest]"]
-
-        self.assertEqual(kinds, {"word"})  # All tokens should be recognised as "word" tokens
-        self.assertCountEqual(tokens, expected_tokens)
-
-    @skip("Implement stemming and fix this test")
-    def test_fuzzy_matching(self):
-        index = Index(name="test")
-
-        doc1 = FuzzyDocument(company_name="Google")
-        doc2 = FuzzyDocument(company_name="Potato")
-        doc3 = FuzzyDocument(company_name="Facebook")
-        doc4 = FuzzyDocument(company_name="Potential Company")
-
-        index.add(doc1)
-        index.add(doc2)
-        index.add(doc3)
-        index.add(doc4)
-
-        results = [x.company_name for x in index.search("goo", document_class=FuzzyDocument)]
-        self.assertCountEqual(results, ["Google"])
-
-        results = [x.company_name for x in index.search("pot", document_class=FuzzyDocument)]
-        self.assertCountEqual(results, ["Potato", "Potential Company"])
-
-        results = [x.company_name for x in index.search("pota", document_class=FuzzyDocument)]
-        self.assertCountEqual(results, ["Potato"])
-
-    def test_startswith_matching(self):
-        index = Index(name="test")
-
-        doc1 = CompanyDocument(company_name="Google")
-        doc2 = CompanyDocument(company_name="Potato")
-        doc3 = CompanyDocument(company_name="Facebook")
-        doc4 = CompanyDocument(company_name="Potential Company")
-
-        index.add(doc1)
-        index.add(doc2)
-        index.add(doc3)
-        index.add(doc4)
-
-        results = [x.company_name for x in index.search("goo", document_class=CompanyDocument, use_startswith=True)]
-        self.assertCountEqual(results, ["Google"])
-
-        results = [x.company_name for x in index.search("pot", document_class=CompanyDocument, use_startswith=True)]
-        self.assertCountEqual(results, ["Potato", "Potential Company"])
-
-        results = [x.company_name for x in index.search("pota", document_class=CompanyDocument, use_startswith=True)]
-        self.assertCountEqual(results, ["Potato"])
-
-    def test_startswith_with_multiple_results_per_token(self):
-        """
-            The problem here is that doing startswith matches can return multiple
-            matching tokens from the database, for a single input token. e.g.
-            in this example searching for "test" will return matches for "testing" and "test.
-
-            This caused a bug when document matching would use token counts to determine
-            if a document matched a search string.
-        """
-
-        index = Index(name="test")
-
-        doc1 = CompanyDocument(company_name="Internal testing test", company_type="LLC")
-        doc2 = CompanyDocument(company_name="My test", company_type="Ltd")
-
-        index.add(doc1)
-        index.add(doc2)
-
-        results = [
-            x.company_name
-            for x in index.search("test ltd", CompanyDocument, use_startswith=True)
-        ]
-
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0], "My test")
-
-    def test_startswith_multiple_tokens(self):
-        index = Index(name="test")
-
-        doc1 = CompanyDocument(company_name="Google", company_type="LLC")
-        doc2 = CompanyDocument(company_name="Potato", company_type="Ltd.")
-        doc3 = CompanyDocument(company_name="Facebook", company_type="Inc.")
-        doc4 = CompanyDocument(company_name="Awesome", company_type="LLC")
-        doc5 = CompanyDocument(company_name="Google", company_type="Ltd.")
-
-        index.add(doc1)
-        index.add(doc2)
-        index.add(doc3)
-        index.add(doc4)
-        index.add(doc5)
-
-        results = [
-            (x.company_name, x.company_type)
-            for x in index.search("goo llc", document_class=CompanyDocument, use_startswith=True)
-        ]
-
-        self.assertCountEqual(results, [("Google", "LLC")])
-
-        results = [
-            (x.company_name, x.company_type)
-            for x in index.search("pot ltd", document_class=CompanyDocument, use_startswith=True)
-        ]
-
-        self.assertCountEqual(results, [("Potato", "Ltd.")])
-
-    def test_number_field_querying(self):
-        class Doc(Document):
-            number = fields.NumberField()
-
-        index = Index(name="test")
-
-        doc1 = index.add(Doc(number=1))
-        doc2 = index.add(Doc(number=2341920))
-
-        results = [x for x in index.search("number:1", document_class=Doc)]
-
-        # Should only return the exact match
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, doc1)
-
-        results = [x for x in index.search("1", document_class=Doc)]
-
-        # Should only return the exact match
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, doc1)
-
-        results = [x for x in index.search("2341920", document_class=Doc)]
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, doc2)
-
-    def test_datefield_querying(self):
-        class Doc(Document):
-            datefield = fields.DateField()
-
-        date = datetime(year=2020, month=1, day=1, hour=6, minute=15)
-        tomorrow = date + timedelta(days=1)
-
-        index = Index(name="test")
-        index.add(Doc(datefield=date))
-        index.add(Doc(datefield=tomorrow))
-
-        results = [x for x in index.search("2020-01-01", document_class=Doc)]
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].datefield, date)
-
-    def test_match_all_flag(self):
-
-        class Doc(Document):
-            text = fields.TextField()
-
-        index = Index(name="test")
-        doc1 = index.add(Doc(text="test string one"))
-        doc2 = index.add(Doc(text="test string two"))
-
-        results = list(index.search("test string", Doc, match_all=True))
-        self.assertEqual(len(results), 2)
-
-        results = list(index.search("string one", Doc, match_all=True))
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, doc1)
-
-        results = list(index.search("test two", Doc, match_all=True))
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, doc2)
-
-        # Should return both as we're defaulting to OR behaviour
-        results = list(index.search("string one", Doc, match_all=False))
-        self.assertEqual(len(results), 2)
-
-    def test_or_queries(self):
-        class Doc(Document):
-            text = fields.TextField()
-
-        index = Index(name="test")
-        index.add(Doc(text="test string one"))
-        index.add(Doc(text="test string two"))
-
-        results = list(index.search("one OR two", Doc, match_all=True))
-        self.assertEqual(len(results), 2)
-
-    def test_trailing_period(self):
-        class Doc(Document):
-            text = fields.TextField()
-
-        index = Index(name="test")
-        index.add(Doc(text="My company ltd."))
-        index.add(Doc(text="Company co."))
-
-        results = list(index.search("co", Doc))
-        self.assertEqual(len(results), 1)
-
-        results = list(index.search("co.", Doc))
-        self.assertEqual(len(results), 1)
-
-        results = list(index.search("ltd", Doc))
-        self.assertEqual(len(results), 1)
-
-        results = list(index.search("ltd.", Doc))
-        self.assertEqual(len(results), 1)
-
-    def test_acronyms(self):
-        class Doc(Document):
-            text = fields.TextField()
-
-        index = Index(name="test")
-        doc1 = index.add(Doc(text="a.b.c"))
-        doc2 = index.add(Doc(text="1-2-3"))
-        index.add(Doc(text="do-re-mi"))
-
-        results = list(index.search("a.b.c", Doc))
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, doc1)
-
-        results = list(index.search("abc", Doc))
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, doc1)
-
-        results = list(index.search("a-b-c", Doc))
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, doc1)
-
-        results = list(index.search("1-2-3", Doc))
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, doc2)
 
 
 class SearchRankingTests(TestCase):
@@ -316,3 +66,226 @@ class SearchRankingTests(TestCase):
         ]
 
         self.assertEqual(results, expected_order)
+
+
+class CompareTokensMatchAllTests(TestCase):
+    def test_search_single_token_single_found(self):
+        res = query._compare_tokens(
+            set({'goo'}),
+            set({'google'}),
+            match_all=True,
+            use_startswith=True
+        )
+        self.assertTrue(res)
+
+    def test_search_single_token_multi_found(self):
+        res = query._compare_tokens(
+            set({'goo'}),
+            set({'google', 'llc'}),
+            match_all=True,
+            use_startswith=True
+        )
+        self.assertTrue(res)
+
+    def test_search_multiple_tokens_multiple_found_startswith_match(self):
+        res = query._compare_tokens(
+            set({'goo', 'llc'}),
+            set({'google', 'llc'}),
+            match_all=True,
+            use_startswith=True
+        )
+        self.assertTrue(res)
+
+    def test_search_multiple_tokens__partial_single_found_startswith_no_match(self):
+        """Only one of the two sarched terms is found, but match all would require both
+        both to be there."""
+        res = query._compare_tokens(
+            set({'goo', 'llc'}),
+            set({'llc'}),
+            match_all=True,
+            use_startswith=True
+        )
+        self.assertFalse(res)
+
+    def test_search_multiple_tokens_single_found_startswith_no_match(self):
+        """None of the searched terms are found, it should return `False`."""
+        res = query._compare_tokens(
+            set({'aaa', 'bbb'}),
+            set({'llc'}),
+            match_all=True,
+            use_startswith=True
+        )
+        self.assertFalse(res)
+
+
+class CompareTokensNotMatchAllTests(TestCase):
+    def test_match_all_false_always_returns_a_compare(self):
+        """When match_all=False we always compare."""
+        res = query._compare_tokens(
+            set({'goo', 'llc'}),
+            set({'llc'}),
+            match_all=False,
+            use_startswith=True
+        )
+        self.assertTrue(res)
+
+        res = query._compare_tokens(
+            set({'goo'}),
+            set({'google'}),
+            match_all=False,
+            use_startswith=True
+        )
+        self.assertTrue(res)
+
+        res = query._compare_tokens(
+            set({'goo'}),
+            set({'google', 'llc'}),
+            match_all=False,
+            use_startswith=True
+        )
+        self.assertTrue(res)
+
+
+class TokenizeQueryStringTests(TestCase):
+
+    def test_word_with_lodash(self):
+        q_string = 'query_string'
+        expected_query = [[('word', None, 'querystring'), ('word', None, 'query_string')]]
+        query_token = expected_query[0]
+
+        res = query._tokenize_query_string(q_string, False)
+
+        res_kind = [r[0] for r in query_token]
+        res_field = [r[1] for r in query_token]
+        res_content = [r[2] for r in query_token]
+        first_kind, first_field, first_content = query_token[0]
+        second_kind, second_field, second_content = query_token[1]
+
+        self.assertEqual(len(res[0]), len(query_token))
+
+        self.assertTrue(first_kind in res_kind)
+        self.assertTrue(first_field in res_field)
+        self.assertTrue(first_content in res_content)
+
+        self.assertTrue(second_kind in res_kind)
+        self.assertTrue(second_field in res_field)
+        self.assertTrue(second_content in res_content)
+
+    def test_query_with_single_symbol(self):
+        q_string = 'query    ,'
+        expected_query = [[('word', None, 'query')]]
+        query_token = expected_query[0]
+
+        res = query._tokenize_query_string(q_string, False)
+
+        res_kind = [r[0] for r in query_token]
+        res_field = [r[1] for r in query_token]
+        res_content = [r[2] for r in query_token]
+        first_kind, first_field, first_content = query_token[0]
+
+        self.assertEqual(len(res[0]), len(query_token))
+
+        self.assertTrue(first_kind in res_kind)
+        self.assertTrue(first_field in res_field)
+        self.assertTrue(first_content in res_content)
+
+    def test_symbol_with_word(self):
+        q_string = 'query    ,something'
+        expected_query = [[('word', None, 'query'), ('word', None, ',something'), ('word', None, 'something')]]
+        query_token = expected_query[0]
+
+        res = query._tokenize_query_string(q_string, False)
+
+        res_kind = [r[0] for r in query_token]
+        res_field = [r[1] for r in query_token]
+        res_content = [r[2] for r in query_token]
+        first_kind, first_field, first_content = query_token[0]
+        second_kind, second_field, second_content = query_token[1]
+
+        self.assertEqual(len(res[0]), len(query_token))
+
+        self.assertTrue(first_kind in res_kind)
+        self.assertTrue(first_field in res_field)
+        self.assertTrue(first_content in res_content)
+
+        self.assertTrue(second_kind in res_kind)
+        self.assertTrue(second_field in res_field)
+        self.assertTrue(second_content in res_content)
+
+    def test_partial_exact(self):
+        q_string = 'query    "something exact"'
+        expected_query = [[('word', None, 'query'), ('exact', None, 'something exact')]]
+        query_token = expected_query[0]
+
+        res = query._tokenize_query_string(q_string, False)
+
+        res_kind = [r[0] for r in query_token]
+        res_field = [r[1] for r in query_token]
+        res_content = [r[2] for r in query_token]
+        first_kind, first_field, first_content = query_token[0]
+        second_kind, second_field, second_content = query_token[1]
+
+        self.assertEqual(len(res[0]), len(query_token))
+
+        self.assertTrue(first_kind in res_kind)
+        self.assertTrue(first_field in res_field)
+        self.assertTrue(first_content in res_content)
+
+        self.assertTrue(second_kind in res_kind)
+        self.assertTrue(second_field in res_field)
+        self.assertTrue(second_content in res_content)
+
+    def test_exact_full(self):
+        q_string = '"something exact"'
+        expected_query = [[('exact', None, 'something exact')]]
+        query_token = expected_query[0]
+
+        res = query._tokenize_query_string(q_string, False)
+
+        res_kind = [r[0] for r in query_token]
+        res_field = [r[1] for r in query_token]
+        res_content = [r[2] for r in query_token]
+        first_kind, first_field, first_content = query_token[0]
+
+        self.assertEqual(len(res[0]), len(query_token))
+
+        self.assertTrue(first_kind in res_kind)
+        self.assertTrue(first_field in res_field)
+        self.assertTrue(first_content in res_content)
+
+    def test_or_query(self):
+        q_string = '"something exact" or something else'
+        expected_query = [[('exact', None, 'something exact')], [('word', None, 'something'), ('word', None, 'else')]]
+        query_token_0 = expected_query[0]
+        query_token_1 = expected_query[1]
+
+        res = query._tokenize_query_string(q_string, False)
+
+        # check exact part
+        res_kind = [r[0] for r in query_token_0]
+        res_field = [r[1] for r in query_token_0]
+        res_content = [r[2] for r in query_token_0]
+        first_kind, first_field, first_content = query_token_0[0]
+
+        self.assertEqual(len(res), len(expected_query))
+        self.assertEqual(len(res[0]), len(query_token_0))
+        self.assertEqual(len(res[1]), len(query_token_1))
+
+        self.assertTrue(first_kind in res_kind)
+        self.assertTrue(first_field in res_field)
+        self.assertTrue(first_content in res_content)
+
+        # check or part
+        res_kind = [r[0] for r in query_token_1]
+        res_field = [r[1] for r in query_token_1]
+        res_content = [r[2] for r in query_token_1]
+        first_kind, first_field, first_content = query_token_1[0]
+        second_kind, second_field, second_content = query_token_1[1]
+
+        self.assertTrue(first_kind in res_kind)
+        self.assertTrue(first_field in res_field)
+        self.assertTrue(first_content in res_content)
+
+        self.assertTrue(second_kind in res_kind)
+        self.assertTrue(second_field in res_field)
+        self.assertTrue(second_content in res_content)
