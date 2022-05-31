@@ -108,7 +108,7 @@ This can be useful when doing things like updating sharded counters.
 
 ### Scatter index
 
-Using `defer_iteration_with_finalize` with a queryset which also filters on other columns requires a Datastore index. `__scatter__` indexes are no longer possible on the Datastore (for the AppEngine Python 3 runtime). Trying to deploy a scatter index with `gcloud app deploy index.yaml` results in the following error:
+Using `defer_iteration_with_finalize` with a queryset which also filters on other columns requires a Datastore `__scatter__` index. These indexes are no longer possible on the Datastore (for the AppEngine Python 3 runtime). Trying to deploy a scatter index with `gcloud app deploy index.yaml` results in the following error:
 
 ```bash
 ERROR: (gcloud.app.deploy) INVALID_ARGUMENT: Invalid reserved name '__scatter__' in field path
