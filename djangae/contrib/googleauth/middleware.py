@@ -259,9 +259,12 @@ def local_iap_login_middleware(get_response):
                     if is_superuser:
                         defaults["is_staff"] = True
 
+                    google_iap_id=id_from_email(email)
+
                     user, _ = User.objects.update_or_create(
-                        google_iap_id=id_from_email(email),
+                        google_iap_id=google_iap_id,
                         google_iap_namespace="auth.example.com",
+                        username=f'google_iap_user:{google_iap_id}',
                         defaults=defaults
                     )
 
