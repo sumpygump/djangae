@@ -52,9 +52,14 @@ def datastore_key_ranges(
     random_keys_getter: Callable[[QuerySet, int], list] = _find_random_keys,
 ) -> list:
     """
-        Given a queryset and a number of shard. This function makes use
-        of the __scatter__ property to return a list of key ranges
-        for sharded iteration.
+        Given a queryset and a number of shard. This function makes use of the
+        __scatter__ property to return a list of key ranges for sharded iteration.
+
+        `random_keys_getter` is a callable used to generate random keys.
+        It defaults to `_find_random_keys`, but can be used to customise how random keys are
+        generated for a given model, e.g. `_find_random_keys` uses the `objects` model manager,
+        other implementations can use a different model manager.
+        This is especially useful on AppEngine Python 3 which no longer allows `__scatter__` indexes.
     """
 
     if shard_count > 1:
