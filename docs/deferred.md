@@ -105,3 +105,13 @@ shard_index = get_deferred_shard_index()
 ```
 
 This can be useful when doing things like updating sharded counters.
+
+### Scatter index
+
+Using `defer_iteration_with_finalize` with a queryset which also filters on other columns requires a Datastore index. `__scatter__` indexes are no longer possible on the Datastore (for the AppEngine Python 3 runtime). Trying to deploy a scatter index with `gcloud app deploy index.yaml` results in the following error:
+
+```bash
+ERROR: (gcloud.app.deploy) INVALID_ARGUMENT: Invalid reserved name '__scatter__' in field path
+```
+
+To work around this issue, `djangae.processing.datastore_key_ranges` allows a configurable `random_keys_getter`. The getter makes it possible to retrieve random keys (for your use case) in a way that does not require a new `__scatter__` index, e.g. by changing the model manager used to retrieve the keys.
