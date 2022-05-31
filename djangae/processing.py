@@ -1,9 +1,11 @@
 from math import ceil
+from typing import Callable
 
+from django.db.models.query import QuerySet
 from gcloudc.db.backends.datastore.expressions import Scatter
 
 
-def _find_random_keys(queryset, shard_count):
+def _find_random_keys(queryset: QuerySet, shard_count: int) -> list:
     OVERSAMPLING_FACTOR = 32
 
     return list(
@@ -44,16 +46,25 @@ def sequential_int_key_ranges(queryset, shard_count):
     return key_ranges
 
 
-def datastore_key_ranges(queryset, shard_count):
+def datastore_key_ranges(
+    queryset: QuerySet,
+    shard_count: int,
+    random_keys_getter: Callable[[QuerySet, int], list] = _find_random_keys,
+) -> list:
     """
-        Given a queryset and a number of shard. This function makes use
-        of the __scatter__ property to return a list of key ranges
-        for sharded iteration.
+        Given a queryset and a number of shard. This function makes use of the
+        __scatter__ property to return a list of key ranges for sharded iteration.
+
+        `random_keys_getter` is a callable used to generate random keys.
+        It defaults to `_find_random_keys`, but can be used to customise how random keys are
+        generated for a given model, e.g. `_find_random_keys` uses the `objects` model manager,
+        other implementations can use a different model manager.
+        This is especially useful on AppEngine Python 3 which no longer allows `__scatter__` indexes.
     """
 
     if shard_count > 1:
         # Use the scatter property to generate shard points
-        random_keys = _find_random_keys(queryset, shard_count)
+        random_keys = random_keys_getter(queryset, shard_count)
 
         if not random_keys:
             # No random keys? Don't shard

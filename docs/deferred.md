@@ -105,3 +105,38 @@ shard_index = get_deferred_shard_index()
 ```
 
 This can be useful when doing things like updating sharded counters.
+
+### Scatter index
+
+`defer_iteration_with_finalize` uses the built-in `__scatter__` column (a column which is automatically randomly populated for a subset of Datastore entities) in order to get a random selection of keys to divide up the entities into shards. If you're using `defer_iteration_with_finalize` with a queryset which also filters on other columns, then this requires a composite index which includes both the `__scatter__` column and the other columns being filtered on.
+
+These composite indexes are no longer possible on the Datastore (for the AppEngine Python 3 runtime). Trying to deploy the composite index with `gcloud app deploy index.yaml` results in the following error:
+
+```bash
+ERROR: (gcloud.app.deploy) INVALID_ARGUMENT: Invalid reserved name '__scatter__' in field path
+```
+
+To work around this issue, `djangae.processing.datastore_key_ranges` allows a configurable `random_keys_getter`. The getter makes it possible to retrieve random keys (for your use case) in a way that does not require a new `__scatter__` composite index.
+
+You will need to create a wrapper or partial for `datastore_key_ranges`, passing in your custom `random_keys_getter`, and then pass that wrapper function to `defer_iteration_with_finalize`, e.g.
+
+```python
+import functools
+from djangae.processing import datastore_key_ranges
+
+
+def custom_find_random_keys(queryset, shard_count) -> list:
+    # your custom implementation
+    
+custom_datastore_key_ranges = functools.partial(
+    datastore_key_ranges, 
+    random_keys_getter=custom_find_random_keys,
+)
+
+deferred.defer_iteration_with_finalize(
+    queryset,
+    callback,
+    finalize,
+    key_ranges_getter=custom_datastore_key_ranges,
+)
+```
