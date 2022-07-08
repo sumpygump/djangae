@@ -4,7 +4,7 @@ from django.db import models
 from gcloudc.db import transaction
 
 from djangae.contrib import sleuth
-from djangae.tasks.deferred import defer
+from djangae.tasks.deferred import defer, PermanentTaskFailure
 from djangae.test import (
     TaskFailedError,
     TestCase,
@@ -45,6 +45,10 @@ def create_defer_model_b(key_value):
 
 def process_argument(arg):
     DeferModelC.objects.create(text=arg)
+
+
+def permanent_task_failure():
+    raise PermanentTaskFailure
 
 
 class DeferTests(TestCase):
@@ -145,3 +149,11 @@ class DeferTests(TestCase):
         # Now we should be good!
         self.process_task_queues()
         self.assertEqual(1, DeferModelB.objects.count())
+
+    def test_permanent_task_failure(self):
+
+        defer(permanent_task_failure)
+
+        # Complete task without exception raised externally.
+        self.process_task_queues()
+        self.assertEqual(self.get_task_count(), 0)
