@@ -3,6 +3,7 @@ from functools import wraps
 
 from django.http import HttpResponseForbidden
 
+from djangae.utils import get_client_ip
 from .environment import is_in_task, is_in_cron
 
 
@@ -48,3 +49,21 @@ def csrf_exempt_if_task(view_function):
             return any((is_in_task(), is_in_cron()))
 
     return Replacement()
+
+
+def internal_only(view_function):
+    """ View decorator for restricting access to internal 0.1.0.* ip addresses only.
+        This decorator is particularly useful for requests related to automatically scaling,
+        i.e., /_ah/warmup|start|stop.
+        https://cloud.google.com/appengine/docs/standard/python3/understanding-firewalls
+    """
+
+    @wraps(view_function)
+    def replacement(request, *args, **kwargs):
+        request_ip = get_client_ip(request)
+        if not request_ip or not request_ip.startswith('0.1.0.'):
+            return HttpResponseForbidden("Access denied.")
+
+        return view_function(request, *args, **kwargs)
+
+    return replacement
