@@ -39,10 +39,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CLOUD_TASKS_LOCATION = tasks_location()
 
 
-# Default Django middleware, with the addition of the RequestMiddleware
+# Default Django middleware, with the addition of the RequestStorageMiddleware
 # for logging purposes
 MIDDLEWARE = [
-    'google.cloud.logging_v2.handlers.middleware.request.RequestMiddleware',
+    'djangae.common.middleware.RequestStorageMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
