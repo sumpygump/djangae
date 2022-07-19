@@ -72,6 +72,18 @@ class LocalIAPMiddlewareTests(TestCase):
             User.objects.get(email="test@example.com").is_superuser
         )
 
+    def test_username_created_and_not_empty(self):
+        form_data = {
+            "email": "test@example.com"
+        }
+
+        response = self.client.post("/_dj/login/?next=/", form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertTrue(
+            bool(User.objects.get(email="test@example.com").username)
+        )
+
     def test_login_failure(self):
         form_data = {
             "email": "test"
