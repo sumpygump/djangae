@@ -76,7 +76,7 @@ class GSMBackend:
             if not create_if_missing:
                 raise MissingSecretError()
 
-            logging.warning("No secret found at % creating", name)
+            logging.warning("No secret found at %s creating", name)
             # Create a new secret
             try:
                 response = client.create_secret(
