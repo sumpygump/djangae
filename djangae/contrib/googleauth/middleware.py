@@ -250,22 +250,22 @@ def local_iap_login_middleware(get_response):
                     # data in the credentials file.
                     data = f.readline()
                     is_superuser = data.strip() == "True"
+                    google_iap_id = id_from_email(email)
 
                     defaults = dict(
                         is_superuser=is_superuser,
                         email=email,
+                        google_iap_id=google_iap_id,
+                        google_iap_namespace="auth.example.com",
+                        username=f'google_iap_user:{google_iap_id}',
                     )
 
                     if is_superuser:
                         defaults["is_staff"] = True
 
-                    google_iap_id = id_from_email(email)
-
                     user, _ = User.objects.update_or_create(
-                        google_iap_id=google_iap_id,
-                        google_iap_namespace="auth.example.com",
-                        username=f'google_iap_user:{google_iap_id}',
-                        defaults=defaults
+                        email_lower=email.lower(),
+                        defaults=defaults,
                     )
 
                     request.META[_GOOG_JWT_ASSERTION_HEADER] = "JWT TOKEN"
