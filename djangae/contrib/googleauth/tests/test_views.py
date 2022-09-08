@@ -14,6 +14,7 @@ from requests_oauthlib import OAuth2Session
 
 from djangae.contrib.googleauth import _SCOPE_SESSION_KEY
 from djangae.contrib.googleauth.models import (
+    OAuthUserSession,
     User,
     AnonymousUser,
 )
@@ -55,18 +56,23 @@ class LoginViewTestCase(TestCase):
         self.client.get(self.login_url)
         self.assertEqual(self.client.session[auth.REDIRECT_FIELD_NAME], self.next_url)
 
+    @patch('djangae.contrib.googleauth.views.OAuthUserSession', spec=OAuthUserSession)
     @patch(
         'djangae.contrib.googleauth.views.OAuth2Session.return_value.authorization_url',
         return_value=('url', 'state')
     )
-    def test_shows_no_prompt_if_user(self, auth_url_mock):
-        """Tests it does not prompt consent screen if user is authenticated"""
+    def test_shows_no_prompt_if_user(self, auth_url_mock, OAuthUserSession_mock):
+        """Tests it does not prompt consent screen if user is authenticated with OAuth"""
         user = User.objects.create_user(
             google_oauth_id="123",
             username='test',
             email='test@domain.com'
         )
         request = RequestFactory().get('', HTTP_HOST=host)
+
+        valid_OAuth_session = Mock(OAuthUserSession)
+        valid_OAuth_session.is_valid = True
+        OAuthUserSession_mock.objects.filter.return_value.first.return_value = valid_OAuth_session
 
         # adding session
         middleware = SessionMiddleware()
@@ -77,7 +83,37 @@ class LoginViewTestCase(TestCase):
         oauth_login(request)
 
         auth_url_mock.assert_called_once()
+
         self.assertEqual(auth_url_mock.call_args[1]['prompt'], 'none')
+
+    @patch('djangae.contrib.googleauth.views.OAuthUserSession', spec=OAuthUserSession)
+    @patch(
+        'djangae.contrib.googleauth.views.OAuth2Session.return_value.authorization_url',
+        return_value=('url', 'state')
+    )
+    def test_shows_prompt_if_user_with_addional_scopes(self, auth_url_mock, OAuthUserSession_mock):
+        """It prompts consent screen if user is authenticated but additional scopes are required"""
+        user = User.objects.create_user(
+            google_oauth_id="123",
+            username='test',
+            email='test@domain.com'
+        )
+        valid_OAuth_session = Mock(OAuthUserSession)
+        valid_OAuth_session.is_valid = True
+        OAuthUserSession_mock.objects.filter.return_value.first.return_value = valid_OAuth_session
+        request = RequestFactory().get('', HTTP_HOST=host)
+
+        # adding session
+        middleware = SessionMiddleware()
+
+        middleware.process_request(request)
+        request.session.save()
+        request.session[_SCOPE_SESSION_KEY] = (["additional"], False)
+        request.user = user
+        oauth_login(request)
+
+        auth_url_mock.assert_called_once()
+        self.assertEqual(auth_url_mock.call_args[1]['prompt'], 'consent')
 
     @patch(
         'djangae.contrib.googleauth.views.OAuth2Session.return_value.authorization_url',
