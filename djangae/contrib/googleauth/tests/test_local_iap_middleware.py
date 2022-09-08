@@ -112,3 +112,15 @@ class LocalIAPMiddlewareTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+
+    def test_works_with_existing_user(self):
+        existing = User.objects.create(email="test@example.com")
+
+        form_data = {
+            "email": "test@example.com"
+        }
+
+        response = self.client.post("/_dj/login/?next=/", form_data, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(User.objects.get(email="test@example.com"), existing)
