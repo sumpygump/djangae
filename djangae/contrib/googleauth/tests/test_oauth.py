@@ -329,6 +329,7 @@ class OAuthScopesRequiredTests(TestCase):
 
         decorated_func_mock = oauth_scopes_required(scopes=scopes)(func)
         response_mocked = decorated_func_mock(request)
+        request.session.save()
         self.assertFalse(func.called)
         # check we're redirecting to login url with the correct parameters
         self.assertEquals(response_mocked.status_code, 302)
