@@ -113,8 +113,8 @@ def oauth_login(request):
         else None
     )
 
-    if oauth_session and oauth_session.is_valid:
-        # Valid Oauth session exists...
+    if oauth_session:
+        # Oauth session exists (it's ok if it expired, see #1292)...
         if additional_scopes:
             # ...but we're requesting additional scopes, so we need to prompt
             kwargs["prompt"] = "consent"
