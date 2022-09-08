@@ -112,10 +112,13 @@ def oauth_login(request):
         if request.user.is_authenticated
         else None
     )
-
     if oauth_session:
+        being_requested = set(google.scope)
+        current_scopes = set(oauth_session.scopes)
+
+        difference = being_requested - current_scopes
         # Oauth session exists (it's ok if it expired, see #1292)...
-        if additional_scopes:
+        if difference:
             # ...but we're requesting additional scopes, so we need to prompt
             kwargs["prompt"] = "consent"
         else:
