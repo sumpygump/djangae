@@ -13,7 +13,7 @@
   - contrib.consistency (new datastore is strongly consistent)
   - contrib.mappers (partially superseded by djangae.tasks)
   - contrib.contenttypes (may come back, originally for eventual consistency reasons)
-  - contrib.gauth* (will come back in some form, but there's no users API anymore)
+  - contrib.gauth* (replaced by contrib.googleauth, supporting IAP and Oauth)
   - contrib.processing (partially superseded by djangae.tasks)
   - contrib.uniquetool (unique markers don't exist as new datastore is consistent)
   - djangae.mail (there's no built-in way to send email on Google Cloud)
