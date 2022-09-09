@@ -117,11 +117,9 @@ def oauth_login(request):
         current_scopes = set(oauth_session.scopes)
 
         difference = being_requested - current_scopes
+
         # Oauth session exists (it's ok if it expired, see #1292)...
-        if difference:
-            # ...but we're requesting additional scopes, so we need to prompt
-            kwargs["prompt"] = "consent"
-        else:
+        if not difference:
             # ...and we already have all the scopes, no need to prompt
             kwargs["prompt"] = "none"
 

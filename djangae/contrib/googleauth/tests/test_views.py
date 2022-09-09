@@ -40,6 +40,7 @@ class LoginViewTestCase(TestCase):
         self.oAuthSessionMock = create_autospec(OAuth2Session)
         self.oAuthSessionMock.authorization_url.return_value = (authorization_url, state_str,)
         self.oAuthSessionMock.new_state.return_value = state_str
+        self.oAuthSessionMock.scope = []
         self.patcher = patch(
             'djangae.contrib.googleauth.views.OAuth2Session',
             Mock(return_value=self.oAuthSessionMock)
@@ -70,9 +71,10 @@ class LoginViewTestCase(TestCase):
         )
         request = RequestFactory().get('', HTTP_HOST=host)
 
-        valid_OAuth_session = Mock(OAuthUserSession)
-        valid_OAuth_session.is_valid = True
-        OAuthUserSession_mock.objects.filter.return_value.first.return_value = valid_OAuth_session
+        OAuth_session = Mock(OAuthUserSession)
+        OAuth_session.is_valid = True
+        OAuth_session.scopes = []
+        OAuthUserSession_mock.objects.filter.return_value.first.return_value = OAuth_session
 
         # adding session
         middleware = SessionMiddleware()
@@ -98,9 +100,9 @@ class LoginViewTestCase(TestCase):
             username='test',
             email='test@domain.com'
         )
-        valid_OAuth_session = Mock(OAuthUserSession)
-        valid_OAuth_session.is_valid = True
-        OAuthUserSession_mock.objects.filter.return_value.first.return_value = valid_OAuth_session
+        OAuth_session = Mock(OAuthUserSession)
+        OAuth_session.is_valid = True
+        OAuth_session.scopes = []
         request = RequestFactory().get('', HTTP_HOST=host)
 
         # adding session
@@ -108,12 +110,13 @@ class LoginViewTestCase(TestCase):
 
         middleware.process_request(request)
         request.session.save()
-        request.session[_SCOPE_SESSION_KEY] = (["additional"], False)
         request.user = user
+        self.oAuthSessionMock.scope = ['extra']
+
         oauth_login(request)
 
         auth_url_mock.assert_called_once()
-        self.assertEqual(auth_url_mock.call_args[1]['prompt'], 'consent')
+        self.assertEqual(auth_url_mock.call_args[1]['prompt'], 'select_account')
 
     @patch(
         'djangae.contrib.googleauth.views.OAuth2Session.return_value.authorization_url',
