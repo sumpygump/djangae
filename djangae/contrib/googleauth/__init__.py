@@ -20,7 +20,7 @@ def _stash_scopes(request, scopes, offline):
         Stores requested scopes in the session
     """
 
-    request.session[_SCOPE_SESSION_KEY] = (scopes, offline)
+    request.session[_SCOPE_SESSION_KEY] = (list(scopes), offline)
 
 
 def _pop_scopes(request):

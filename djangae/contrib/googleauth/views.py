@@ -107,8 +107,21 @@ def oauth_login(request):
         "include_granted_scopes": 'true'
     }
 
-    if request.user.is_authenticated:
-        kwargs["prompt"] = "none"
+    oauth_session = (
+        OAuthUserSession.objects.filter(pk=request.user.google_oauth_id).first()
+        if request.user.is_authenticated
+        else None
+    )
+    if oauth_session:
+        being_requested = set(google.scope)
+        current_scopes = set(oauth_session.scopes)
+
+        difference = being_requested - current_scopes
+
+        # Oauth session exists (it's ok if it expired, see #1292)...
+        if not difference:
+            # ...and we already have all the scopes, no need to prompt
+            kwargs["prompt"] = "none"
 
     if offline:
         kwargs["access_type"] = "offline"
