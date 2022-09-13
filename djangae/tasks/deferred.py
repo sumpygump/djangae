@@ -212,7 +212,7 @@ def _schedule_task(
         schedule_time = ts
 
     task = {
-        'name': task_args['name'],
+        'name': (path + '/tasks/' + task_args['name']) if task_args['name'] else None,
         'schedule_time': schedule_time,
         'app_engine_http_request': {  # Specify the type of request.
             'http_method': 'POST',

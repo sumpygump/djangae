@@ -103,6 +103,11 @@ class TestCaseMixin(LiveServerTestCase):
             task = tasks.pop(0)
 
             try:
+                # Appending the port number to the task name
+                # is a special-case that does not exist
+                # on the live server and it exists so that
+                # local development servers can direct a task
+                # to run on a particular port.
                 response = self.task_client.run_task(task.name + "?port=%s" % self._server_port)
 
                 # If the returned status wasn't a success then
