@@ -13,6 +13,7 @@ from djangae.core.signals import module_started, module_stopped
 logger = logging.getLogger(__name__)
 
 
+@decorators.internal_only
 def warmup(request):
     """
         Provides default procedure for handling warmup requests on App
@@ -27,11 +28,13 @@ def warmup(request):
     return HttpResponse("OK")
 
 
+@decorators.internal_only
 def start(request):
     module_started.send(sender=__name__, request=request)
     return HttpResponse("OK")
 
 
+@decorators.internal_only
 def stop(request):
     module_stopped.send(sender=__name__, request=request)
     return HttpResponse("OK")
