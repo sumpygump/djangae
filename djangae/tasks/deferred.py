@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 
 _DEFAULT_QUEUE = "default"
-_DEFAULT_URL = reverse_lazy("tasks_deferred_handler")
+_DEFAULT_URL = reverse_lazy("tasks_deferred_handler", urlconf=settings.ROOT_URLCONF)
 _TASKQUEUE_HEADERS = {
     "Content-Type": "application/octet-stream"
 }
