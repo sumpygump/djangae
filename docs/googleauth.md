@@ -134,6 +134,12 @@ authentication if necessary:
 LOGIN_URL = reverse_lazy('oauth_login')
 ```
 
+### Handling clock skew times
+By default, Djangae allows for a 10 seconds skew between your server and google's
+auth server when verifying token are not issued in the future.
+
+You can change this via the `GOOGLEAUTH_CLOCK_SKEWS_SECONDS` setting
+
 ### IAP configuration
 IAP uses JSON Web Tokens (JWT) to make sure that a request to your app is authorized. This protects your app from the following kind of risks:
 
