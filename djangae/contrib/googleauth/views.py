@@ -56,8 +56,10 @@ _TOKEN_EXPIRATION_GUARD_TIME = 5
 # We're reverting back to the default of 10 seconds here
 _DEFAULT_CLOCK_SKEW_SECONDS = 10
 
+
 def _get_clock_skew_seconds():
     return getattr(settings, _SKEW_SECONDS_SETTING, _DEFAULT_CLOCK_SKEW_SECONDS)
+
 
 def _get_default_scopes():
     return getattr(settings, _DEFAULT_SCOPES_SETTING, _DEFAULT_OAUTH_SCOPES)
