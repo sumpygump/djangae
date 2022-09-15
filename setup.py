@@ -54,6 +54,8 @@ setup(
         'cryptography==3.4.6',
         'python-jose[cryptography]==3.2.0',
         'google-cloud-storage==1.43.0',
+        # required minimum version for oauth backend
+        'google-auth>=2.3.2<3.0dev',
     ],
     extras_require=EXTRAS,
     tests_require=EXTRAS['test'],

@@ -25,6 +25,7 @@ from . import (
     _CLIENT_SECRET_SETTING,
     _DEFAULT_SCOPES_SETTING,
     _OAUTH_REDIRECT_HOST,
+    _SKEW_SECONDS_SETTING,
     _pop_scopes,
 )
 from .backends.oauth2 import OAuthBackend
@@ -48,6 +49,15 @@ GOOGLE_USER_INFO = "https://www.googleapis.com/oauth2/v1/userinfo"
 # the token was granted, not the time we process it
 _TOKEN_EXPIRATION_GUARD_TIME = 5
 
+
+# The time in seconds that is used by `verify_oauth2_token` to compensate for differences
+# in clocks between local time and server time. This used to be baked in google-auth but has
+# been changed from being hardcoded to 10seconds to being a parameter that defaults to 0.
+# We're reverting back to the default of 10 seconds here
+_DEFAULT_CLOCK_SKEW_SECONDS = 10
+
+def _get_clock_skew_seconds():
+    return getattr(settings, _SKEW_SECONDS_SETTING, _DEFAULT_CLOCK_SKEW_SECONDS)
 
 def _get_default_scopes():
     return getattr(settings, _DEFAULT_SCOPES_SETTING, _DEFAULT_OAUTH_SCOPES)
@@ -234,7 +244,8 @@ def oauth2callback(request):
             profile = id_token.verify_oauth2_token(
                 token['id_token'],
                 requests.Request(),
-                client_id
+                client_id,
+                clock_skew_in_seconds=_get_clock_skew_seconds()
             )
         except ValueError:
             logging.exception("Error verifying OAuth2 token")

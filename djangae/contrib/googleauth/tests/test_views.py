@@ -14,11 +14,14 @@ from requests_oauthlib import OAuth2Session
 
 from djangae.contrib.googleauth import _SCOPE_SESSION_KEY
 from djangae.contrib.googleauth.models import (
+    AnonymousUser,
     OAuthUserSession,
     User,
-    AnonymousUser,
 )
-from djangae.contrib.googleauth.views import STATE_SESSION_KEY, oauth_login
+from djangae.contrib.googleauth.views import (
+    STATE_SESSION_KEY,
+    oauth_login,
+)
 from djangae.test import TestCase
 
 host = "test.appspot.com"
@@ -249,6 +252,13 @@ class OAuthCallbackTestCase(TestCase):
         self.oAuthSessionMock = create_autospec(OAuth2Session)
         self.oAuthSessionMock.authorization_url.return_value = (authorization_url, state_str,)
         self.oAuthSessionMock.new_state.return_value = state_str
+        self.oAuthSessionMock.fetch_token.return_value = {
+            'id_token': 'atoken',
+            'access_token': 'another_token',
+            'token_type': 'sometype',
+            'expires_in': 123,
+            'scope': ['scope1'],
+        }
         self.patcher = patch(
             'djangae.contrib.googleauth.views.OAuth2Session',
             Mock(return_value=self.oAuthSessionMock)
@@ -285,3 +295,30 @@ class OAuthCallbackTestCase(TestCase):
         self.session.save()
         response = self.client.get("{}?state={}".format(self.callback_url, self.valid_state))
         self.assertEqual(response.status_code, 400)
+
+    def test_it_passes_the_default_skew_time(self, mock_id_token):
+        "Test verify_oauth2_token is called with correct defaults"
+        mock_id_token.verify_oauth2_token.return_value = {
+            'sub': '123344',
+            'email': 'test@example.com',
+        }
+        self.client.get(self.callback_url, {
+            'state': self.valid_state,
+        })
+
+        self.assertEqual(mock_id_token.verify_oauth2_token.call_count, 1)
+        self.assertEqual(mock_id_token.verify_oauth2_token.call_args[1]['clock_skew_in_seconds'], 10)
+
+    @override_settings(GOOGLEAUTH_CLOCK_SKEWS_SECONDS=42)
+    def test_it_passes_the_overridden_skew_time(self, mock_id_token):
+        "Test verify_oauth2_token is called with specified override"
+        mock_id_token.verify_oauth2_token.return_value = {
+            'sub': '123344',
+            'email': 'test@example.com'
+        }
+        self.client.get(self.callback_url, {
+            'state': self.valid_state,
+        })
+
+        self.assertEqual(mock_id_token.verify_oauth2_token.call_count, 1)
+        self.assertEqual(mock_id_token.verify_oauth2_token.call_args[1]['clock_skew_in_seconds'], 42)
