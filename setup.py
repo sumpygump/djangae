@@ -30,9 +30,8 @@ setup(
         'Development Status :: 4 - Beta',
         'Framework :: Django',
         'Framework :: Django :: 2.2',
-        'Framework :: Django :: 3.0',
-        'Framework :: Django :: 3.1',
         'Framework :: Django :: 3.2',
+        'Framework :: Django :: 4.1',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
@@ -42,7 +41,7 @@ setup(
     include_package_data=True,
     # dependencies
     install_requires=[
-        'django>=2.2,<=3.3.*',
+        'django>=2.2,<5.0',
         'django-gcloud-connectors>=0.3.5',
         'google-api-python-client>=2.27.0',
         'google-cloud-tasks>=1.5.0,<2.0.0',

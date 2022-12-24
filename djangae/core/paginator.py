@@ -1,4 +1,4 @@
-import collections
+import collections.abc
 
 from django.core.paginator import PageNotAnInteger, EmptyPage
 
@@ -71,7 +71,7 @@ class DatastorePaginator(object):
 Paginator = DatastorePaginator
 
 
-class DatastorePage(collections.Sequence):
+class DatastorePage(collections.abc.Sequence):
 
     def __init__(self, has_next, object_list, number, paginator):
         self.object_list = object_list
