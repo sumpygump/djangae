@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import collections
+import collections.abc
 import functools
 import logging
 import random
@@ -257,7 +257,7 @@ class memoized(object):
 
     def __call__(self, *args):
         args = self.args or args
-        if not isinstance(args, collections.Hashable):
+        if not isinstance(args, collections.abc.Hashable):
             # uncacheable. a list, for instance.
             # better to not cache than blow up.
             return self.func(*args)
