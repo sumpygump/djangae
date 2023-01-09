@@ -50,9 +50,9 @@ If you don't have `gcloud` (the Google Cloud SDK) installed, installation instru
 
 For running the tests, you just need to run:
 
-    $ tox -e py37
+    $ tox -e py310
 
 
 You can run specific tests in the usual way by doing:
 
-    tox -e py37 -- some_app.SomeTestCase.some_test_method
+    tox -e py310 -- some_app.SomeTestCase.some_test_method

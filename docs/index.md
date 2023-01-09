@@ -23,9 +23,9 @@ GitLab: [https://gitlab.com/potato-oss/djangae/djangae](https://gitlab.com/potat
 * Test utilities for writing tests that leverage the Google Cloud Platform (e.g. task queue processing)
 * Apps for cross-request locking and efficient pagination on the Google Cloud Datastore
 
-## Supported Django Versions
+## Supported Python & Django Versions
 
-Djangae currently supports Django 3.2.
+Djangae currently supports Django 2.2, 3.2 and 4.1, using Python 3.8, 3.9 or 3.10.
 
 Support for Django 1.11 / Python 2.7 lives in the `1.x` branch.
 
