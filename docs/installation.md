@@ -28,7 +28,7 @@ from djangae.settings_base import *
 In `app.yaml` add the following handlers:
 
 ```yml
-runtime: python37
+runtime: python310
 
 handlers:
 # This configures Google App Engine to serve the files in the app's static
